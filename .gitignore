@@ -1,0 +1,17 @@
+# Operating-system and editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# IETF author-tool rendered outputs (regenerate from the .md source).
+# Keep the .md (and, if you submit it, the .xml); these are derived artifacts.
+draft-bubblefish-npamp-*.txt
+draft-bubblefish-npamp-*.html
+draft-bubblefish-npamp-*.pdf
+
+# Local tooling
+node_modules/
+.venv/
+__pycache__/

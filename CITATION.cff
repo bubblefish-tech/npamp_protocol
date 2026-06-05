@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: "N-PAMP: Native Post-Quantum Agent Messaging Protocol"
+message: "If you reference or implement N-PAMP, please cite the Internet-Draft."
+type: software
+authors:
+  - family-names: Sammartano
+    given-names: Shawn
+    affiliation: "BubbleFish Technologies, Inc"
+repository-code: "https://github.com/bubblefish-tech/npamp_protocol"
+url: "https://datatracker.ietf.org/doc/draft-bubblefish-npamp/"
+identifiers:
+  - type: other
+    value: "draft-bubblefish-npamp-00"
+    description: "IETF Internet-Draft (Independent Submission stream, Informational)"
+keywords:
+  - post-quantum
+  - agents
+  - transport
+  - ALPN
+  - QUIC
+license: Apache-2.0
