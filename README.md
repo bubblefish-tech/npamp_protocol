@@ -1,13 +1,13 @@
-# N-PAMP: Native Post-Quantum Agent Messaging Protocol
+# N-PAMP™: Native Post-Quantum Agent Messaging Protocol
 
-N-PAMP is a binary, multi-channel, wire-level protocol for authenticated
+N-PAMP™ is a binary, multi-channel, wire-level protocol for authenticated
 communication between autonomous software agents. It operates beneath
 application-layer agent protocols and provides a single fixed-size frame
 format, a registry of multiplexed channels, and three escalating security
 profiles (Standard, High, and Sovereign) built on standard post-quantum and
 classical cryptography.
 
-This repository is the public home of the N-PAMP specification: the
+This repository is the public home of the N-PAMP™ specification: the
 Internet-Draft, the IANA registration requests, and supporting material.
 
 ## Status
@@ -23,7 +23,7 @@ Internet-Draft, the IANA registration requests, and supporting material.
 Once the draft is posted, it will be available on the IETF Datatracker:
 <https://datatracker.ietf.org/doc/draft-bubblefish-npamp/>
 
-## What N-PAMP provides
+## What N-PAMP™ provides
 
 - **A single fixed 36-octet frame header** with mandatory authenticated
   encryption (AEAD) and a header CRC32C for fast rejection of corrupted frames.
@@ -40,7 +40,7 @@ Once the draft is posted, it will be available on the IETF Datatracker:
 - **QUIC** as the primary transport and **TCP with TLS 1.3** as a fallback,
   negotiated via the ALPN identifier `n-pamp/2`.
 
-N-PAMP is deliberately scoped as a transport substrate. It does not define
+N-PAMP™ is deliberately scoped as a transport substrate. It does not define
 application-layer semantics for the data carried on its channels; those are the
 subject of companion specifications.
 
@@ -98,4 +98,4 @@ notice (`ipr: trust200902`) in the draft front matter.
 
 ## Author
 
-Shawn Sammartano, BubbleFish Technologies, Inc
+Shawn Sammartano, BubbleFish™ Technologies, Inc
