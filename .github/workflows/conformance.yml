@@ -109,3 +109,19 @@ jobs:
         run: swift build --package-path harness/adapters/swift-adapter
       - name: Run swift handshake KAT (npamp-handshake-kat validates the in-repo vectors)
         run: swift run --package-path impl/swift npamp-handshake-kat test-vectors/v1
+
+  impl-go:
+    name: go reference build + handshake/KAT + sdk tests
+    runs-on: ubuntu-latest
+    env:
+      # Build the impl/go module standalone even if an ambient workspace exists.
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: impl/go/go.mod
+      - name: Build impl/go (root wire package + sdk)
+        run: go build -C impl/go ./...
+      - name: Test impl/go (handshake flow, KAT sets, sdk loopback e2e)
+        run: go test -C impl/go ./... -count=1
