@@ -113,8 +113,8 @@ func newConn(raw net.Conn, master []byte, peerID ed25519.PublicKey, sendDir, rec
 		peerID:  append(ed25519.PublicKey(nil), peerID...),
 		sendDir: sendDir,
 		recvDir: recvDir,
-		sendSeq: make(map[npamp.ChannelID]uint64),
-		recvSeq: make(map[npamp.ChannelID]uint64),
+		sendKeys: make(map[npamp.ChannelID]*epochKeys),
+		recvKeys: make(map[npamp.ChannelID]*epochKeys),
 	}
 }
 

@@ -61,12 +61,61 @@ type Conn struct {
 	sendDir npamp.Direction
 	recvDir npamp.Direction
 
-	wmu     sync.Mutex
-	sendSeq map[npamp.ChannelID]uint64
-	rmu     sync.Mutex
-	recvSeq map[npamp.ChannelID]uint64
+	wmu      sync.Mutex
+	sendKeys map[npamp.ChannelID]*epochKeys
+	rmu      sync.Mutex
+	recvKeys map[npamp.ChannelID]*epochKeys
 
 	closeOnce sync.Once
+}
+
+// epochKeys is the cached AEAD key material for one (channel, direction) at the
+// current key-update epoch, plus the per-epoch sequence counter. Caching the
+// derived key/iv (rather than re-deriving per frame) is what lets KeyUpdate
+// zeroize a retired epoch's key material, satisfying the spec's forward-secrecy
+// requirement (spec/06 "Key Schedule and Nonces": on key update, new-epoch
+// secrets are derived afresh and the prior epoch's secrets are zeroized).
+type epochKeys struct {
+	epoch uint64
+	key   [32]byte
+	iv    [12]byte
+	seq   uint64
+}
+
+// derive computes key/iv for the current epoch from the master secret via the
+// per-(direction, epoch, suite, channel) traffic schedule.
+func (k *epochKeys) derive(master []byte, dir npamp.Direction, channel npamp.ChannelID, p npamp.Profile) error {
+	ts, err := npamp.DeriveTrafficSecret(master, dir, k.epoch, npamp.AEADAES256GCM, channel, p)
+	if err != nil {
+		return err
+	}
+	key, iv, err := npamp.DeriveKeyIV(ts, p)
+	if err != nil {
+		return err
+	}
+	k.key, k.iv = key, iv
+	return nil
+}
+
+// zeroize wipes the current epoch's key and IV in place (forward secrecy: a
+// retired epoch's key material must not linger in memory).
+func (k *epochKeys) zeroize() {
+	for i := range k.key {
+		k.key[i] = 0
+	}
+	for i := range k.iv {
+		k.iv[i] = 0
+	}
+}
+
+// advance rotates to the next epoch: zeroize the retired key material, bump the
+// epoch, reset the sequence counter (a fresh key restarts the nonce space), and
+// derive the new epoch's key/iv.
+func (k *epochKeys) advance(master []byte, dir npamp.Direction, channel npamp.ChannelID, p npamp.Profile) error {
+	k.zeroize()
+	k.epoch++
+	k.seq = 0
+	return k.derive(master, dir, channel, p)
 }
 
 // PeerIdentity returns a copy of the peer's authenticated Ed25519 public key
@@ -84,54 +133,133 @@ func (c *Conn) Close() error {
 }
 
 // Send AEAD-seals payload into one frame on channel with the given application
-// frame type and writes it. The per-channel send sequence advances so no two
-// frames on a channel reuse an AEAD nonce.
+// frame type and writes it. The per-channel sequence advances within the current
+// key-update epoch, so no two frames on a (channel, epoch) reuse an AEAD nonce.
 func (c *Conn) Send(ctx context.Context, channel npamp.ChannelID, frameType npamp.FrameType, payload []byte) error {
 	c.wmu.Lock()
 	defer c.wmu.Unlock()
-	seq := c.sendSeq[channel]
-	wire, err := sealFrame(c.master, c.sendDir, channel, seq, frameType, payload, c.profile)
+	return c.sendLocked(ctx, channel, frameType, payload)
+}
+
+// sendLocked seals + writes one frame under the channel's current send epoch key.
+// The caller MUST hold wmu.
+func (c *Conn) sendLocked(ctx context.Context, channel npamp.ChannelID, frameType npamp.FrameType, payload []byte) error {
+	st, err := c.sendState(channel)
+	if err != nil {
+		return fmt.Errorf("npamp/sdk: derive send key: %w", err)
+	}
+	wire, err := sealWith(st, channel, frameType, payload)
 	if err != nil {
 		return fmt.Errorf("npamp/sdk: seal frame: %w", err)
 	}
 	if err := c.writeWire(ctx, wire); err != nil {
 		return err
 	}
-	c.sendSeq[channel] = seq + 1
+	st.seq++
 	return nil
 }
 
-// Recv reads, authenticates, and opens the next frame, returning its channel,
-// application frame type, and plaintext. It enforces the per-channel receive
-// sequence, rejecting a replayed or reordered frame.
+// sendState returns the send AEAD state for channel, deriving + caching the
+// epoch-0 key on first use. Caller holds wmu.
+func (c *Conn) sendState(channel npamp.ChannelID) (*epochKeys, error) {
+	st := c.sendKeys[channel]
+	if st == nil {
+		st = &epochKeys{}
+		if err := st.derive(c.master, c.sendDir, channel, c.profile); err != nil {
+			return nil, err
+		}
+		c.sendKeys[channel] = st
+	}
+	return st, nil
+}
+
+// Recv reads, authenticates, and opens the next application frame, returning its
+// channel, frame type, and plaintext. Record-layer control frames (KEY_UPDATE /
+// KEY_UPDATE_ACK) are processed transparently and never returned to the caller.
+// It enforces the per-(channel, epoch) receive sequence, rejecting a replayed or
+// reordered frame.
 func (c *Conn) Recv(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []byte, error) {
 	c.rmu.Lock()
 	defer c.rmu.Unlock()
-	wire, err := c.readWire(ctx)
-	if err != nil {
-		return 0, 0, nil, err
+	for {
+		wire, err := c.readWire(ctx)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		var f npamp.Frame
+		if err := f.UnmarshalBinary(wire); err != nil {
+			return 0, 0, nil, fmt.Errorf("npamp/sdk: parse frame: %w", err)
+		}
+		if f.Flags&npamp.FlagENC == 0 {
+			return 0, 0, nil, fmt.Errorf("npamp/sdk: frame is not AEAD-encrypted")
+		}
+		ch := npamp.ChannelID(f.Channel)
+		st, err := c.recvState(ch)
+		if err != nil {
+			return 0, 0, nil, fmt.Errorf("npamp/sdk: derive recv key: %w", err)
+		}
+		if f.Seq != st.seq {
+			return 0, 0, nil, fmt.Errorf("npamp/sdk: channel %d out-of-sequence frame: got seq %d, want %d (epoch %d)", ch, f.Seq, st.seq, st.epoch)
+		}
+		pt, err := openWith(st, &f)
+		if err != nil {
+			return 0, 0, nil, fmt.Errorf("npamp/sdk: open frame: %w", err)
+		}
+		st.seq++
+
+		switch npamp.FrameType(f.Type) {
+		case npamp.FrameKeyUpdate:
+			if err := c.handleKeyUpdate(ctx, ch, st, pt); err != nil {
+				return 0, 0, nil, err
+			}
+			continue // transparent control frame; read the next
+		case npamp.FrameKeyUpdateAck:
+			continue // confirmation of our own KeyUpdate; nothing to do
+		default:
+			return ch, npamp.FrameType(f.Type), pt, nil
+		}
 	}
-	var f npamp.Frame
-	if err := f.UnmarshalBinary(wire); err != nil {
-		return 0, 0, nil, fmt.Errorf("npamp/sdk: parse frame: %w", err)
-	}
-	if f.Flags&npamp.FlagENC == 0 {
-		return 0, 0, nil, fmt.Errorf("npamp/sdk: application frame is not AEAD-encrypted")
-	}
-	ch := npamp.ChannelID(f.Channel)
-	want := c.recvSeq[ch]
-	if f.Seq != want {
-		return 0, 0, nil, fmt.Errorf("npamp/sdk: channel %d out-of-sequence frame: got seq %d, want %d", ch, f.Seq, want)
-	}
-	pt, err := openFrame(&f, c.master, c.recvDir, c.profile)
-	if err != nil {
-		return 0, 0, nil, fmt.Errorf("npamp/sdk: open frame: %w", err)
-	}
-	c.recvSeq[ch] = want + 1
-	return ch, npamp.FrameType(f.Type), pt, nil
 }
 
-// --- record-layer sealing, shared by the handshake AUTH frames and Send/Recv ---
+// recvState returns the recv AEAD state for channel, deriving + caching the
+// epoch-0 key on first use. Caller holds rmu.
+func (c *Conn) recvState(channel npamp.ChannelID) (*epochKeys, error) {
+	st := c.recvKeys[channel]
+	if st == nil {
+		st = &epochKeys{}
+		if err := st.derive(c.master, c.recvDir, channel, c.profile); err != nil {
+			return nil, err
+		}
+		c.recvKeys[channel] = st
+	}
+	return st, nil
+}
+
+// --- application record layer (cached epoch key) ---
+
+// sealWith seals plaintext under a cached epoch key. The nonce is st.iv XOR
+// st.seq; because (key, iv) are fixed within an epoch and seq advances, no nonce
+// repeats within an epoch, and a KeyUpdate restarts the space under a fresh key.
+func sealWith(st *epochKeys, channel npamp.ChannelID, ft npamp.FrameType, plaintext []byte) ([]byte, error) {
+	f := npamp.Frame{Flags: npamp.FlagENC, Type: uint16(ft), Channel: uint16(channel), Seq: st.seq}
+	var aad [21]byte
+	f.HeaderPrefix(aad[:], uint32(len(plaintext)+16)) // +16: AES-256-GCM tag
+	sealed, err := npamp.SealAES256GCM(st.key, st.iv, st.seq, aad[:], plaintext)
+	if err != nil {
+		return nil, err
+	}
+	f.Payload = sealed
+	return f.MarshalBinary()
+}
+
+// openWith opens a parsed FlagENC frame under a cached epoch key.
+func openWith(st *epochKeys, f *npamp.Frame) ([]byte, error) {
+	var aad [21]byte
+	f.HeaderPrefix(aad[:], uint32(len(f.Payload)))
+	return npamp.OpenAES256GCM(st.key, st.iv, f.Seq, aad[:], f.Payload)
+}
+
+// --- handshake AUTH-frame sealing (epoch-0, one-shot; used by handshake.go) ---
 
 func deriveKeyIV(baseSecret []byte, dir npamp.Direction, channel npamp.ChannelID, p npamp.Profile) (key [32]byte, iv [12]byte, err error) {
 	ts, err := npamp.DeriveTrafficSecret(baseSecret, dir, 0, npamp.AEADAES256GCM, channel, p)
@@ -143,7 +271,8 @@ func deriveKeyIV(baseSecret []byte, dir npamp.Direction, channel npamp.ChannelID
 
 // sealFrame AEAD-seals plaintext into a marshaled, self-delimiting frame:
 // FlagENC, the caller's channel/type/seq, and AAD = the 21-octet header prefix
-// (so the ciphertext is bound to the frame header).
+// (so the ciphertext is bound to the frame header). Used for the epoch-0
+// handshake AUTH frames.
 func sealFrame(baseSecret []byte, dir npamp.Direction, channel npamp.ChannelID, seq uint64, ft npamp.FrameType, plaintext []byte, p npamp.Profile) ([]byte, error) {
 	key, iv, err := deriveKeyIV(baseSecret, dir, channel, p)
 	if err != nil {
@@ -161,7 +290,7 @@ func sealFrame(baseSecret []byte, dir npamp.Direction, channel npamp.ChannelID, 
 }
 
 // openFrame opens an already-parsed FlagENC frame under the per-(direction,
-// channel) traffic key and returns the plaintext.
+// channel) epoch-0 traffic key and returns the plaintext.
 func openFrame(f *npamp.Frame, baseSecret []byte, dir npamp.Direction, p npamp.Profile) ([]byte, error) {
 	key, iv, err := deriveKeyIV(baseSecret, dir, npamp.ChannelID(f.Channel), p)
 	if err != nil {
@@ -211,9 +340,9 @@ func writeFrame(w io.Writer, frame []byte) error {
 // then the payload whose length the header advertises (octets 17-20). Header
 // integrity (CRC32C, version, reserved octets) is validated by
 // npamp.Frame.UnmarshalBinary at the call site; readFrame guarantees only the
-// frame boundary, the magic, and the size cap. The payload is read
-// incrementally so a peer that advertises a large length it does not deliver
-// cannot force a large up-front allocation.
+// frame boundary, the magic, and the size cap. The payload is read incrementally
+// so a peer that advertises a large length it does not deliver cannot force a
+// large up-front allocation.
 func readFrame(r io.Reader) ([]byte, error) {
 	header := make([]byte, npamp.HeaderSize)
 	if _, err := io.ReadFull(r, header); err != nil {
