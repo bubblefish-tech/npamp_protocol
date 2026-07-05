@@ -1,0 +1,95 @@
+# Issue form: request a new per-protocol mapping companion (the 60-series in
+# spec/companion/) and/or a protocol_id assignment in the bridge protocol registry.
+#
+# Governed by spec/companion/30_protocol_registry.md: an assignment names the
+# protocol, exactly one carriage class (its Section 5: JSONRPC, HTTP, MSG, STREAM,
+# DOC, OPAQUE), and a mapping reference. A registry change is substantive, so this
+# form auto-applies `design` + `needs-discussion` per CONTRIBUTING.md and
+# .github/labels.yml; consensus produces a numbered ADR in decisions/.
+name: "New protocol mapping request"
+description: "Request a per-protocol mapping companion document (60-series) / a protocol_id assignment in the bridge protocol registry."
+title: "[mapping]: "
+labels: ["design", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Existing mappings live in `spec/companion/` (60-series, `60_map_mcp.md` through
+        `70_map_nlip.md`); assignment policy is defined by
+        `spec/companion/30_protocol_registry.md`. A protocol may also be carried
+        **generically** by an existing carriage class with no protocol-specific
+        mapping — say so below if that is all you need.
+  - type: input
+    id: protocol-name
+    attributes:
+      label: Protocol name
+      description: "The foreign protocol to be mapped."
+      placeholder: "e.g. Open Voice Interoperability (OVON)"
+    validations:
+      required: true
+  - type: input
+    id: spec-url
+    attributes:
+      label: Protocol specification URL
+      description: "The current published specification. Assignments pin against a published spec, never against memory (CONTRIBUTING.md, research discipline)."
+      placeholder: "https://..."
+    validations:
+      required: true
+  - type: input
+    id: steward
+    attributes:
+      label: Specification steward
+      description: "The organization or body that publishes and versions the protocol spec."
+      placeholder: "e.g. Linux Foundation AI & Data, W3C CG, a vendor"
+    validations:
+      required: false
+  - type: dropdown
+    id: carriage-class
+    attributes:
+      label: Carriage class
+      description: "The class (30_protocol_registry.md, Section 5) under which a peer interprets bridged frames of this protocol."
+      options:
+        - "JSONRPC — JSON-RPC 2.0 request/response/notification carriage"
+        - "HTTP — HTTP request/response carriage"
+        - "MSG — asynchronous message carriage"
+        - "STREAM — streaming / incremental-delivery carriage"
+        - "DOC — document / artifact carriage"
+        - "OPAQUE — uninterpreted payload carriage"
+        - "unsure — propose one in the discussion"
+    validations:
+      required: true
+  - type: textarea
+    id: namespace
+    attributes:
+      label: Method / operation namespace to pin
+      description: "What a protocol-specific mapping must pin: the method or operation namespace, identifiers, and any protocol-specific fields. Leave empty if requesting generic carriage only."
+    validations:
+      required: false
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation and adoption
+      description: "Why N-PAMP should bridge this protocol: deployments, implementations, user base, or interop obligations."
+    validations:
+      required: true
+  - type: input
+    id: overlap
+    attributes:
+      label: Closest existing mapping
+      description: "The nearest 60-series mapping and why it does not cover this protocol."
+      placeholder: "e.g. 61_map_a2a.md — but this protocol's task model differs because ..."
+    validations:
+      required: false
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight
+      options:
+        - label: "The protocol specification is published and stable enough to pin a mapping against."
+          required: true
+        - label: "No existing assignment in 30_protocol_registry.md covers this protocol."
+          required: true
+        - label: "I considered generic carriage under an existing carriage class before requesting a protocol-specific mapping."
+          required: true
+        - label: "I can contribute a draft mapping companion in the house style of the existing 60-series documents."
+          required: false

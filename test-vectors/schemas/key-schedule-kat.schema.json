@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "N-PAMP draft-00 key-schedule KAT",
+  "description": "Schema for the single N-PAMP draft-00 key-schedule Known Answer Test vector (spec/10 §5; draft-00 §7.4 HKDF-Expand-Label + §7.5 traffic keys). This is a standards-anchored, NON-CIRCULAR KAT: it carries external RFC anchors (RFC 8446 §7.1, RFC 8448 §3, RFC 5869 A.1) plus fixed N-PAMP inputs and the key-schedule construction ladder — not implementation output bytes.",
+  "type": "object",
+  "required": [
+    "name",
+    "spec",
+    "provenance",
+    "rfc8446_7_1",
+    "rfc8448_expand_label",
+    "rfc5869_tc1",
+    "npamp_inputs",
+    "construction",
+    "coverage"
+  ],
+  "properties": {
+    "name": { "const": "N-PAMP key-schedule KAT" },
+    "spec": { "type": "string", "description": "spec section + draft-00 clauses this KAT pins" },
+    "provenance": { "type": "string", "description": "states the KAT is standards-derived, non-circular and anchor-based (no implementation output bytes)" },
+    "rfc8446_7_1": {
+      "type": "object",
+      "description": "RFC 8446 §7.1 HKDF-Expand-Label construction anchor (N-PAMP swaps the label prefix from 'tls13 ' to 'n-pamp ').",
+      "required": ["description", "source_url"],
+      "properties": {
+        "description": { "type": "string" },
+        "source_url": { "type": "string", "pattern": "^https://www\\.rfc-editor\\.org/rfc/rfc8446" }
+      }
+    },
+    "rfc8448_expand_label": {
+      "type": "object",
+      "description": "RFC 8448 §3 anchor that validates the HKDF-Expand-Label mechanism (tls13 prefix, SHA-256).",
+      "required": ["description", "source_url", "hash", "client_handshake_traffic_secret", "write_key", "write_iv", "finished_key"],
+      "properties": {
+        "description": { "type": "string" },
+        "source_url": { "type": "string", "pattern": "^https://www\\.rfc-editor\\.org/rfc/rfc8448" },
+        "hash": { "const": "SHA-256" },
+        "client_handshake_traffic_secret": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte handshake traffic secret (parent of the derived key/iv/finished)" },
+        "write_key": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 32, "maxLength": 32, "description": "16-byte AES-128 write key" },
+        "write_iv": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 24, "maxLength": 24, "description": "12-byte write IV" },
+        "finished_key": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte finished key" }
+      }
+    },
+    "rfc5869_tc1": {
+      "type": "object",
+      "description": "RFC 5869 Appendix A.1 Test Case 1 (SHA-256) anchoring raw HKDF-Extract and HKDF-Expand.",
+      "required": ["description", "source_url", "ikm", "salt", "info", "L", "prk", "okm"],
+      "properties": {
+        "description": { "type": "string" },
+        "source_url": { "type": "string", "pattern": "^https://www\\.rfc-editor\\.org/rfc/rfc5869" },
+        "ikm": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 44, "maxLength": 44, "description": "22-byte input keying material" },
+        "salt": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 26, "maxLength": 26, "description": "13-byte salt" },
+        "info": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 20, "maxLength": 20, "description": "10-byte info" },
+        "L": { "type": "integer", "description": "HKDF-Expand output length in octets" },
+        "prk": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte pseudorandom key (HKDF-Extract output)" },
+        "okm": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 84, "maxLength": 84, "description": "42-byte output keying material (HKDF-Expand output, L=42)" }
+      }
+    },
+    "npamp_inputs": {
+      "type": "object",
+      "description": "Fixed inputs for the N-PAMP Standard-profile (SHA-256) key schedule.",
+      "required": ["description", "profile", "hash", "label_prefix", "ikm_mlkem_ss", "ikm_x25519_ss", "th_kem", "th_ccv"],
+      "properties": {
+        "description": { "type": "string" },
+        "profile": { "const": "Standard" },
+        "hash": { "const": "SHA-256" },
+        "label_prefix": { "const": "n-pamp " },
+        "ikm_mlkem_ss": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte ML-KEM shared secret (ML-KEM-first, ADR-0005)" },
+        "ikm_x25519_ss": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte X25519 shared secret" },
+        "th_kem": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte KEM-phase transcript-hash input" },
+        "th_ccv": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte CCV-phase transcript-hash input" }
+      }
+    },
+    "construction": {
+      "type": "object",
+      "description": "The N-PAMP key-schedule ladder (HKDF-Extract + HKDF-Expand-Label derivations) the KAT pins the derivation of.",
+      "required": ["ikm", "handshake_secret", "c_hs", "s_hs", "master", "traffic_secret", "key", "iv", "finished_key", "suite_handshake", "channel_control"],
+      "properties": {
+        "ikm": { "type": "string", "description": "IKM concatenation rule (ML-KEM_SS || X25519_SS)" },
+        "handshake_secret": { "type": "string" },
+        "c_hs": { "type": "string" },
+        "s_hs": { "type": "string" },
+        "master": { "type": "string" },
+        "traffic_secret": { "type": "string" },
+        "key": { "type": "string" },
+        "iv": { "type": "string" },
+        "finished_key": { "type": "string" },
+        "suite_handshake": { "type": "string" },
+        "channel_control": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$", "description": "Control channel id code point expressed as a 0x-prefixed hex string" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "description": "What this KAT anchors versus what it explicitly does NOT cover.",
+      "required": ["anchored", "not_covered_here"],
+      "properties": {
+        "anchored": { "type": "array", "items": { "type": "string" } },
+        "not_covered_here": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "contexts": {
+    "client": "N-PAMP draft-00, client CertificateVerify",
+    "server": "N-PAMP draft-00, server CertificateVerify"
+  },
+  "coverage": {
+    "anchored": [
+      "Ed25519 primitive (pubkey + signature) vs RFC 8032 §7.1 TEST 1/TEST 2",
+      "signing_input + signature vs an independent crypto/ed25519 (oracle leg) — guards the vector",
+      "certverify_value vs SignCertVerify + certVerifySigningInput; VerifyCertVerify accept + role-mismatch reject + wrong-transcript reject (impl leg) — guards the impl"
+    ],
+    "not_covered_here": [
+      "transcript CONSTRUCTION (transcript KAT) and finished_key/Finished (key-schedule + Finished KATs)",
+      "ML-DSA / High / Sovereign signatures: this vector is Standard/Ed25519"
+    ]
+  },
+  "expected": {
+    "certverify_value_client": "08071c20ff13f0eb4b3c4df0f82dc04849ceae558392e1a81f22e167124255ad26dd38982fa3dd7967a03197fd0f5be1c387543567016f1b8cd3189275c6ee550406",
+    "certverify_value_server": "0807504cb67cf28d4fc9a8db676465359e6b27a19b1c5d63600923219879d02c963ff41fe1bb681da3f6057285ddf4fed6c86a6db5d60472ac4b04c3b7105c4d6906",
+    "signature_client": "1c20ff13f0eb4b3c4df0f82dc04849ceae558392e1a81f22e167124255ad26dd38982fa3dd7967a03197fd0f5be1c387543567016f1b8cd3189275c6ee550406",
+    "signature_server": "504cb67cf28d4fc9a8db676465359e6b27a19b1c5d63600923219879d02c963ff41fe1bb681da3f6057285ddf4fed6c86a6db5d60472ac4b04c3b7105c4d6906",
+    "signing_input_client": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204e2d50414d502064726166742d30302c20636c69656e74204365727469666963617465566572696679007447a1770de3aa9fee0196a407fdcf5b5012dcb95af22330c965f21426fba386",
+    "signing_input_server": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204e2d50414d502064726166742d30302c2073657276657220436572746966696361746556657269667900e71beafbba82bdb7ab41a5940ba106d90637bf8339dcb4db596fd635bb24c84c"
+  },
+  "name": "N-PAMP CertVerify KAT",
+  "npamp_inputs": {
+    "client_pub": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+    "client_seed": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+    "description": "Keys = RFC 8032 test keypairs; th_sid/th_cid = Transcript KAT points (transcript-kat.json) the CertVerify signs per spec §6.1.",
+    "server_pub": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+    "server_seed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+    "th_cid": "7447a1770de3aa9fee0196a407fdcf5b5012dcb95af22330c965f21426fba386",
+    "th_sid": "e71beafbba82bdb7ab41a5940ba106d90637bf8339dcb4db596fd635bb24c84c"
+  },
+  "provenance": "Standards-derived, non-circular. CertVerify value = u16(0x0807) || Ed25519(priv, signing_input); signing_input = 64*0x20 || context || 0x00 || transcript_hash. The expected signatures are produced with crypto/ed25519 directly, NOT SignCertVerify/certVerifySigningInput — independent of the implementation. The Ed25519 primitive is anchored to RFC 8032 §7.1 TEST 1/TEST 2 (the consuming test reproduces the published pubkeys + signatures first). Ed25519 is deterministic (RFC 8032), so any conforming signer reproduces these. transcript_hash inputs are the Transcript KAT's TH_sId (server) / TH_cId (client) — the points each role signs per spec §6.1. Keys are the RFC 8032 test keypairs (server=TEST1, client=TEST2).",
+  "rfc8032_ed25519": {
+    "description": "RFC 8032 §7.1 Ed25519 test vectors; anchor the Ed25519 primitive (pubkey derivation + deterministic signature).",
+    "source_url": "https://www.rfc-editor.org/rfc/rfc8032#section-7.1",
+    "test1": {
+      "message": "",
+      "public_key": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "seed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "signature": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+    },
+    "test2": {
+      "message": "72",
+      "public_key": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "seed": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "signature": "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00"
+    }
+  },
+  "signature_scheme": "0x0807 (Ed25519)",
+  "spec": "N-PAMP draft-00 handshake binding (spec/10) §6.1 (CertVerify); RFC 8446 §4.4.3; Ed25519 RFC 8032"
+}

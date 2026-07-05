@@ -1,0 +1,18 @@
+[package]
+name = "npamp-conform-adapter"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP (draft-bubblefish-npamp-00) conformance adapter (testee) that calls the impl/rust reference implementation."
+
+[[bin]]
+name = "npamp-adapter"
+path = "src/main.rs"
+
+# The adapter calls the REAL reference implementation by path. It does not
+# reimplement any primitive; every op routes into a function in `npamp`.
+[dependencies]
+npamp = { path = "../../../impl/rust" }
+
+[profile.release]
+opt-level = 2

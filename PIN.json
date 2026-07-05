@@ -1,0 +1,8 @@
+{
+  "canonical_draft": "ietf/draft-bubblefish-npamp-latest.md",
+  "canonical_draft_sha256": "c5e4671dad298d1f3f7435e150df975c4b932c62290325516a0f1ae0ae8f62b9",
+  "conformance_corpus": "test-vectors/v1/conformance-corpus.json",
+  "conformance_corpus_sha256": "b2fc4ce0d00e8f655d98167c30a76dde5bb056ec6635609843c93512b39f0f5b",
+  "manifest": "MANIFEST.sha256",
+  "note": "Tiers MUST ride these exact OPEN bytes. MANIFEST.sha256 covers the canonical draft, registries, spec, and the conformance corpus + KAT vectors. Run scripts/verify-pins.ps1 to recompute every pinned hash and compare; any drift exits non-zero."
+}

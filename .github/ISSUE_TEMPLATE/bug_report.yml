@@ -1,0 +1,88 @@
+# Issue form: specification defect / erratum report.
+#
+# Aligned with .github/labels.yml and CONTRIBUTING.md: every issue is triaged
+# `design` (substantive protocol effect; requires consensus even if the resolution
+# is "no change"; produces a numbered ADR in decisions/) or `editorial` (no
+# substantive effect). Final triage labels are applied by maintainers; this form
+# auto-applies `needs-discussion` so new reports enter the triage queue.
+name: "Spec defect / erratum"
+description: "Report a defect in the N-PAMP specification: the IETF draft, a spec/ module, a companion document, or a registry CSV."
+title: "[erratum]: "
+labels: ["needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Per `CONTRIBUTING.md`, every issue is triaged
+        **design** (substantive protocol effect — requires consensus, even if the
+        resolution is "no change", and produces a numbered ADR in `decisions/`)
+        or **editorial** (wording/formatting only). Maintainers apply the final label.
+
+        **Firewall note (ADR-0004):** this repository carries only the public-draft
+        primitives. Do not attach controlled-extension material to this issue.
+  - type: input
+    id: document
+    attributes:
+      label: Affected document
+      description: "Repository path of the defective document."
+      placeholder: "e.g. ietf/draft-bubblefish-npamp-latest.md, spec/02_frame_format.md, spec/companion/60_map_mcp.md, registries/tlv_tags.csv"
+    validations:
+      required: true
+  - type: input
+    id: section
+    attributes:
+      label: Section / anchor / row
+      description: "Section number, heading, table row, or line range within the affected document."
+      placeholder: "e.g. Section 4.2, '## 5. Carriage class', code-point row 0x0002"
+    validations:
+      required: false
+  - type: textarea
+    id: current-text
+    attributes:
+      label: What the specification currently says
+      description: "Quote the defective text exactly (copy-paste; do not paraphrase)."
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: defect
+    attributes:
+      label: Why this is a defect
+      description: "The contradiction, ambiguity, wrong value, or unimplementable requirement — with evidence (the conflicting clause, a failing vector, the cited underlying standard)."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed correction (optional)
+      description: "Concrete replacement text, if you have one. Issues with a concrete written proposal can be labeled `proposal-ready`."
+    validations:
+      required: false
+  - type: dropdown
+    id: classification
+    attributes:
+      label: Proposed classification
+      description: "Your assessment under the CONTRIBUTING.md decision process; maintainers make the final call."
+      options:
+        - "design — substantive protocol effect (wire format, handshake binding, suites, profiles, registries, corpus)"
+        - "editorial — wording/formatting/typo, no substantive effect"
+        - "unsure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: flags
+    attributes:
+      label: Additional flags
+      description: "Check all that apply; these correspond to labels in .github/labels.yml."
+      options:
+        - label: "Security-relevant (`security`) — may require formal-methods review (formal/)"
+        - label: "Affects the conformance test-vector corpus or its schema (`corpus`)"
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight
+      options:
+        - label: "I searched existing issues (open and closed) for this defect."
+          required: true
+        - label: "The defect is present in the current revision (it is not an already-recorded 'Since draft-NN' change)."
+          required: true

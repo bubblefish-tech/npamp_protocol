@@ -15,3 +15,12 @@ draft-bubblefish-npamp-*.pdf
 node_modules/
 .venv/
 __pycache__/
+
+# Language build outputs (regenerate from source; never publish — they embed
+# absolute build paths and platform binaries)
+target/
+.build/
+*.exe
+*.rlib
+*.rmeta
+*.pdb

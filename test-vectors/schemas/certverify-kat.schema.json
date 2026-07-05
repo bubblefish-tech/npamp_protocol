@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "npamp_00 CertVerify KAT",
+  "description": "Schema for the N-PAMP draft-00 §6.1 CertificateVerify Known-Answer-Test vector (spec/10). A standards-anchored, NON-CIRCULAR KAT: it carries the RFC 8032 §7.1 Ed25519 anchor (pubkey + deterministic signature), fixed signing inputs (signing_input = 64*0x20 || context || 0x00 || transcript_hash), and the expected certverify_value (u16(0x0807) || Ed25519 signature) — fixed standards-derived inputs and expectations, not implementation output bytes.",
+  "type": "object",
+  "required": ["contexts", "coverage", "expected", "name", "npamp_inputs", "provenance", "rfc8032_ed25519", "signature_scheme", "spec"],
+  "properties": {
+    "name": { "const": "N-PAMP CertVerify KAT" },
+    "spec": {
+      "type": "string",
+      "description": "Spec clause(s) this KAT anchors; must reference the N-PAMP draft-00 handshake binding.",
+      "pattern": "^N-PAMP draft-00"
+    },
+    "signature_scheme": {
+      "const": "0x0807 (Ed25519)",
+      "description": "N-PAMP signature-scheme code point carried as the u16 prefix of certverify_value."
+    },
+    "provenance": {
+      "type": "string",
+      "description": "Narrative attesting the KAT is standards-derived and non-circular (signatures produced by crypto/ed25519, not by the implementation under test).",
+      "minLength": 1
+    },
+    "contexts": {
+      "type": "object",
+      "description": "Human-readable CertificateVerify context labels signed per role.",
+      "required": ["client", "server"],
+      "properties": {
+        "client": { "type": "string", "pattern": "CertificateVerify$" },
+        "server": { "type": "string", "pattern": "CertificateVerify$" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "description": "What this vector anchors and what it explicitly does NOT cover.",
+      "required": ["anchored", "not_covered_here"],
+      "properties": {
+        "anchored": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "not_covered_here": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "npamp_inputs": {
+      "type": "object",
+      "description": "Fixed inputs the CertVerify signs: RFC 8032 test keypairs and the Transcript-KAT points (TH_sId server / TH_cId client) per spec §6.1.",
+      "required": ["client_pub", "client_seed", "description", "server_pub", "server_seed", "th_cid", "th_sid"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "client_pub": { "type": "string", "description": "Ed25519 client public key (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "client_seed": { "type": "string", "description": "Ed25519 client private seed (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "server_pub": { "type": "string", "description": "Ed25519 server public key (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "server_seed": { "type": "string", "description": "Ed25519 server private seed (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_cid": { "type": "string", "description": "Client transcript hash TH_cId (SHA-256, 32 bytes) the client CertVerify signs.", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_sid": { "type": "string", "description": "Server transcript hash TH_sId (SHA-256, 32 bytes) the server CertVerify signs.", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Expected standards-derived outputs: signing inputs, raw Ed25519 signatures (64 bytes), and full certverify_value (u16(0x0807) || signature = 66 bytes) per role.",
+      "required": ["certverify_value_client", "certverify_value_server", "signature_client", "signature_server", "signing_input_client", "signing_input_server"],
+      "properties": {
+        "certverify_value_client": { "type": "string", "description": "u16(0x0807) || Ed25519 signature (66 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 132, "maxLength": 132 },
+        "certverify_value_server": { "type": "string", "description": "u16(0x0807) || Ed25519 signature (66 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 132, "maxLength": 132 },
+        "signature_client": { "type": "string", "description": "Raw Ed25519 signature over signing_input_client (64 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 128, "maxLength": 128 },
+        "signature_server": { "type": "string", "description": "Raw Ed25519 signature over signing_input_server (64 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 128, "maxLength": 128 },
+        "signing_input_client": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_cId (138 bytes for the draft-00 client context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 276, "maxLength": 276 },
+        "signing_input_server": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_sId (138 bytes for the draft-00 server context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 276, "maxLength": 276 }
+      }
+    },
+    "rfc8032_ed25519": {
+      "type": "object",
+      "description": "RFC 8032 §7.1 Ed25519 anchor block: published test vectors that anchor the Ed25519 primitive (pubkey derivation + deterministic signature).",
+      "required": ["description", "source_url", "test1", "test2"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "source_url": { "type": "string", "description": "Primary-source URL for the RFC 8032 §7.1 test vectors.", "pattern": "rfc8032" },
+        "test1": { "$ref": "#/$defs/rfc8032Vector" },
+        "test2": { "$ref": "#/$defs/rfc8032Vector" }
+      }
+    }
+  },
+  "$defs": {
+    "rfc8032Vector": {
+      "type": "object",
+      "description": "One RFC 8032 §7.1 Ed25519 test vector (message may be empty, e.g. TEST 1).",
+      "required": ["message", "public_key", "seed", "signature"],
+      "properties": {
+        "message": { "type": "string", "description": "Message bytes as hex; empty string for the zero-length-message vector.", "pattern": "^[0-9a-fA-F]*$" },
+        "public_key": { "type": "string", "description": "Ed25519 public key (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "seed": { "type": "string", "description": "Ed25519 private seed (32 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "signature": { "type": "string", "description": "Deterministic Ed25519 signature (64 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 128, "maxLength": 128 }
+      }
+    }
+  }
+}

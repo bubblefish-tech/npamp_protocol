@@ -1,0 +1,4 @@
+profile,code,min_kem,allowed_signatures,kdf_hash,per_frame_aead_diversification,downgrade_refusal,mandatory_key_update,summary
+Standard,0x01,X25519MLKEM768,Ed25519,SHA-256,Off,Off,Yes,"Baseline hybrid post-quantum security."
+High,0x02,X25519MLKEM1024,"Ed25519, ML-DSA-87",SHA-384,On,Refuses Standard,"Yes (tighter bounds)","Stronger KEM parameters and stronger hash; downgrade refusal to Standard."
+Sovereign,0x03,X25519MLKEM1024,ML-DSA-87,SHA-384,On,Refuses below Sovereign,"Yes (tightest bounds)","Highest standard-crypto strength; downgrade refusal below Sovereign."

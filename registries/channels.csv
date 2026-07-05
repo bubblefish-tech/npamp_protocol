@@ -1,0 +1,21 @@
+channel_id,name,purpose,min_profile,direction
+0x0000,Control,"Connection control, handshake completion, capability epoch",Standard,Bidirectional
+0x0001,Memory,"Persistent-state create/read/update/delete and retrieval",Standard,Multi-stream
+0x0002,Capability,"Capability issuance, delegation, revocation, lookup",Standard,Bidirectional
+0x0003,Identity,"Identity resolution, attestation, presence",Standard,Bidirectional
+0x0004,Governance,"Policy proposals, votes, quorum closure",High,Bidirectional
+0x0005,Immune,"Anomaly reports and defensive gossip",Standard,Bidirectional
+0x0006,Federation,"Cross-instance synchronization and gossip",High,Multi-stream
+0x0007,Settlement,"Agent-to-agent settlement and receipts",Standard,Bidirectional
+0x0008,Compliance,"Attestation and regulatory export",High,Bidirectional
+0x0009,Sensory,"Bulk telemetry and low-priority observations",High,Multi-stream
+0x000A,Telemetry,"Operational metrics and health reporting",Standard,Bidirectional
+0x000B,Audit,"Audit-epoch commitments and transparency-log entries",Sovereign,Bidirectional
+0x000C,Stream,"Multiplexed full-duplex streaming (tokens, audio, video, file transfer)",Standard,Multi-stream
+0x000D,Bridge,"Encapsulation of external agent protocols within N-PAMP frames",Standard,Bidirectional
+0x000E,Commerce,"Multi-party agentic commerce and payment mandates",Standard,Bidirectional
+0x000F,Interaction,"Agent-to-human user-interface events",Standard,Bidirectional
+0x0010,Discovery,"Agent, tool, and service discovery and capability advertisement",Standard,Bidirectional
+0x0011,Workflow,"Multi-agent orchestration and task delegation",Standard,Bidirectional
+0x0012,Knowledge,"Retrieval queries with ranked results and provenance",Standard,Multi-stream
+0x0013,Spatial,"Physical-world state for robotics and IoT (high-frequency)",High,Multi-stream

@@ -1,0 +1,9 @@
+protocol_id,name,carriage_class,mapping_reference,assignment_policy,description
+0x00,(reserved),--,--,Not assignable,"Reserved (the null identifier). MUST NOT be used as a protocol_id; a receiver MUST reject a BridgeEnvelope whose protocol_id is 0x00 with EnvelopeMalformed (NPAMP-BRIDGE transport error code 1). NPAMP-REG Sections 4 and 9."
+0x01,MCP - Model Context Protocol,JSONRPC,NPAMP-MAP-MCP,Specification Required,"Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned."
+0x02,A2A - Agent2Agent,JSONRPC (with DOC for the AgentCard),NPAMP-MAP-A2A,Specification Required,"Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned."
+0x03,HTTP/2 generic carriage,HTTP,NPAMP-CC-HTTP,Specification Required,"Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned."
+0x04,WebSocket generic carriage,STREAM,NPAMP-CC-STREAM,Specification Required,"Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned."
+0x05-0x0F,(unassigned),--,--,Specification Required,"Unassigned standards range; available under the Specification Required policy of RFC 8126 via the registration procedure of NPAMP-REG Section 8."
+0x10-0x7F,(experimental),--,--,No registration,"Experimental range; usable without registration; carries no guaranteed cross-domain meaning; a sender MUST NOT use it without out-of-band agreement with the peer. NPAMP-REG Section 7.1."
+0x80-0xFF,(private use),--,--,No registration,"Private-use range; usable within a single administrative domain without registration; never assigned by this registry; MUST NOT be emitted toward a peer outside that domain. NPAMP-REG Section 7.2."

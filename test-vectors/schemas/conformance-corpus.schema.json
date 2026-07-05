@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "npamp_00 conformance corpus",
+  "description": "Schema for the language-agnostic npamp_00 conformance vector corpus that npamp-conform grades implementations against. Vector format modeled on Project Wycheproof and NIST ACVP.",
+  "type": "object",
+  "required": ["algorithm", "schemaVersion", "specRevision", "testGroups"],
+  "properties": {
+    "algorithm": { "const": "npamp_00" },
+    "schemaVersion": { "type": "string" },
+    "specRevision": { "type": "string" },
+    "testGroups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op", "tests"],
+        "properties": {
+          "op": { "type": "string", "enum": [
+            "header.encode", "header.decode", "crc32c", "tlv.encode", "tlv.decode",
+            "aead.seal", "aead.open", "nonce.derive", "hkdf.expand", "hkdf.expand_label",
+            "keys.derive_traffic", "frame.seal", "frame.open", "profile.check",
+            "bridge.envelope.encode", "bridge.envelope.decode", "bridge.correlate"
+          ] },
+          "profile": { "type": "string", "enum": ["Standard", "High", "Sovereign", "any"] },
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["tcId", "requirement", "in", "result"],
+              "properties": {
+                "tcId": { "type": "integer" },
+                "requirement": { "type": "string", "description": "spec-clause id this case checks (printed on failure)" },
+                "comment": { "type": "string" },
+                "in": { "type": "object" },
+                "expected": { "description": "required when result=valid; absent for result=invalid (which asserts the impl MUST return an error)" },
+                "result": { "type": "string", "enum": ["valid", "invalid", "acceptable"] },
+                "flags": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

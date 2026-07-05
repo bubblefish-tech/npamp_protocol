@@ -1,0 +1,11 @@
+{
+  "name": "npamp",
+  "version": "0.1.0",
+  "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-00) wire format.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "vectors": "node bin/npamp-vectors.ts"
+  }
+}

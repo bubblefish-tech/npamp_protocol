@@ -1,0 +1,31 @@
+# Issue/PR label taxonomy for N-PAMP (RFC 8874 "WG GitHub Usage Guidance" + quicwg practice).
+# The decision-process rule (CONTRIBUTING.md): every `design`-consensus issue produces a
+# closing comment + a numbered ADR in decisions/ + a "Since draft-NN" change-log bullet.
+
+- name: design
+  color: "d73a4a"
+  description: "Has or might have a substantive protocol effect; requires consensus even if the resolution is no change. Produces an ADR."
+
+- name: editorial
+  color: "0e8a16"
+  description: "No substantive protocol effect (wording, formatting, typos). No ADR required."
+
+- name: has-consensus
+  color: "0052cc"
+  description: "Consensus reached; ready to resolve and record the decision."
+
+- name: needs-discussion
+  color: "fbca04"
+  description: "Open design question; not yet ready for a consensus call."
+
+- name: proposal-ready
+  color: "5319e7"
+  description: "A concrete proposal is written and ready for review."
+
+- name: corpus
+  color: "1d76db"
+  description: "Affects the conformance test-vector corpus or its schema."
+
+- name: security
+  color: "b60205"
+  description: "Security-relevant; may require formal-methods review (formal/)."

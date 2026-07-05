@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Conformance adapter ("testee") for the N-PAMP C# reference implementation.
+       It speaks the length-prefixed stdin/stdout JSON contract and dispatches each
+       operation onto the real reference code in impl/csharp/Npamp.cs. The
+       reference source is compiled directly into this assembly (Compile Include
+       below) so the adapter calls the genuine primitives, not a reimplementation. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>npamp-adapter-csharp</AssemblyName>
+    <RootNamespace>Sh.Bubblefish.Npamp.Conformance</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The real reference implementation. Relative path from this .csproj to
+         impl/csharp/Npamp.cs. The adapter dispatches onto these functions. -->
+    <Compile Include="..\..\..\impl\csharp\Npamp.cs" />
+  </ItemGroup>
+
+</Project>

@@ -1,101 +1,328 @@
-# N-PAMP™: Native Post-Quantum Agent Messaging Protocol
+# N-PAMP™ — Native Post-Quantum Agent Messaging Protocol
 
-N-PAMP™ is a binary, multi-channel, wire-level protocol for authenticated
-communication between autonomous software agents. It operates beneath
-application-layer agent protocols and provides a single fixed-size frame
-format, a registry of multiplexed channels, and three escalating security
-profiles (Standard, High, and Sovereign) built on standard post-quantum and
-classical cryptography.
+**A binary, multi-channel, wire-level protocol for authenticated communication between autonomous software agents.** N-PAMP sits *beneath* application-layer agent protocols and gives them one thing they all lack: a single fixed-size frame, a registry of multiplexed channels, and negotiated post-quantum security — on the wire, before any application semantics.
 
-This repository is the public home of the N-PAMP™ specification: the
-Internet-Draft, the IANA registration requests, and supporting material.
+This repository is the **public reference home** of N-PAMP: the Internet-Draft, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the durable, per-decision record of *how the protocol was designed*. N-PAMP is developed as its **own artifact** — consuming products vendor a reference implementation and pin the conformance corpus from here; they do not fork the protocol. Design, rationale, and conformance authority live in one place, with one history.
+
+| | |
+|---|---|
+| **Specification** | [`draft-bubblefish-npamp-01`](ietf/draft-bubblefish-npamp-latest.md) (Internet-Draft, Independent Submission stream, Informational) |
+| **License** | [Apache-2.0](LICENSE) |
+| **Reference implementations** | 10 languages (Go, Rust, Python, TypeScript, C#, Swift, Java, Kotlin, PHP, Ruby) |
+| **Conformance corpus** | 253-vector conformance corpus (byte-identical across all 10 languages) + 5 NIST/RFC-anchored handshake KAT sets |
+
+---
 
 ## Status
 
 | Item | State |
 |---|---|
-| Specification | `draft-bubblefish-npamp-00` (Internet-Draft, Independent Submission stream, Informational) |
+| Specification | `draft-bubblefish-npamp-01` (Internet-Draft, Independent Submission stream, Informational) |
 | Wire major version | 2 (ALPN identifier `n-pamp/2`) |
-| IETF Datatracker | Prepared for posting |
-| ALPN `n-pamp/2` | Registration requested from IANA (Expert Review, RFC 7301) |
-| `npamp` URI scheme | Provisional registration requested from IANA (First Come First Served, RFC 7595) |
+| IETF Datatracker | <https://datatracker.ietf.org/doc/draft-bubblefish-npamp/> |
+| ALPN `n-pamp/2` | Registered with IANA (Expert Review, RFC 7301), citing the draft |
+| `npamp` URI scheme | Provisionally registered with IANA (First Come First Served, RFC 7595), citing the draft |
+| License | Apache-2.0 |
 
-Once the draft is posted, it will be available on the IETF Datatracker:
-<https://datatracker.ietf.org/doc/draft-bubblefish-npamp/>
+---
 
-## What N-PAMP™ provides
+## Why you can trust this
 
-- **A single fixed 36-octet frame header** with mandatory authenticated
-  encryption (AEAD) and a header CRC32C for fast rejection of corrupted frames.
-- **Twenty multiplexed channels** (Control, Memory, Capability, Identity,
-  Governance, Immune, Federation, Settlement, Compliance, Sensory, Telemetry,
-  Audit, Stream, Bridge, Commerce, Interaction, Discovery, Workflow, Knowledge,
-  Spatial), each with an independent per-direction sequence space and
-  independent traffic keys. All channels are full-duplex.
-- **Three negotiated security profiles** (Standard / High / Sovereign) that
-  hold the wire format constant while escalating the cryptographic primitives
-  and operational requirements.
-- **Hybrid post-quantum key establishment** combining X25519 with ML-KEM
-  (FIPS 203), AEAD record protection, and a forward-secure key schedule.
-- **QUIC** as the primary transport and **TCP with TLS 1.3** as a fallback,
-  negotiated via the ALPN identifier `n-pamp/2`.
+N-PAMP is not a whitepaper with aspirational code. Every claim in this repository is backed by an external authority, an executable gate, or a documented decision.
 
-N-PAMP™ is deliberately scoped as a transport substrate. It does not define
-application-layer semantics for the data carried on its channels; those are the
-subject of companion specifications.
+- **A submitted IETF Internet-Draft.** The normative specification is [`draft-bubblefish-npamp-01`](ietf/draft-bubblefish-npamp-latest.md), an Independent Submission (Informational) tracked on the IETF Datatracker. The draft — not any single implementation — is the source of truth; the implementations exist to conform to it.
+- **Live IANA registrations.** The ALPN protocol identifier `n-pamp/2` is registered under RFC 7301 (Expert Review), and the `npamp` URI scheme is provisionally registered under RFC 7595 — both citing the draft. These are restated in template form in [`IANA_ALPN_n-pamp-2_registration_request.md`](IANA_ALPN_n-pamp-2_registration_request.md).
+- **Test vectors anchored to outside authorities, not to ourselves.** The known-answer tests are derived from NIST and the RFC series — **never** generated by the implementation they grade (which would be circular). A KEM-wire KAT anchored to NIST ACVP / FIPS 203 and RFC 7748; a key-schedule KAT validated through an RFC 8448 (TLS 1.3) + RFC 5869 (HKDF) oracle; a Finished KAT anchored to RFC 4231 (HMAC); a CertVerify KAT anchored to RFC 8032 (Ed25519). Because the expected answers come from independent standards, a bug shared across implementations cannot silently pass.
+- **A documented decision history.** MADR 4.0 Architecture Decision Records in [`decisions/`](decisions/) record why the wire format is shared across profiles, why the KEM combiner is ML-KEM-first, how the 1.5-RTT handshake binding was fixed, and how each KAT was anchored. Rationale is preserved, not lost.
+- **Integrity gates that fail loud.** [`PIN.json`](PIN.json) and [`MANIFEST.sha256`](MANIFEST.sha256) pin the SHA-256 of the canonical draft, the registries, the spec, the conformance corpus, and every KAT vector. [`scripts/verify-pins.ps1`](scripts/verify-pins.ps1) recomputes and compares every hash and exits non-zero on any drift — so the vectors a consumer pins are provably the vectors this repo shipped.
+- **CI that runs all of it on every push and pull request.** [`.github/workflows/conformance.yml`](.github/workflows/conformance.yml) validates every vector against its JSON Schema, builds and runs the Go conformance runner against the reference adapter, runs the pin-drift gate, and builds + tests the Rust and Swift references.
+
+Rigor and adoption-readiness in the same repository: the protocol is specified like a standard *and* shipped like a product.
+
+---
+
+## What N-PAMP provides
+
+- **A single fixed 36-octet frame header** with mandatory authenticated encryption (AEAD) and a header CRC32C (Castagnoli) for fast rejection of corrupted frames before any cryptographic work.
+- **Twenty multiplexed channels**, each with an independent per-direction sequence space and independent traffic keys. All channels are **full-duplex**: Control, Memory, Capability, Identity, Governance, Immune, Federation, Settlement, Compliance, Sensory, Telemetry, Audit, Stream, Bridge, Commerce, Interaction, Discovery, Workflow, Knowledge, and Spatial.
+- **Three negotiated security profiles** — Standard, High, and Sovereign — that hold the wire format **constant** while escalating the cryptographic primitives and operational requirements:
+
+  | Profile | Code | KEM | Signatures | KDF hash |
+  |---|---|---|---|---|
+  | Standard | `0x01` | X25519MLKEM768 | Ed25519 | SHA-256 |
+  | High | `0x02` | X25519MLKEM1024 | Ed25519, ML-DSA-87 | SHA-384 |
+  | Sovereign | `0x03` | X25519MLKEM1024 | ML-DSA-87 | SHA-384 |
+
+  High and Sovereign add per-frame AEAD diversification and downgrade refusal. (Profile enums and code points are public; high-assurance implementation material is maintained separately — see [Scope](#scope).)
+- **Hybrid post-quantum key establishment** combining X25519 with ML-KEM (FIPS 203). The suite name lists X25519 first, but shared secrets are concatenated ML-KEM-first (`ML-KEM_SS || X25519_SS`) as HKDF-Extract input keying material, aligned to NIST SP 800-56C Rev. 2 (see [ADR-0005](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md)).
+- **A 1.5-RTT, mutually-authenticated handshake** — a four-frame exchange with transcript binding, an HKDF key schedule, forward secrecy, and downgrade protection.
+- **QUIC** as the primary transport and **TCP with TLS 1.3** as a fallback, negotiated via the ALPN identifier `n-pamp/2` (the trailing `2` equals the `0x02` value carried in the frame header's `Ver` field).
+
+N-PAMP is deliberately scoped as a **transport substrate**. It does not define application-layer semantics for the data carried on its channels; those are the subject of the companion specifications and bridge mappings shipped alongside it.
+
+### The 20 channels
+
+Every channel is full-duplex with its own sequence space and traffic keys. Per-channel specs live in [`spec/channels/`](spec/channels/).
+
+| Code | Channel | Spec | Code | Channel | Spec |
+|---|---|---|---|---|---|
+| `0x0000` | Control | [`0000_control`](spec/channels/0000_control.md) | `0x000A` | Telemetry | [`000A_telemetry`](spec/channels/000A_telemetry.md) |
+| `0x0001` | Memory | [`0001_memory`](spec/channels/0001_memory.md) | `0x000B` | Audit | [`000B_audit`](spec/channels/000B_audit.md) |
+| `0x0002` | Capability | [`0002_capability`](spec/channels/0002_capability.md) | `0x000C` | Stream | [`000C_stream`](spec/channels/000C_stream.md) |
+| `0x0003` | Identity | [`0003_identity`](spec/channels/0003_identity.md) | `0x000D` | Bridge | [`000D_bridge`](spec/channels/000D_bridge.md) |
+| `0x0004` | Governance | [`0004_governance`](spec/channels/0004_governance.md) | `0x000E` | Commerce | [`000E_commerce`](spec/channels/000E_commerce.md) |
+| `0x0005` | Immune | [`0005_immune`](spec/channels/0005_immune.md) | `0x000F` | Interaction | [`000F_interaction`](spec/channels/000F_interaction.md) |
+| `0x0006` | Federation | [`0006_federation`](spec/channels/0006_federation.md) | `0x0010` | Discovery | [`0010_discovery`](spec/channels/0010_discovery.md) |
+| `0x0007` | Settlement | [`0007_settlement`](spec/channels/0007_settlement.md) | `0x0011` | Workflow | [`0011_workflow`](spec/channels/0011_workflow.md) |
+| `0x0008` | Compliance | [`0008_compliance`](spec/channels/0008_compliance.md) | `0x0012` | Knowledge | [`0012_knowledge`](spec/channels/0012_knowledge.md) |
+| `0x0009` | Sensory | [`0009_sensory`](spec/channels/0009_sensory.md) | `0x0013` | Spatial | [`0013_spatial`](spec/channels/0013_spatial.md) |
+
+---
+
+## 1. Pick your language and go
+
+Ten idiomatic reference implementations live under [`impl/`](impl/), co-located with the spec (C2SP model). Each SDK is the **open-protocol reference library**: the wire-format and cryptographic *primitives* for the Standard profile (X25519MLKEM768, Ed25519, SHA-256, AES-256-GCM, HKDF), plus conformance and KAT tests. Each ships a copy-paste **`QUICKSTART.md`** and a matching conformance adapter in the harness. The Go implementation is the primary reference that consuming products vendor.
+
+| Language | Source | Quickstart | Build with | Conformance adapter |
+|---|---|---|---|---|
+| Go *(primary reference)* | [`impl/go/`](impl/go/) | [QUICKSTART](impl/go/QUICKSTART.md) | `go build` — module `github.com/bubblefish-tech/npamp_protocol/impl/go` | [`harness/adapters/go/`](harness/adapters/go/) |
+| Rust | [`impl/rust/`](impl/rust/) | [QUICKSTART](impl/rust/QUICKSTART.md) | `cargo build` — the `npamp` crate | [`harness/adapters/rust/`](harness/adapters/rust/) |
+| Python | [`impl/python/`](impl/python/) | [QUICKSTART](impl/python/QUICKSTART.md) | the `npamp` package (`pyproject.toml`) | [`harness/adapters/python/`](harness/adapters/python/) |
+| TypeScript | [`impl/typescript/`](impl/typescript/) | [QUICKSTART](impl/typescript/QUICKSTART.md) | `npm` — sources in `src/` (`package.json`) | [`harness/adapters/typescript/`](harness/adapters/typescript/) |
+| C# | [`impl/csharp/`](impl/csharp/) | [QUICKSTART](impl/csharp/QUICKSTART.md) | `dotnet build` (`Npamp.csproj`) | [`harness/adapters/csharp/`](harness/adapters/csharp/) |
+| Swift | [`impl/swift/`](impl/swift/) | [QUICKSTART](impl/swift/QUICKSTART.md) | `swift build` (`Package.swift`) | [`harness/adapters/swift-adapter/`](harness/adapters/swift-adapter/) |
+| Java | [`impl/java/`](impl/java/) | [QUICKSTART](impl/java/QUICKSTART.md) | JDK — sources in `src/` | [`harness/adapters/java/`](harness/adapters/java/) |
+| Kotlin | [`impl/kotlin/`](impl/kotlin/) | [QUICKSTART](impl/kotlin/QUICKSTART.md) | Kotlin/JVM — sources in `src/` | [`harness/adapters/kotlin/`](harness/adapters/kotlin/) |
+| PHP | [`impl/php/`](impl/php/) | [QUICKSTART](impl/php/QUICKSTART.md) | sources in `src/` | [`harness/adapters/php/`](harness/adapters/php/) |
+| Ruby | [`impl/ruby/`](impl/ruby/) | [QUICKSTART](impl/ruby/QUICKSTART.md) | sources in `lib/` | [`harness/adapters/ruby/`](harness/adapters/ruby/) |
+
+### What every SDK gives you
+
+The exact symbol names differ per language (see each `QUICKSTART.md`), but every port implements the same primitives, verified against the shared vectors in [`test-vectors/v1/`](test-vectors/v1/):
+
+- **Frame codec** — the 36-octet header (magic `NPAM`, version, flags, frame type, channel, sequence, header CRC32C) plus payload: marshal / unmarshal / header-prefix.
+- **AEAD record layer** — AES-256-GCM seal / open / nonce-derivation, using the 21-octet header prefix (octets 0–20) as AEAD associated data.
+- **HKDF key schedule** — `HKDF-Expand-Label` (following TLS 1.3, RFC 8446 §7.1, with the literal `"n-pamp "` label prefix), traffic-secret and key/IV derivation, and the forward-secure handshake ladder.
+- **TLV codec + code-point constants** — channels, frame types, TLV tags, profiles, KEM, AEAD, and signature identifiers.
+- **1.5-RTT handshake binding** ([`spec/10_handshake_binding.md`](spec/10_handshake_binding.md), Standard profile) — the X25519MLKEM768 hybrid KEM, the handshake flights, the per-TLV transcript, and Ed25519 CertVerify + Finished. Verified against the five standards-anchored handshake KATs.
+
+Each SDK also ships **runnable examples** and **KAT tests** in its directory. The primitives are composable building blocks; the transport (ALPN `n-pamp/2` over QUIC or TLS 1.3), connection management, and RPC live in the *consuming* product that vendors the SDK — see each quickstart's boundary note.
+
+---
+
+## 2. Prove your implementation conforms
+
+Every implementation is graded against the **same** independent corpus by a single-binary, language-agnostic runner — so "it passes on my machine, in my language" means the same thing everywhere. The runner checks the wire format (frame header, CRC32C, TLV rules), the cryptographic suites (AES-256-GCM, HKDF), and the profile invariants — **including the negative cases an implementation MUST reject**, which is where real conformance bugs surface.
+
+```sh
+# Build the runner and the Go reference adapter, then grade the adapter:
+go build -C harness/runner -o npamp-conform .
+go build -C harness/adapters/go -o npamp-adapter-go .
+./harness/runner/npamp-conform run \
+  --testee "./harness/adapters/go/npamp-adapter-go" \
+  --junit report.xml
+```
+
+A run prints a per-operation summary, a spec-clause citation for every failure, a `Pass / Fail / Unimplemented / Non-Strict` tally, and **exits non-zero if any MUST fails** — so it drops into CI with no glue code.
+
+### Two ways to use it
+
+- **Tier A — vectors only.** Emit the corpus (`npamp-conform vectors`) and loop the cases through your code: for `valid` cases your output must equal `expected`; for `invalid` cases you MUST reject the input. The format is defined by [`test-vectors/schemas/conformance-corpus.schema.json`](test-vectors/schemas/conformance-corpus.schema.json).
+- **Tier B — black-box adapter.** Write a small **adapter** ("testee") that wraps your implementation. The runner spawns it as a subprocess and drives it over a length-prefixed JSON-on-stdin/stdout contract (`4-byte little-endian length ‖ N bytes of JSON`; request `{op, in}` → response `{out | error | skipped}`). The adapter owns no test logic — it only translates each request into a call on your implementation, so it can be written in any language.
+
+### Adapter starting points (one per language)
+
+Copy a reference adapter from [`harness/adapters/`](harness/adapters/) and re-point it at your code. The Go adapter is the **CI-exercised known-good reference** (driven by the runner on every push).
+
+| | | | | |
+|---|---|---|---|---|
+| [`adapters/go/`](harness/adapters/go/) | [`adapters/rust/`](harness/adapters/rust/) | [`adapters/python/`](harness/adapters/python/) | [`adapters/typescript/`](harness/adapters/typescript/) | [`adapters/csharp/`](harness/adapters/csharp/) |
+| [`adapters/swift-adapter/`](harness/adapters/swift-adapter/) | [`adapters/java/`](harness/adapters/java/) | [`adapters/kotlin/`](harness/adapters/kotlin/) | [`adapters/php/`](harness/adapters/php/) | [`adapters/ruby/`](harness/adapters/ruby/) |
+
+The adapter contract covers these eight operations (full detail in [`harness/INSTRUCTIONS.md`](harness/INSTRUCTIONS.md)):
+
+| `op` | Checks |
+|---|---|
+| `header.encode` / `header.decode` | Frame header layout + MUST-reject rules |
+| `crc32c` | CRC32C (Castagnoli) over header octets 0–20 |
+| `tlv.decode` | TLV parse; unknown high-bit (`0x8000`) type MUST be rejected |
+| `aead.seal` / `aead.open` | AEAD seal/open; tag mismatch MUST be rejected |
+| `hkdf.expand` | HKDF-Expand (RFC 5869) |
+| `profile.check` | Profile KEM-acceptance invariants |
+
+Any operation you do not cover returns `{"skipped": "..."}` and is reported **Unimplemented**, not Fail. See [`harness/CONFORMANCE-README.md`](harness/CONFORMANCE-README.md) for the overview and [`harness/INSTRUCTIONS.md`](harness/INSTRUCTIONS.md) for the full adapter contract and CI wiring.
+
+---
+
+## 3. Standards-anchored test vectors
+
+The [`test-vectors/`](test-vectors/) tree is the **canonical** conformance oracle (Wycheproof model): self-describing JSON vectors in [`v1/`](test-vectors/v1/), each with a draft-2020-12 JSON Schema in [`schemas/`](test-vectors/schemas/). Consuming products pin a copy and re-sync from here. Crucially, the vectors are derived from the underlying standards — **not** generated by the implementation they grade.
+
+| Vector set | What it pins | Standards anchor |
+|---|---|---|
+| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 253 frame / codec / reject vectors (cross-implementation golden) | draft-01 wire format; AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli |
+| [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 — [ADR-0005](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md) / [ADR-0007](decisions/0007-kem-wire-kat-anchor-keygen-x25519-order-defer-decaps-ss.md) |
+| [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 — [ADR-0008](decisions/0008-key-schedule-kat-via-rfc8448-validated-oracle.md) |
+| [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor — [ADR-0009](decisions/0009-transcript-kat-independent-byte-constructor-fips180-anchor.md) |
+| [`finished-kat`](test-vectors/v1/finished-kat.json) | Finished-message HMAC | RFC 4231 — [ADR-0010](decisions/0010-finished-kat-via-rfc4231-anchored-hmac.md) |
+| [`certverify-kat`](test-vectors/v1/certverify-kat.json) | CertificateVerify signature | RFC 8032 (Ed25519) — [ADR-0011](decisions/0011-certverify-kat-via-rfc8032-anchored-ed25519.md) |
+
+Because every expected answer traces to an external standard, no value is generated by an N-PAMP implementation, and a shared implementation bug cannot pass the suite. Validate the vectors against their schemas with [`scripts/validate-schemas.py`](scripts/validate-schemas.py); confirm the pinned bytes with [`scripts/verify-pins.ps1`](scripts/verify-pins.ps1).
+
+---
+
+## 4. Machine-readable code-point registries
+
+Eight CSV registries in [`registries/`](registries/) carry the public draft code points — parseable by tooling, one row per assignment:
+
+| Registry | Contents |
+|---|---|
+| [`channels.csv`](registries/channels.csv) | The 20 channel code points, purpose, minimum profile, direction |
+| [`frame_types_reserved.csv`](registries/frame_types_reserved.csv) | Reserved frame-type ranges |
+| [`tlv_tags.csv`](registries/tlv_tags.csv) | Extension TLV tags |
+| [`profiles.csv`](registries/profiles.csv) | Standard / High / Sovereign profile parameters |
+| [`kem.csv`](registries/kem.csv) | `X25519MLKEM768` (`0x11ec`), `X25519MLKEM1024` (`0x11ed`) |
+| [`aead.csv`](registries/aead.csv) | `AES-256-GCM` (`0x0001`), `ChaCha20-Poly1305` (`0x0002`) |
+| [`signatures.csv`](registries/signatures.csv) | `Ed25519` (`0x0807`), `ML-DSA-87` (`0x0905`) |
+| [`bridge_protocol_ids.csv`](registries/bridge_protocol_ids.csv) | Bridge `protocol_id` assignments + assignment policy |
+
+Every vector, schema, registry, and the draft itself is hash-pinned in [`PIN.json`](PIN.json) / [`MANIFEST.sha256`](MANIFEST.sha256); `scripts/verify-pins.ps1` recomputes and compares them in CI to catch silent drift.
+
+---
+
+## Bridging to the agent-protocol ecosystem
+
+N-PAMP's Bridge channel carries other agent protocols as first-class payloads. The companion specs define a bridge framework, six carriage classes, and **seventeen** normative protocol mappings, so you can bridge an existing ecosystem onto N-PAMP channels. Each mapping has a reserved `protocol_id` in [`registries/bridge_protocol_ids.csv`](registries/bridge_protocol_ids.csv).
+
+### 17 protocol mappings
+
+| Protocol | Mapping spec | Protocol | Mapping spec |
+|---|---|---|---|
+| MCP — Model Context Protocol | [`60_map_mcp`](spec/companion/60_map_mcp.md) | FIPA-ACL — FIPA Agent Communication Language | [`6a_map_fipa_acl`](spec/companion/6a_map_fipa_acl.md) |
+| A2A — Agent2Agent | [`61_map_a2a`](spec/companion/61_map_a2a.md) | agents.json — Discovery Document | [`6b_map_agents_json`](spec/companion/6b_map_agents_json.md) |
+| ACP — Agent Communication Protocol | [`62_map_acp`](spec/companion/62_map_acp.md) | AgentSpec — Open Agent Specification | [`6c_map_agentspec`](spec/companion/6c_map_agentspec.md) |
+| ANP — Agent Network Protocol | [`63_map_anp`](spec/companion/63_map_anp.md) | AgentScript — Agent Definition | [`6d_map_agentscript`](spec/companion/6d_map_agentscript.md) |
+| AG-UI — Agent-User Interaction Protocol | [`64_map_agui`](spec/companion/64_map_agui.md) | MS Agent Framework | [`6e_map_msagentfw`](spec/companion/6e_map_msagentfw.md) |
+| AP2 — Agent Payments Protocol | [`65_map_ap2`](spec/companion/65_map_ap2.md) | AGNTCY — Internet of Agents | [`6f_map_agntcy`](spec/companion/6f_map_agntcy.md) |
+| UCP — Universal Commerce Protocol | [`66_map_ucp`](spec/companion/66_map_ucp.md) | NLIP — Natural Language Interaction Protocol | [`70_map_nlip`](spec/companion/70_map_nlip.md) |
+| AITP — Agent Interaction & Transaction Protocol | [`67_map_aitp`](spec/companion/67_map_aitp.md) | | |
+| LMOS — Language Model Operating System Protocol | [`68_map_lmos`](spec/companion/68_map_lmos.md) | | |
+| OASF — Open Agentic Schema Framework | [`69_map_oasf`](spec/companion/69_map_oasf.md) | | |
+
+### 6 carriage classes
+
+Bridged payloads travel over one of six carriage classes, each with a normative binding:
+
+| Carriage class | Spec |
+|---|---|
+| JSON-RPC 2.0 | [`20_carriage_jsonrpc`](spec/companion/20_carriage_jsonrpc.md) |
+| HTTP semantics | [`21_carriage_http`](spec/companion/21_carriage_http.md) |
+| Messaging / performative | [`22_carriage_messaging`](spec/companion/22_carriage_messaging.md) |
+| Streaming | [`23_carriage_streaming`](spec/companion/23_carriage_streaming.md) |
+| Documents (capability & schema) | [`24_carriage_documents`](spec/companion/24_carriage_documents.md) |
+| Opaque | [`25_carriage_opaque`](spec/companion/25_carriage_opaque.md) |
+
+### Bridge machinery
+
+The pieces that tie mappings and carriage together live in [`spec/companion/`](spec/companion/): the [bridge framework](spec/companion/10_bridge_framework.md), the [protocol-ID registry](spec/companion/30_protocol_registry.md), [discovery](spec/companion/40_discovery.md) and [signed discovery](spec/companion/41_discovery_signed.md), the [hello bootstrap](spec/companion/45_hello_bootstrap.md), the [peer handle](spec/companion/50_peer_handle.md), the [conformance requirements](spec/companion/55_conformance_requirements.md), and a [worked handshake example](spec/companion/56_worked_example_handshake.md).
+
+---
+
+## Repository map
+
+| Path | Holds |
+|------|-------|
+| [`ietf/draft-bubblefish-npamp-latest.md`](ietf/draft-bubblefish-npamp-latest.md) | The Internet-Draft (single source of truth; kramdown-rfc source) |
+| [`spec/`](spec/) | Ten core normative spec extracts (`01_alpn` … `10_handshake_binding`) |
+| [`spec/channels/`](spec/channels/) | 20 per-channel specifications (`0000_control` … `0013_spatial`) |
+| [`spec/companion/`](spec/companion/) | 32 companion docs: bridge framework, 6 carriage bindings, protocol registry, discovery, hello bootstrap, peer handle, the 17 protocol mappings, and a worked example |
+| [`registries/`](registries/) | 8 machine-readable code-point registries (CSV) |
+| [`impl/`](impl/) | 10 multi-language reference implementations |
+| [`harness/`](harness/) | Cross-implementation conformance runner (`npamp-conform`) + 10 language adapters |
+| [`test-vectors/v1/`](test-vectors/v1/) | The canonical conformance corpus + 5 KAT vector sets |
+| [`test-vectors/schemas/`](test-vectors/schemas/) | One draft-2020-12 JSON Schema per vector set |
+| [`scripts/`](scripts/) | Gate scripts: [`verify-pins.ps1`](scripts/verify-pins.ps1), [`validate-schemas.py`](scripts/validate-schemas.py) |
+| [`decisions/`](decisions/) | MADR 4.0 decision records (`0001`, `0003`–`0011`) + template |
+| [`formal/`](formal/) | Link-out stub for external formal-analysis models (re-targeting to the draft-01 binding is pending; no proof is vendored here yet) |
+| [`.github/`](.github/) | Issue/PR templates, labels, and the conformance CI workflow |
+
+---
+
+## Continuous integration
+
+[`.github/workflows/conformance.yml`](.github/workflows/conformance.yml) runs on every push and pull request:
+
+| Job | Gate |
+|---|---|
+| `schemas` | Every vector in `test-vectors/v1` validates against its draft-2020-12 JSON Schema (`scripts/validate-schemas.py`). |
+| `conformance` | The Go runner (`npamp-conform`) drives the in-tree Go reference adapter over the embedded corpus; any MUST failure exits non-zero. Also asserts the embedded corpus equals the pinned corpus. |
+| `pins` | `scripts/verify-pins.ps1` recomputes and compares every SHA-256 in `PIN.json` + `MANIFEST.sha256` (draft, registries, spec, corpus, KATs, schemas); exits non-zero on drift. |
+| `rust` | Builds the Rust reference impl + adapter and runs its conformance / handshake-KAT tests. |
+| `swift` | Builds the Swift reference impl + adapter and runs its tests. |
+
+---
 
 ## Reading the specification
 
 The normative specification is the Internet-Draft in this repository:
 
-- [`draft-bubblefish-npamp-00.md`](draft-bubblefish-npamp-00.md) - kramdown-rfc source.
+- [`ietf/draft-bubblefish-npamp-latest.md`](ietf/draft-bubblefish-npamp-latest.md) — kramdown-rfc source; the build emits the numbered revision `draft-bubblefish-npamp-01`.
 
 Render it locally with the IETF author tools:
 
 ```sh
 gem install kramdown-rfc
 pip install xml2rfc
-kramdown-rfc draft-bubblefish-npamp-00.md > draft-bubblefish-npamp-00.xml
-xml2rfc draft-bubblefish-npamp-00.xml --text --html
+kramdown-rfc ietf/draft-bubblefish-npamp-latest.md > draft-bubblefish-npamp-01.xml
+xml2rfc draft-bubblefish-npamp-01.xml --text --html
 ```
 
-or use the hosted renderer at <https://author-tools.ietf.org/>.
+…or use the hosted renderer at <https://author-tools.ietf.org/>.
+
+## Getting started
+
+1. **Read the wire format** — [`spec/02_frame_format.md`](spec/02_frame_format.md) and [`spec/05_profiles.md`](spec/05_profiles.md) for the 36-octet header and the three profiles.
+2. **Follow the handshake** — the worked example in [`spec/companion/56_worked_example_handshake.md`](spec/companion/56_worked_example_handshake.md) walks the 1.5-RTT exchange frame by frame.
+3. **Pick a language** — start from that implementation's `QUICKSTART.md` (table above).
+4. **Prove conformance** — run your build against the `npamp-conform` harness with the vectors in `test-vectors/v1/`.
+
+---
+
+## Scope
+
+This repository is the **open** N-PAMP reference surface: the Standard-profile primitives (X25519MLKEM768, Ed25519, SHA-256, AES-256-GCM, HKDF), the public draft registry code points and profile enums, the conformance corpus, and the reference implementations. Publishing a code point discloses an *identifier*, not an *implementation*: the registries list the High/Sovereign code points (`X25519MLKEM1024`, `ML-DSA-87`, SHA-384), but their high-assurance implementation material is maintained separately and is out of scope for this open reference.
 
 ## IANA registrations
 
-The registration requests are restated in registry-template form in
-[`IANA_ALPN_n-pamp-2_registration_request.md`](IANA_ALPN_n-pamp-2_registration_request.md):
+The registration details are restated in registry-template form in [`IANA_ALPN_n-pamp-2_registration_request.md`](IANA_ALPN_n-pamp-2_registration_request.md):
 
-- ALPN protocol identifier `n-pamp/2` (RFC 7301, Section 6; Expert Review).
-- Provisional `npamp` URI scheme (RFC 7595; First Come First Served).
+- **ALPN protocol identifier `n-pamp/2`** (RFC 7301, Section 6; Expert Review). Identification sequence: the 8-octet UTF-8 string `n-pamp/2` (`0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32`). The trailing `2` equals the `0x02` value carried in the frame header's `Ver` field.
+- **Provisional `npamp` URI scheme** (RFC 7595; First Come First Served).
 
-Both actions are also stated in the IANA Considerations of the Internet-Draft.
+Both are also stated in the IANA Considerations of the Internet-Draft, which at draft-01 requests a reference update to the current revision.
 
 ## Versioning
 
-- **Protocol wire major version** - the digit in the ALPN label `n-pamp/2`
-  equals the value `0x02` carried in the `Ver` field of the frame header.
-  A change to this digit means a wire-incompatible major version and a new ALPN
-  identifier.
-- **Internet-Draft revision** - the `-NN` counter at the end of the draft name
-  advances with every published revision of the document; it is independent of
-  the protocol's wire major version.
+- **Protocol wire major version** — the digit in the ALPN label `n-pamp/2` equals the value `0x02` carried in the `Ver` field of the frame header. A change to this digit means a wire-incompatible major version and a new ALPN identifier.
+- **Internet-Draft revision** — the `-NN` counter at the end of the draft name advances with every published revision; it is independent of the protocol's wire major version. The working tree carries the `-latest` source; one annotated git tag marks each Datatracker `-NN` revision (`draft-bubblefish-npamp-00`, `-01`, …), with `rfcdiff` for per-revision deltas.
 
 ## License
 
-The repository's code and original content are licensed under the
-[Apache License 2.0](LICENSE).
+The repository's code and original content are licensed under the [Apache License 2.0](LICENSE).
 
-The Internet-Draft and any resulting RFC are additionally subject to the IETF
-Trust's Legal Provisions Relating to IETF Documents (BCP 78); see the IPR
-notice (`ipr: trust200902`) in the draft front matter.
+The Internet-Draft and any resulting RFC are additionally subject to the IETF Trust's Legal Provisions Relating to IETF Documents (BCP 78); see the IPR notice (`ipr: trust200902`) in the draft front matter and [`NOTICE`](NOTICE). Trademark usage is covered by [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Contributing and security
 
 - Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Community standards: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Reporting a security issue: [SECURITY.md](SECURITY.md)
+- How to cite this work: [CITATION.cff](CITATION.cff)
 
 ## Author
 
-Shawn Sammartano, BubbleFish™ Technologies, Inc
+Shawn Sammartano, BubbleFish™ Technologies, Inc.
+
+---
+
+*N-PAMP™ and BubbleFish™ are trademarks of BubbleFish Technologies, Inc.*

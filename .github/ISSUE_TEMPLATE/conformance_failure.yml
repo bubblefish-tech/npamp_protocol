@@ -1,0 +1,125 @@
+# Issue form: an implementation fails a conformance vector or KAT.
+#
+# Auto-applies `corpus` (.github/labels.yml): the resolution is either an
+# implementation bug (no spec effect) or a defective vector — and a corpus change
+# is `design`-level per CONTRIBUTING.md (consensus + a numbered ADR).
+# `needs-discussion` puts the report in the triage queue until the failing side
+# (implementation vs. vector) is established.
+name: "Conformance failure"
+description: "An implementation fails a vector from the conformance corpus (harness/) or a KAT (test-vectors/v1/)."
+title: "[conformance]: "
+labels: ["corpus", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when `npamp-conform` (see `harness/INSTRUCTIONS.md`) or one of the
+        KAT suites in `test-vectors/v1/` reports a failure. Every vector carries a
+        `requirement` field citing the spec clause it checks — please include it.
+  - type: dropdown
+    id: language
+    attributes:
+      label: Implementation language
+      description: "The language of the failing implementation."
+      options:
+        - "C#"
+        - "Go"
+        - "Java"
+        - "Kotlin"
+        - "PHP"
+        - "Python"
+        - "Ruby"
+        - "Rust"
+        - "Swift"
+        - "TypeScript"
+        - "other (state it under Implementation)"
+    validations:
+      required: true
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation
+      description: "Which implementation fails: an in-tree reference (impl/<lang>) at a given commit, or your own (name + version)."
+      placeholder: "e.g. impl/go @ <commit>, or acme-npamp 0.3.1"
+    validations:
+      required: true
+  - type: input
+    id: vector-id
+    attributes:
+      label: Vector identifier
+      description: "The failing vector: operation + tcId for corpus cases, or KAT file + test index."
+      placeholder: "e.g. op=hkdf.expand tcId=57, or key-schedule-kat.json test #3"
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation / suite
+      description: "The runner operation (harness/INSTRUCTIONS.md) or KAT suite."
+      options:
+        - "header.encode"
+        - "header.decode"
+        - "crc32c"
+        - "tlv.decode"
+        - "aead.seal"
+        - "aead.open"
+        - "hkdf.expand"
+        - "profile.check"
+        - "KAT: transcript"
+        - "KAT: key-schedule"
+        - "KAT: finished"
+        - "KAT: certverify"
+        - "KAT: kem-wire"
+        - "other"
+    validations:
+      required: true
+  - type: input
+    id: corpus-version
+    attributes:
+      label: Corpus / spec revision
+      description: "As printed by the runner header, or the KAT file's schemaVersion."
+      placeholder: "e.g. spec draft-bubblefish-npamp-00, corpus 1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected (from the vector)
+      description: "The vector's `expected` object — or, for `result: invalid` cases, the MUST-reject rule that the implementation failed to enforce."
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual (from the implementation)
+      description: "What the implementation produced (output, error, or wrongly-accepted input)."
+    validations:
+      required: true
+  - type: textarea
+    id: runner-output
+    attributes:
+      label: Runner output / test log
+      description: "The FAIL lines from npamp-conform (or the KAT suite output), including the requirement citation."
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: "OS, architecture, and toolchain version(s)."
+      placeholder: "e.g. ubuntu 24.04 x86_64, go 1.26.3"
+    validations:
+      required: false
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight
+      options:
+        - label: "I ran against an unmodified vector corpus (the SHA-256 pins verify: MANIFEST.sha256 / scripts/verify-pins.ps1)."
+          required: true
+        - label: "The failure reproduces at the current head of this repository."
+          required: true
+        - label: "I read the vector's `requirement` citation in the spec before concluding which side is wrong."
+          required: false
