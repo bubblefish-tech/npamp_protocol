@@ -6,9 +6,17 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 )
+
+// ackWriteTimeout bounds how long a KEY_UPDATE_ACK write may block the receive
+// loop when a peer stalls its socket. Without it, a peer that sends KEY_UPDATE
+// then stops reading could wedge Recv indefinitely (the ACK is written while the
+// receive lock is held). It is independent of the caller's Recv context so the
+// bound holds even when Recv is called with a deadline-less context.
+const ackWriteTimeout = 30 * time.Second
 
 // KeyUpdate rotates the send-direction traffic key for channel to the next
 // epoch, giving forward secrecy: it sends a KEY_UPDATE control frame (sealed
@@ -50,10 +58,11 @@ func (c *Conn) KeyUpdate(ctx context.Context, channel npamp.ChannelID) error {
 // handleKeyUpdate processes a received KEY_UPDATE control frame: it validates the
 // marker announces exactly the next epoch, advances the receive epoch (zeroizing
 // the retired recv key), and replies with KEY_UPDATE_ACK on the local send
-// direction. The caller (Recv) holds rmu; the ACK acquires wmu. This rmu→wmu
-// order is the only nesting in the type (Send/KeyUpdate take wmu alone), so it
-// cannot deadlock.
-func (c *Conn) handleKeyUpdate(ctx context.Context, channel npamp.ChannelID, st *epochKeys, plaintext []byte) error {
+// direction under a bounded write deadline (ackWriteTimeout), so a peer that
+// stalls its socket cannot wedge the receive loop indefinitely. The caller
+// (Recv) holds rmu; the ACK acquires wmu. This rmu→wmu order is the only nesting
+// in the type (Send/KeyUpdate take wmu alone), so it cannot deadlock.
+func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext []byte) error {
 	next, err := parseKeyUpdateMarker(plaintext)
 	if err != nil {
 		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d: %w", channel, err)
@@ -65,21 +74,38 @@ func (c *Conn) handleKeyUpdate(ctx context.Context, channel npamp.ChannelID, st 
 		return fmt.Errorf("npamp/sdk: advance recv epoch: %w", err)
 	}
 
+	// Reply with KEY_UPDATE_ACK OFF the receive path (its own goroutine), so a
+	// peer that stalls its socket cannot wedge Recv: the receive loop returns
+	// immediately and keeps draining. The ACK still serializes with Send/KeyUpdate
+	// via wmu (preserving seq == wire order) and is bounded by ackWriteTimeout.
+	go c.sendKeyUpdateAck(channel, next)
+	return nil
+}
+
+// sendKeyUpdateAck seals + writes a KEY_UPDATE_ACK on channel, off the receive
+// path. It takes wmu (serializing with Send/KeyUpdate so wire order matches
+// sequence order) and bounds the write by ackWriteTimeout. A failed or partial
+// write corrupts our send stream, so it closes the connection; the ACK is
+// informational (the peer ignores it), so a derivation/seal error simply skips
+// it without tearing the connection down.
+func (c *Conn) sendKeyUpdateAck(channel npamp.ChannelID, epoch uint64) {
 	c.wmu.Lock()
 	defer c.wmu.Unlock()
-	sst, err := c.sendState(channel)
+	st, err := c.sendState(channel)
 	if err != nil {
-		return fmt.Errorf("npamp/sdk: derive send key for ACK: %w", err)
+		return
 	}
-	ack, err := sealWith(sst, channel, npamp.FrameKeyUpdateAck, keyUpdateMarker(next))
+	ack, err := sealWith(st, channel, npamp.FrameKeyUpdateAck, keyUpdateMarker(epoch))
 	if err != nil {
-		return fmt.Errorf("npamp/sdk: seal KEY_UPDATE_ACK: %w", err)
+		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), ackWriteTimeout)
+	defer cancel()
 	if err := c.writeWire(ctx, ack); err != nil {
-		return err
+		_ = c.Close()
+		return
 	}
-	sst.seq++
-	return nil
+	st.seq++
 }
 
 // keyUpdateMarker encodes the TLV 0x17 KeyUpdateMarker carrying the epoch as an

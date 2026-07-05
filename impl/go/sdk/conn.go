@@ -71,10 +71,18 @@ type Conn struct {
 
 // epochKeys is the cached AEAD key material for one (channel, direction) at the
 // current key-update epoch, plus the per-epoch sequence counter. Caching the
-// derived key/iv (rather than re-deriving per frame) is what lets KeyUpdate
-// zeroize a retired epoch's key material, satisfying the spec's forward-secrecy
-// requirement (spec/06 "Key Schedule and Nonces": on key update, new-epoch
-// secrets are derived afresh and the prior epoch's secrets are zeroized).
+// derived key/iv (rather than re-deriving per frame) lets KeyUpdate zeroize a
+// retired epoch's key material, per spec/06 ("on key update, new-epoch secrets
+// are derived afresh and the prior epoch's secrets are zeroized").
+//
+// Scope of the guarantee: this bounds exposure of a retired epoch's *traffic
+// key* — after rotation the old key/iv are wiped and the new epoch's key is an
+// independent HKDF output. It does NOT provide forward secrecy against
+// compromise of the master secret: per the spec's key schedule the master is
+// retained for the connection's lifetime, and DeriveTrafficSecret(master, dir,
+// epoch, ...) can reproduce any epoch's key from it. Whole-session forward
+// secrecy is a property of the transport's ephemeral (re)handshake, not of a
+// per-connection KeyUpdate.
 type epochKeys struct {
 	epoch uint64
 	key   [32]byte
@@ -90,6 +98,11 @@ func (k *epochKeys) derive(master []byte, dir npamp.Direction, channel npamp.Cha
 		return err
 	}
 	key, iv, err := npamp.DeriveKeyIV(ts, p)
+	// The traffic secret is an intermediate from which key+iv are re-derivable;
+	// wipe it once extracted so it does not linger on the heap after rotation.
+	for i := range ts {
+		ts[i] = 0
+	}
 	if err != nil {
 		return err
 	}
@@ -97,8 +110,9 @@ func (k *epochKeys) derive(master []byte, dir npamp.Direction, channel npamp.Cha
 	return nil
 }
 
-// zeroize wipes the current epoch's key and IV in place (forward secrecy: a
-// retired epoch's key material must not linger in memory).
+// zeroize wipes the current epoch's key and IV in place so a retired epoch's key
+// does not linger in this struct after rotation (see the epochKeys doc for the
+// scope of the forward-secrecy guarantee).
 func (k *epochKeys) zeroize() {
 	for i := range k.key {
 		k.key[i] = 0
@@ -147,6 +161,13 @@ func (c *Conn) sendLocked(ctx context.Context, channel npamp.ChannelID, frameTyp
 	st, err := c.sendState(channel)
 	if err != nil {
 		return fmt.Errorf("npamp/sdk: derive send key: %w", err)
+	}
+	// Refuse to send once the epoch's 64-bit sequence space is exhausted: the
+	// next seq would wrap to 0 and reuse an AEAD nonce. Callers must KeyUpdate
+	// (rotating to a fresh key + reset sequence) first. Practically unreachable
+	// at 2^64 frames, but a hard guard against catastrophic nonce reuse.
+	if st.seq == ^uint64(0) {
+		return fmt.Errorf("npamp/sdk: channel %d epoch %d sequence space exhausted; call KeyUpdate before sending more", channel, st.epoch)
 	}
 	wire, err := sealWith(st, channel, frameType, payload)
 	if err != nil {
@@ -209,7 +230,7 @@ func (c *Conn) Recv(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []by
 
 		switch npamp.FrameType(f.Type) {
 		case npamp.FrameKeyUpdate:
-			if err := c.handleKeyUpdate(ctx, ch, st, pt); err != nil {
+			if err := c.handleKeyUpdate(ch, st, pt); err != nil {
 				return 0, 0, nil, err
 			}
 			continue // transparent control frame; read the next
