@@ -107,5 +107,5 @@ jobs:
         run: swift build --package-path impl/swift
       - name: Build swift conformance adapter
         run: swift build --package-path harness/adapters/swift-adapter
-      - name: Run swift tests
-        run: swift test --package-path impl/swift
+      - name: Run swift handshake KAT (npamp-handshake-kat validates the in-repo vectors)
+        run: swift run --package-path impl/swift npamp-handshake-kat test-vectors/v1
