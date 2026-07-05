@@ -1,7 +1,7 @@
 ---
 title: "N-PAMP: Native Post-Quantum Agent Messaging Protocol"
 abbrev: N-PAMP
-docname: draft-bubblefish-npamp-00
+docname: draft-bubblefish-npamp-01
 category: info
 ipr: trust200902
 submissionType: independent
@@ -21,7 +21,7 @@ author:
   -
     ins: S. Sammartano
     name: Shawn Sammartano
-    org: BubbleFish Technologies, Inc
+    org: BubbleFish Technologies, Inc.
     # Required: a working, MONITORED email (below). ISE correspondence, the IETF
     # conflict review, and AUTH48 final-proof all go to this address. A postal
     # address is OPTIONAL under current RFC Editor practice and is omitted here.
@@ -55,11 +55,19 @@ normative:
     date: 2024
     seriesinfo:
       FIPS: 204
+  SP800-56C:
+    title: "Recommendation for Key-Derivation Methods in Key-Establishment Schemes"
+    author:
+      - org: National Institute of Standards and Technology (NIST)
+    date: 2020-08
+    target: https://csrc.nist.gov/pubs/sp/800/56/c/r2/final
+    seriesinfo:
+      NIST: Special Publication 800-56C Rev. 2
 
 informative:
   RFC8126:
   RFC3552:
-  I-D.ietf-tls-hybrid-design:
+  I-D.ietf-tls-ecdhe-mlkem:
 
 --- abstract
 
@@ -324,6 +332,17 @@ namespace. Frame-type code points at or above 0x0030 that are not reserved here,
 and in particular the ranges enumerated in {{extension-points}}, are reserved
 for extensions defined in companion specifications.
 
+The Control channel (0x0000) assigns the following channel-specific frame types for
+the N-PAMP handshake ({{handshake}}):
+
+| Type | Name | Description |
+|---|---|---|
+| 0x0100 | CLIENT_HELLO | First handshake flight (client); cleartext. |
+| 0x0101 | SERVER_HELLO | Second handshake flight (server); cleartext. |
+| 0x0102 | SERVER_AUTH | Server authentication flight; AEAD-protected. |
+| 0x0103 | CLIENT_AUTH | Client authentication flight; AEAD-protected. |
+{: title="Control-channel handshake frame types"}
+
 ## CLOSE Frame
 
 A CLOSE frame is authenticated like any other frame. A receiver MUST verify the
@@ -452,10 +471,13 @@ All cryptographic primitives used by N-PAMP are published standards.
 
 Both are hybrid KEMs combining X25519 ECDH with ML-KEM {{FIPS203}} (ML-KEM-768
 and ML-KEM-1024, respectively). The two shared secrets are concatenated as
-(X25519 shared secret || ML-KEM shared secret) and supplied as input keying
-material to HKDF-Extract {{RFC5869}}. The construction follows the established
-practice for hybrid key establishment {{I-D.ietf-tls-hybrid-design}}. The
-Sovereign profile MUST NOT accept X25519MLKEM768.
+(ML-KEM shared secret || X25519 shared secret) and supplied as input keying
+material to HKDF-Extract {{RFC5869}}. The ML-KEM shared secret is placed first so
+the FIPS-approved key-establishment output leads the HKDF input ({{SP800-56C}}),
+matching the X25519MLKEM768 construction of {{I-D.ietf-tls-ecdhe-mlkem}}.
+The suite name lists X25519 first, but the shared-secret concatenation and the
+on-wire KEMShare/KEMCiphertext layout are ML-KEM-first. The Sovereign profile
+MUST NOT accept X25519MLKEM768.
 
 ## Authenticated Encryption
 
@@ -487,9 +509,11 @@ Sovereign profile uses ML-DSA-87 for identity and audit signatures.
 
 All key derivation uses HKDF {{RFC5869}}. The KDF hash is SHA-256 at the Standard
 profile and SHA-384 at the High and Sovereign profiles. The HKDF-Expand-Label
-construction follows TLS 1.3 {{RFC8446}}, with a protocol-specific label prefix
-that provides domain separation from TLS 1.3, from QUIC, and from earlier N-PAMP
-versions.
+construction follows TLS 1.3 {{RFC8446}}, with the literal label prefix "n-pamp "
+(with the trailing space) in place of TLS 1.3's "tls13 ", providing domain
+separation from TLS 1.3, from QUIC, and from earlier N-PAMP versions. A conforming
+implementation MUST use the "n-pamp " prefix; use of the "tls13 " prefix is
+non-conformant. The full key-schedule ladder is specified in {{key-schedule}}.
 
 ## Key Schedule and Nonces
 
@@ -508,6 +532,150 @@ the prior epoch's secrets are zeroized.
 All randomness that participates in security MUST come from a cryptographically
 secure random number generator. Implementations MUST NOT use a non-cryptographic
 source for any field that participates in security.
+
+# Handshake {#handshake}
+
+The N-PAMP handshake is a 1.5-RTT, mutually-authenticated exchange of four frames
+on the Control channel (0x0000, sequence 0), after which both peers are
+authenticated and a forward-secure key schedule is established. It reuses TLS 1.3
+{{RFC8446}} constructions (HKDF-Expand-Label, CertificateVerify, Finished) with
+N-PAMP framing and context; each divergence from TLS 1.3 is noted inline in the
+relevant subsection below. One construction serves all three profiles; a profile
+selects a parameter row (see {{profile-negotiation}} and {{cryptographic-suites}}),
+so H and HashLen below are read from the negotiated profile.
+
+## Message Flow
+
+| Flight | Frame | Type | TLVs (in order) | Encryption |
+|---|---|---|---|---|
+| 1 | CLIENT_HELLO | 0x0100 | ProfileOffer, KEMOffer, SigOffer, AEADOffer, KEMShare | cleartext |
+| 2 | SERVER_HELLO | 0x0101 | ProfileSelect, KEMSelect, SigSelect, AEADSelect, KEMCiphertext | cleartext |
+| 2 | SERVER_AUTH | 0x0102 | IdentityKey, CertVerify, Finished | AEAD-sealed |
+| 3 | CLIENT_AUTH | 0x0103 | IdentityKey, CertVerify, Finished | AEAD-sealed |
+{: title="Handshake flights"}
+
+There is no separate Finished frame; the Finished MAC is a TLV inside each AUTH
+frame. Each frame is a standard 36-octet N-PAMP frame ({{wire-format}}) on channel
+0x0000 with sequence 0; the AUTH frames set FlagENC and are AEAD-sealed
+({{auth-frame-sealing}}). A server reaches the Established state only after it has
+verified CLIENT_AUTH; the master secret is derived at the client-authentication
+boundary.
+
+## Transcript
+
+The handshake transcript is a running byte buffer; a transcript hash is H over all
+bytes absorbed so far. Unlike TLS 1.3 {{RFC8446}} Section 4.4.1, which hashes whole
+handshake messages, N-PAMP absorbs at per-TLV granularity and absorbs only the
+2-octet big-endian frame type of each frame: the remaining 34 header octets and the
+AEAD tag are NOT absorbed. For each frame, the 2-octet frame type is absorbed,
+followed by each of that frame's TLVs in canonical Type(2) || Length(2) || Value
+form, in order. Five transcript hashes are named:
+
+| Symbol | Absorbed through | Used by |
+|---|---|---|
+| TH_kem | CLIENT_HELLO and SERVER_HELLO TLVs | handshake-secret labels |
+| TH_sId | ... server IdentityKey | server CertVerify signs this |
+| TH_sCV | ... server CertVerify (excludes server Finished) | server Finished MACs this |
+| TH_cId | ... server Finished, CLIENT_AUTH, client IdentityKey | client CertVerify signs this |
+| TH_cCV | ... client CertVerify (excludes client Finished) | client Finished MACs this; master derived from this |
+{: title="Handshake transcript hashes"}
+
+Because both peers absorb the identical decoded on-wire TLV bytes, their transcripts
+are byte-identical.
+
+## Key Schedule {#key-schedule}
+
+The key schedule is a single HKDF-Extract {{RFC5869}} followed by sibling
+HKDF-Expand-Label derivations (simpler than TLS 1.3 {{RFC8446}} Section 7.1's
+three-stage chain; N-PAMP defines no PSK or 0-RTT in this binding).
+HKDF-Expand-Label is as in TLS 1.3 Section 7.1 with the N-PAMP label prefix
+"n-pamp " (with the trailing space) in place of "tls13 ":
+
+~~~
+HKDF-Expand-Label(Secret, Label, Context, Length) =
+    HKDF-Expand(Secret, HkdfLabel, Length)
+HkdfLabel = uint16(Length) || opaque("n-pamp " || Label)
+                           || opaque(Context)
+~~~
+
+The KEM output ({{cryptographic-suites}}) is the 64-octet value
+(ML-KEM shared secret || X25519 shared secret), fed directly as input keying
+material:
+
+~~~
+handshake_secret = HKDF-Extract(salt = HashLen zero octets,
+                                IKM  = ML-KEM_SS || X25519_SS)
+c_hs_secret = HKDF-Expand-Label(handshake_secret,
+                                "c hs", TH_kem, HashLen)
+s_hs_secret = HKDF-Expand-Label(handshake_secret,
+                                "s hs", TH_kem, HashLen)
+master      = HKDF-Expand-Label(handshake_secret,
+                                "master", TH_cCV, HashLen)
+~~~
+
+The Extract salt is HashLen zero octets (the {{RFC5869}} default). The master secret
+is derived only at the client-authentication boundary, from TH_cCV. Handshake-phase
+traffic keys descend from c_hs_secret and s_hs_secret; application-phase traffic
+keys descend from master, using the traffic-secret construction of
+{{cryptographic-suites}}. Because the parents differ, an identical
+(direction, epoch, suite, channel) tuple yields different (key, iv) across the
+handshake and application phases, so no (key, nonce) pair is shared across phases.
+
+## Authentication
+
+### CertVerify
+
+The CertVerify TLV (0x0A) carries a signature over the transcript, structured as in
+TLS 1.3 {{RFC8446}} Section 4.4.3 with N-PAMP context strings:
+
+~~~
+signing_input = (0x20 x 64) || context || 0x00 || transcript_hash
+context (server) = "N-PAMP draft-00, server CertificateVerify"
+context (client) = "N-PAMP draft-00, client CertificateVerify"
+~~~
+
+The context strings are fixed protocol constants (they are the values bound into
+the reference implementations and the interoperability test vectors) and do not
+change with the Internet-Draft revision number. The signed transcript_hash is TH_sId
+(server) or TH_cId (client): the transcript through the signer's own IdentityKey,
+before its own CertVerify. The TLV value is the 2-octet SignatureScheme (Ed25519 =
+0x0807) followed by the signature, whose length is delimited by the TLV Length. A
+verifier MUST reject a signature scheme it did not negotiate and MUST check the
+role: the differing context string makes a server CertVerify unusable as a client
+CertVerify.
+
+### Finished
+
+The Finished TLV (0x0B) carries an HMAC per TLS 1.3 {{RFC8446}} Section 4.4.4, keyed
+by the sender's handshake traffic secret:
+
+~~~
+finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)
+verify_data  = HMAC(finished_key, transcript_hash)
+~~~
+
+BaseKey is c_hs_secret or s_hs_secret per direction; the HMAC hash is H. The MAC'd
+transcript_hash is TH_sCV (server) or TH_cCV (client): the transcript through the
+signer's own CertVerify, excluding its own Finished. The verify_data length is
+HashLen. Verification MUST be constant-time and MUST abort on mismatch.
+
+### AUTH-Frame Sealing {#auth-frame-sealing}
+
+SERVER_AUTH and CLIENT_AUTH are sealed with the negotiated AEAD under the
+per-direction handshake key and IV ({{key-schedule}}): FlagENC is set, Channel is
+0x0000, and Seq is 0. The AAD is the 21-octet frame header prefix and the nonce is
+the IV exclusive-ORed with the sequence number, as in {{cryptographic-suites}}. On
+open, exactly three TLVs -- IdentityKey, CertVerify, Finished, in that order -- MUST
+be present.
+
+### Downgrade Protection {#handshake-downgrade}
+
+The negotiated profile and algorithm selections are carried in the cleartext
+CLIENT_HELLO and SERVER_HELLO and are absorbed into the transcript that both the
+Finished MAC and CertVerify cover. Stripping a profile from an offer, or forcing a
+lower selection, therefore invalidates the Finished MAC and aborts the handshake.
+N-PAMP uses this transcript binding for downgrade protection rather than a
+TLS-style ServerHello.Random sentinel.
 
 # Extension Points {#extension-points}
 
@@ -555,14 +723,15 @@ this document.
 
 ## ALPN Protocol Identifier
 
-This document requests that IANA register the following value in the "TLS
-Application-Layer Protocol Negotiation (ALPN) Protocol IDs" registry established
-by {{RFC7301}}:
+IANA has registered the following value in the "TLS Application-Layer Protocol
+Negotiation (ALPN) Protocol IDs" registry established by {{RFC7301}}. The
+registration was made under an earlier version of this document; IANA is requested
+to update its reference to the current version:
 
 | Protocol | Identification Sequence | Reference |
 |---|---|---|
 | N-PAMP, wire major version 2 | 0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32 ("n-pamp/2") | (this document) |
-{: title="Requested ALPN registration"}
+{: title="ALPN registration (n-pamp/2)"}
 
 The identification sequence is the 8-octet UTF-8 string "n-pamp/2". The trailing
 digit "2" equals the N-PAMP wire major version (the value 0x02 carried in the Ver
@@ -575,9 +744,11 @@ distinct ALPN identifiers (for example, "n-pamp/3").
 
 ## URI Scheme Registration
 
-This document requests provisional registration of the "npamp" URI scheme in the
-"Uniform Resource Identifier (URI) Schemes" registry, following the template and
-the provisional-registration procedure (First Come First Served) of {{RFC7595}}.
+The "npamp" URI scheme has been provisionally registered in the "Uniform Resource
+Identifier (URI) Schemes" registry, following the template and the
+provisional-registration procedure (First Come First Served) of {{RFC7595}}, under
+an earlier version of this document; IANA is requested to update its reference to
+the current version. The registration template follows:
 
 **Scheme name:** npamp
 
@@ -635,7 +806,7 @@ are described in {{extension-points}}.
 
 | Tag | Name | Length | Description |
 |---|---|---|---|
-| 0x01 | ProfileOffer | 4 | Profiles offered by the client (handshake only). |
+| 0x01 | ProfileOffer | var | Profiles offered by the client, one octet per profile (handshake only). |
 | 0x02 | ProfileSelect | 1 | Profile selected by the server (handshake only). |
 | 0x03 | KEMOffer | var | KEMs offered by the client. |
 | 0x04 | KEMSelect | 2 | KEM selected by the server. |
@@ -643,6 +814,11 @@ are described in {{extension-points}}.
 | 0x06 | SigSelect | 2 | Signature algorithm selected. |
 | 0x07 | KEMShare | var | Public KEM share. |
 | 0x08 | KEMCiphertext | var | KEM encapsulation ciphertext. |
+| 0x09 | IdentityKey | var | Sender's identity public key (handshake AUTH; see {{handshake}}). |
+| 0x0A | CertVerify | var | Signature over the transcript (handshake AUTH; see {{handshake}}). |
+| 0x0B | Finished | var | HashLen-octet Finished MAC (handshake AUTH; see {{handshake}}). |
+| 0x0C | AEADOffer | var | AEAD suites offered by the client (handshake only). |
+| 0x0D | AEADSelect | 2 | AEAD suite selected by the server (handshake only). |
 | 0x10 | (reserved) | var | Reserved for a companion specification. |
 | 0x12 | AnomalyCharge | 32 | Per-frame integrity charge. |
 | 0x13 | (reserved) | var | Reserved for a companion specification. |
@@ -662,8 +838,8 @@ properties of its underlying transports, TLS 1.3 {{RFC8446}} and QUIC
 
 ## Hybrid Key Establishment
 
-Every profile uses a hybrid KEM that concatenates an X25519 shared secret with an
-ML-KEM shared secret {{FIPS203}} before key derivation. The confidentiality of an
+Every profile uses a hybrid KEM that concatenates an ML-KEM shared secret with an
+X25519 shared secret {{FIPS203}} (ML-KEM first) before key derivation. The confidentiality of an
 association is preserved as long as at least one of the two components remains
 unbroken; an adversary must defeat both the classical and the post-quantum
 component to recover traffic keys. N-PAMP makes no claim of unconditional or
@@ -735,3 +911,28 @@ can invalidate transcript and integrity computations across peers.
 {:numbered="false"}
 
 The author thanks the reviewers of earlier N-PAMP drafts for their feedback.
+
+# Changes Since draft-bubblefish-npamp-00
+{:numbered="false"}
+
+This revision makes the following changes relative to draft-bubblefish-npamp-00:
+
+- Hybrid KEM combiner order (wire-breaking). The hybrid shared-secret concatenation
+  for both X25519MLKEM768 and X25519MLKEM1024 is now ML-KEM_SS || X25519_SS (ML-KEM
+  first), replacing the X25519-first order of draft-00, so that the FIPS-approved key-establishment output leads the HKDF
+  input per NIST SP 800-56C Rev. 2 ({{SP800-56C}}) and matches the construction of
+  {{I-D.ietf-tls-ecdhe-mlkem}}. This changes the derived keys and is NOT interoperable
+  with draft-00.
+- Handshake binding. Adds the normative 1.5-RTT mutually-authenticated handshake
+  ({{handshake}}): the four-frame flow, the per-TLV transcript, the single
+  HKDF-Extract key schedule with the "n-pamp " label prefix, CertVerify, Finished,
+  AUTH-frame sealing, and downgrade protection.
+- Handshake code points. Assigns the Control-channel handshake frame types
+  0x0100-0x0103 and the handshake TLV tags 0x09-0x0D (IdentityKey, CertVerify,
+  Finished, AEADOffer, AEADSelect).
+- ProfileOffer length. Corrects the ProfileOffer (TLV 0x01) length from a fixed 4 to a
+  variable list of one-octet profile identifiers, matching the other negotiation
+  offers and the reference implementations.
+- IANA Considerations. Updated to reflect that the ALPN identifier "n-pamp/2" and the
+  "npamp" URI scheme are already registered, requesting a reference update to this
+  revision rather than a new assignment.

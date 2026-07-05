@@ -1,0 +1,43 @@
+{
+  "coverage": {
+    "anchored": [
+      "HMAC-SHA-256 primitive vs RFC 4231 TC1/TC2",
+      "verify_data vs an independent crypto/hmac (oracle leg) — guards the vector",
+      "verify_data vs ComputeFinished (impl leg) + VerifyFinished accept/reject — guards the impl"
+    ],
+    "not_covered_here": [
+      "finished_key DERIVATION (key-schedule KAT, ADR-0008)",
+      "High/Sovereign (SHA-384, HashLen 48): this vector is Standard/SHA-256"
+    ]
+  },
+  "expected": {
+    "verify_data_client": "02ebf8c1b7fc428a3bf4465945c69dd2d1382318e856fd7204d0b9db445e2ee3",
+    "verify_data_server": "6cae594ab29bb8d968d8800d469c685b4581a8fd49d9a53951ef0964cc4fbd9b"
+  },
+  "hash": "SHA-256",
+  "name": "N-PAMP Finished KAT",
+  "npamp_inputs": {
+    "description": "finished_key_* are fixed fixtures; th_scv/th_ccv are the Transcript KAT's points (transcript-kat.json) that the Finished MAC covers per spec §6.2.",
+    "finished_key_client": "5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+    "finished_key_server": "5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f",
+    "th_ccv": "09c24d05e6d8082a85d930892b780469a3a7535d97e9c328dabdec2a1bdd0d2d",
+    "th_scv": "8763eb95348b9e52c97a722470f7af4aff401faac2c3388210ba6c70e09cd440"
+  },
+  "profile": "Standard",
+  "provenance": "Standards-derived, non-circular. verify_data = HMAC-SHA256(finished_key, transcript_hash). The expected verify_data are produced with crypto/hmac directly, NOT handshakedraft00.ComputeFinished — so they are independent of the implementation under test. The HMAC-SHA-256 primitive is anchored to RFC 4231 TC1/TC2 (the consuming test reproduces those published MACs before trusting verify_data). transcript_hash inputs are the Transcript KAT's real TH_sCV (server) / TH_cCV (client); finished_key values are fixed fixtures (the key-schedule KAT anchors finished_key DERIVATION separately).",
+  "rfc4231_hmac_sha256": {
+    "description": "RFC 4231 §4.2/§4.3 HMAC-SHA-256 test cases; anchor the HMAC-SHA-256 primitive.",
+    "source_url": "https://www.rfc-editor.org/rfc/rfc4231",
+    "tc1": {
+      "data": "4869205468657265",
+      "hmac_sha256": "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7",
+      "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
+    },
+    "tc2": {
+      "data": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+      "hmac_sha256": "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+      "key": "4a656665"
+    }
+  },
+  "spec": "N-PAMP draft-00 handshake binding (spec/10) §6.2 (Finished); RFC 8446 §4.4.4"
+}

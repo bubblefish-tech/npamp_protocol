@@ -1,0 +1,13 @@
+# Deterministic LF line endings on every platform. The pinned SHA-256 hashes in
+# PIN.json / MANIFEST.sha256 and the byte comparison of the two corpus copies must
+# be identical on Windows and Linux, so all text is stored and checked out as LF.
+* text=auto eol=lf
+
+# Explicit binary guards (never line-ending-converted).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.gz binary

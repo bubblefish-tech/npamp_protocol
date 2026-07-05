@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "N-PAMP draft-00 Finished KAT vector",
+  "description": "Schema for the N-PAMP draft-00 handshake-binding Finished Known-Answer Test (spec/10 §6.2; RFC 8446 §4.4.4). A standards-anchored, NON-CIRCULAR vector: verify_data = HMAC-SHA256(finished_key, transcript_hash) is computed independently of the implementation under test, and the HMAC-SHA-256 primitive is anchored to RFC 4231 TC1/TC2 fixed inputs — not implementation output bytes.",
+  "type": "object",
+  "required": ["coverage", "expected", "hash", "name", "npamp_inputs", "profile", "provenance", "rfc4231_hmac_sha256", "spec"],
+  "properties": {
+    "coverage": {
+      "type": "object",
+      "description": "What this vector anchors and what it explicitly does not cover.",
+      "required": ["anchored", "not_covered_here"],
+      "properties": {
+        "anchored": {
+          "type": "array",
+          "description": "Legs this KAT pins (HMAC primitive vs RFC 4231, oracle leg, impl leg).",
+          "items": { "type": "string" }
+        },
+        "not_covered_here": {
+          "type": "array",
+          "description": "Out-of-scope concerns (e.g. finished_key derivation, High/Sovereign SHA-384).",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Independently computed verify_data MACs (the answers under test).",
+      "required": ["verify_data_client", "verify_data_server"],
+      "properties": {
+        "verify_data_client": {
+          "type": "string",
+          "description": "HMAC-SHA256(finished_key_client, th_ccv); 32-byte MAC as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "verify_data_server": {
+          "type": "string",
+          "description": "HMAC-SHA256(finished_key_server, th_scv); 32-byte MAC as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      }
+    },
+    "hash": {
+      "const": "SHA-256",
+      "description": "Hash backing the HMAC; this vector is the Standard/SHA-256 leg."
+    },
+    "name": {
+      "const": "N-PAMP Finished KAT"
+    },
+    "npamp_inputs": {
+      "type": "object",
+      "description": "Fixed inputs the Finished MAC covers: finished_key fixtures and transcript-hash points.",
+      "required": ["description", "finished_key_client", "finished_key_server", "th_ccv", "th_scv"],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "finished_key_client": {
+          "type": "string",
+          "description": "Fixed client finished_key fixture (HMAC key); 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "finished_key_server": {
+          "type": "string",
+          "description": "Fixed server finished_key fixture (HMAC key); 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "th_ccv": {
+          "type": "string",
+          "description": "Transcript hash TH_cCV (client) the client Finished MAC covers; 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "th_scv": {
+          "type": "string",
+          "description": "Transcript hash TH_sCV (server) the server Finished MAC covers; 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      }
+    },
+    "profile": {
+      "const": "Standard",
+      "description": "N-PAMP profile; Standard pins SHA-256/HashLen 32."
+    },
+    "provenance": {
+      "type": "string",
+      "description": "Why this vector is non-circular: expected MACs come from crypto/hmac directly, not from the implementation's ComputeFinished."
+    },
+    "rfc4231_hmac_sha256": {
+      "type": "object",
+      "description": "RFC 4231 §4.2/§4.3 HMAC-SHA-256 test cases that anchor the HMAC primitive.",
+      "required": ["description", "source_url", "tc1", "tc2"],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string",
+          "description": "Primary-source URL; MUST reference RFC 4231.",
+          "pattern": "rfc4231"
+        },
+        "tc1": {
+          "type": "object",
+          "description": "RFC 4231 Test Case 1 (key=0x0b*20, data=\"Hi There\").",
+          "required": ["data", "hmac_sha256", "key"],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "8-byte input as 16 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 16,
+              "maxLength": 16
+            },
+            "hmac_sha256": {
+              "type": "string",
+              "description": "Published 32-byte HMAC-SHA-256 as 64 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 64,
+              "maxLength": 64
+            },
+            "key": {
+              "type": "string",
+              "description": "20-byte key as 40 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 40,
+              "maxLength": 40
+            }
+          }
+        },
+        "tc2": {
+          "type": "object",
+          "description": "RFC 4231 Test Case 2 (key=\"Jefe\", data=\"what do ya want for nothing?\").",
+          "required": ["data", "hmac_sha256", "key"],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "28-byte input as 56 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 56,
+              "maxLength": 56
+            },
+            "hmac_sha256": {
+              "type": "string",
+              "description": "Published 32-byte HMAC-SHA-256 as 64 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 64,
+              "maxLength": 64
+            },
+            "key": {
+              "type": "string",
+              "description": "4-byte key as 8 hex chars.",
+              "pattern": "^[0-9a-fA-F]+$",
+              "minLength": 8,
+              "maxLength": 8
+            }
+          }
+        }
+      }
+    },
+    "spec": {
+      "type": "string",
+      "description": "Spec anchor; MUST reference N-PAMP draft-00.",
+      "pattern": "draft-00"
+    }
+  }
+}

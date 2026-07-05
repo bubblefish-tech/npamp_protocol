@@ -1,8 +1,12 @@
 N-PAMP: Native Post-Quantum Agent Messaging Protocol
-Copyright 2026 BubbleFish Technologies, Inc
+Copyright 2026 BubbleFish Technologies, Inc.
 
 This product includes software and documentation developed by
 BubbleFish Technologies, Inc.
+
+It includes the open protocol layer of N-PAMP (wire format, framing, hybrid
+KEM, AEAD record layer, channel/TLV registries, profile ladder, and the edge
+enforcer). It implements draft-bubblefish-npamp-01. Standard cryptography only.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

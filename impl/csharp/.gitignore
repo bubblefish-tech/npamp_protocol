@@ -1,0 +1,3 @@
+# .NET build artifacts — never committed; the harness builds in a temp dir.
+bin/
+obj/

@@ -1,0 +1,145 @@
+{
+  "coverage": {
+    "anchored": [
+      "SHA-256 primitive vs FIPS 180-4 (\"abc\")",
+      "TH_* vs an independent per-TLV byte-constructor (oracle leg) — guards the vector",
+      "TH_* vs the N-PAMP Transcript type (impl leg) — guards the implementation"
+    ],
+    "not_covered_here": [
+      "crypto realism of TLV values (fixtures only; construction is value-agnostic)",
+      "High/Sovereign profiles (SHA-384): this vector is Standard/SHA-256",
+      "Finished MAC / CertVerify signature: separate KATs (B1.b/B1.c)"
+    ]
+  },
+  "cut_points": {
+    "th_ccv": "after ClientCertVerify (excludes ClientFinished); master derived from this",
+    "th_cid": "after ServerFinished||0x0103||ClientIdentityKey",
+    "th_kem": "after SERVER_HELLO KEMCiphertext (0x0100||CH-TLVs||0x0101||SH-TLVs)",
+    "th_scv": "after ServerCertVerify (excludes ServerFinished)",
+    "th_sid": "after 0x0102||ServerIdentityKey"
+  },
+  "expected_transcript_points": {
+    "th_ccv": "09c24d05e6d8082a85d930892b780469a3a7535d97e9c328dabdec2a1bdd0d2d",
+    "th_cid": "7447a1770de3aa9fee0196a407fdcf5b5012dcb95af22330c965f21426fba386",
+    "th_kem": "adf9ee3f12a81a894a93b9040d15fe3e66905011456cd333dfe62bc6e1e4aaf2",
+    "th_scv": "8763eb95348b9e52c97a722470f7af4aff401faac2c3388210ba6c70e09cd440",
+    "th_sid": "e71beafbba82bdb7ab41a5940ba106d90637bf8339dcb4db596fd635bb24c84c"
+  },
+  "fips180_4_sha256_abc": {
+    "description": "FIPS 180-4 SHA-256(\"abc\"); proves the test's hash primitive before trusting the TH points.",
+    "digest": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "input_ascii": "abc"
+  },
+  "frames": [
+    {
+      "frame_type": "0x0100",
+      "name": "CLIENT_HELLO",
+      "tlvs": [
+        {
+          "name": "ProfileOffer",
+          "type": "0x0001",
+          "value": "010203"
+        },
+        {
+          "name": "KEMOffer",
+          "type": "0x0003",
+          "value": "11ec"
+        },
+        {
+          "name": "SigOffer",
+          "type": "0x0005",
+          "value": "0807"
+        },
+        {
+          "name": "AEADOffer",
+          "type": "0x000c",
+          "value": "0002"
+        },
+        {
+          "name": "KEMShare",
+          "type": "0x0007",
+          "value": "42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff"
+        }
+      ]
+    },
+    {
+      "frame_type": "0x0101",
+      "name": "SERVER_HELLO",
+      "tlvs": [
+        {
+          "name": "ProfileSelect",
+          "type": "0x0002",
+          "value": "01"
+        },
+        {
+          "name": "KEMSelect",
+          "type": "0x0004",
+          "value": "11ec"
+        },
+        {
+          "name": "SigSelect",
+          "type": "0x0006",
+          "value": "0807"
+        },
+        {
+          "name": "AEADSelect",
+          "type": "0x000d",
+          "value": "0002"
+        },
+        {
+          "name": "KEMCiphertext",
+          "type": "0x0008",
+          "value": "49cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83bbe41c447ca4dd053d659dc5fe265e86bee71f477fa7d008306890c8f1295189b1ea124a72aad30b336b93cbf42c548cb4ed154d75add60e366e96cef72f578fb7e0184078a0d901396199c1fa225a82bae31b437ba3dc043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d20a326a92caf32b538bb3ec144c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e6"
+        }
+      ]
+    },
+    {
+      "frame_type": "0x0102",
+      "name": "SERVER_AUTH",
+      "tlvs": [
+        {
+          "name": "ServerIdentityKey",
+          "type": "0x0009",
+          "value": "50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2d"
+        },
+        {
+          "name": "ServerCertVerify",
+          "type": "0x000a",
+          "value": "080757da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab2eb134b73abd40c346c94ccf52d558db5ee164e76aed70f376f97cff8205880b8e1194"
+        },
+        {
+          "name": "ServerFinished",
+          "type": "0x000b",
+          "value": "5ee164e76aed70f376f97cff8205880b8e1194179a1da023a629ac2fb235b83b"
+        }
+      ]
+    },
+    {
+      "frame_type": "0x0103",
+      "name": "CLIENT_AUTH",
+      "tlvs": [
+        {
+          "name": "ClientIdentityKey",
+          "type": "0x0009",
+          "value": "c043c649cc4fd255d85bde61e467ea6df073f679fc7f0285088b0e9114971a9d"
+        },
+        {
+          "name": "ClientCertVerify",
+          "type": "0x000a",
+          "value": "0807c74acd50d356d95cdf62e568eb6ef174f77afd800386098c0f9215981b9e21a427aa2db033b639bc3fc245c84bce51d457da5de063e669ec6ff275f87bfe8104"
+        },
+        {
+          "name": "ClientFinished",
+          "type": "0x000b",
+          "value": "ce51d457da5de063e669ec6ff275f87bfe8104870a8d109316991c9f22a528ab"
+        }
+      ]
+    }
+  ],
+  "hash": "SHA-256",
+  "name": "N-PAMP transcript KAT",
+  "profile": "Standard",
+  "provenance": "Standards-derived, non-circular. The expected TH_* are produced by an INDEPENDENT byte-constructor (frame-type as 2-octet BE; each TLV as Type(2 BE)||Length(2 BE)||Value) followed by FIPS 180-4 SHA-256 — NOT by the N-PAMP Transcript type under test. The consuming test re-derives the points with its own manual constructor (oracle leg) AND with the real Transcript (impl leg); both MUST equal these values. SHA-256 itself is anchored to FIPS 180-4 via SHA-256(\"abc\"). The TLV values are deterministic KAT fixtures (not crypto-real); the transcript construction is value-agnostic, so this isolates byte-ordering, per-TLV granularity, and frame-type-only absorption (spec §3 / §7.1 divergence from RFC 8446 §4.4.1).",
+  "rule": "AddFrameType(ft) appends ft as 2-octet big-endian (NOT the rest of the 36-octet frame header). AddTLV appends Type(2 BE)||Length(2 BE)||Value. A transcript point = SHA-256 over all bytes absorbed so far. Granularity is per-TLV (spec §3).",
+  "spec": "N-PAMP draft-00 handshake binding (spec/10) §3 (transcript construction)"
+}

@@ -1,0 +1,3 @@
+code_point,name,profiles,construction
+0x11ec,X25519MLKEM768,"Standard, High","Hybrid X25519MLKEM768 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-768_SS || X25519_SS (ML-KEM-first; ADR-0005 / NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract."
+0x11ed,X25519MLKEM1024,"High, Sovereign","Hybrid X25519MLKEM1024 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-1024_SS || X25519_SS (ML-KEM-first; ADR-0005 / NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. Sovereign MUST NOT accept X25519MLKEM768."

@@ -1,0 +1,111 @@
+# CI gates for the publishable N-PAMP slice, run on every push and pull request:
+#
+#   schemas     - scripts/validate-schemas.py: every vector in test-vectors/v1
+#                 validates against its JSON Schema (draft 2020-12).
+#   conformance - the Go conformance runner (harness/runner, `npamp-conform`) drives
+#                 the in-tree Go reference adapter (harness/adapters/go) over the
+#                 embedded corpus; any MUST failure exits non-zero. Invocation per
+#                 harness/CONFORMANCE-README.md / harness/INSTRUCTIONS.md.
+#   pins        - scripts/verify-pins.ps1: recompute-and-compare every SHA-256 in
+#                 PIN.json + MANIFEST.sha256 (the canonical draft, registries, spec,
+#                 the conformance corpus, and all six KAT/schema vectors); exits 1 on
+#                 drift. The conformance job's `cmp` only guards the embedded runner
+#                 corpus == the pinned corpus; it does NOT catch drift in the KAT
+#                 vectors, schemas, draft, or a lock-step edit of both corpus copies.
+#                 pwsh is preinstalled on ubuntu-latest (run via `shell: pwsh`).
+#
+# Action majors verified against their GitHub READMEs on 2026-07-02:
+# actions/checkout@v7, actions/setup-python@v6, actions/setup-go@v6,
+# actions/upload-artifact@v7.
+name: conformance
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  schemas:
+    name: vector schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      # validate-schemas.py exits 2 (SKIP) when the jsonschema package is absent;
+      # install it so the gate validates instead of skipping.
+      - name: Install jsonschema
+        run: python -m pip install jsonschema
+      - name: Validate vectors against schemas
+        run: python scripts/validate-schemas.py
+
+  conformance:
+    name: conformance runner (Go reference adapter)
+    runs-on: ubuntu-latest
+    env:
+      # Build each module standalone even if an ambient Go workspace is present
+      # (harmless when none is).
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          # The runner and adapter modules both declare `go 1.26`.
+          go-version-file: harness/runner/go.mod
+      # The runner embeds harness/runner/corpus/conformance-corpus.json; it must be
+      # byte-identical to the pinned corpus, or the runner grades against stale vectors.
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -o npamp-conform .
+      - name: Build Go reference adapter
+        run: go build -C harness/adapters/go -o npamp-adapter-go .
+      - name: Run conformance suite
+        run: ./harness/runner/npamp-conform run --testee "./harness/adapters/go/npamp-adapter-go" --junit conformance-report.xml
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit
+          path: conformance-report.xml
+
+  pins:
+    name: pinned-vector drift gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # verify-pins.ps1 is self-contained in-slice (it resolves -Root to the repo
+      # root that holds PIN.json + MANIFEST.sha256) and exits non-zero on any
+      # missing/mismatched pinned hash. pwsh ships on ubuntu-latest.
+      - name: Verify pinned corpus, KAT vectors, schemas, and draft (recompute + compare)
+        shell: pwsh
+        run: scripts/verify-pins.ps1
+
+  rust:
+    name: rust reference build + KAT/conformance tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build rust reference implementation
+        run: cargo build --manifest-path impl/rust/Cargo.toml
+      - name: Build rust conformance adapter
+        run: cargo build --manifest-path harness/adapters/rust/Cargo.toml
+      - name: Run rust tests (conformance + handshake KAT)
+        run: cargo test --manifest-path impl/rust/Cargo.toml
+
+  swift:
+    name: swift reference build + tests
+    runs-on: ubuntu-latest
+    container: swift:5.10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build swift reference implementation
+        run: swift build --package-path impl/swift
+      - name: Build swift conformance adapter
+        run: swift build --package-path harness/adapters/swift
+      - name: Run swift tests
+        run: swift test --package-path impl/swift

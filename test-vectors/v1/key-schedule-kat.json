@@ -1,0 +1,63 @@
+{
+  "name": "N-PAMP key-schedule KAT",
+  "spec": "N-PAMP draft-00 handshake binding (spec/10) §5; draft-00 §7.4 (HKDF-Expand-Label) + §7.5 (traffic keys)",
+  "provenance": "Standards-derived, non-circular and ANCHOR-based. This file does NOT store N-PAMP output bytes (those could only come from running an implementation = circular). It stores (a) external RFC anchors and (b) fixed inputs. Each implementation proves its own HKDF-Expand-Label oracle against the RFC 8448 / RFC 5869 anchors, then checks its own key schedule against that proven oracle. N-PAMP's HKDF-Expand-Label is RFC 8446 §7.1 with the label prefix changed from \"tls13 \" to \"n-pamp \" — so RFC 8448 (which uses \"tls13 \") validates the construction MECHANISM, and the prefix swap is the only N-PAMP-original element.",
+  "rfc8446_7_1": {
+    "description": "HKDF-Expand-Label(Secret, Label, Context, Length) = HKDF-Expand(Secret, HkdfLabel, Length); HkdfLabel = uint16(Length) || uint8(len(prefix+Label)) || (prefix+Label) || uint8(len(Context)) || Context. Big-endian uint16; 1-octet vector length prefixes. N-PAMP uses prefix \"n-pamp \"; TLS 1.3 uses \"tls13 \".",
+    "source_url": "https://www.rfc-editor.org/rfc/rfc8446#section-7.1"
+  },
+  "rfc8448_expand_label": {
+    "description": "RFC 8448 §3 Simple 1-RTT Handshake (TLS_AES_128_GCM_SHA256, SHA-256). Validates an HKDF-Expand-Label oracle with prefix \"tls13 \": expandLabel(secret,\"tls13 \",\"key\",\"\",16)==write_key; (\"iv\",\"\",12)==write_iv; (\"finished\",\"\",32)==finished_key. All derive from the HANDSHAKE traffic secret.",
+    "source_url": "https://www.rfc-editor.org/rfc/rfc8448#section-3",
+    "hash": "SHA-256",
+    "client_handshake_traffic_secret": "b3eddb126e067f35a780b3abf45e2d8f3b1a950738f52e9600746a0e27a55a21",
+    "write_key": "dbfaa693d1762c5b666af5d950258d01",
+    "write_iv": "5bd3c71b836e0b76bb73265f",
+    "finished_key": "b80ad01015fb2f0bd65ff7d4da5d6bf83f84821d1f87fdc7d3c75b5a7b42d9c4"
+  },
+  "rfc5869_tc1": {
+    "description": "RFC 5869 Appendix A.1 Test Case 1 (SHA-256). Anchors HKDF-Extract and HKDF-Expand: Extract(salt, ikm)==prk; Expand(prk, info, L)==okm.",
+    "source_url": "https://www.rfc-editor.org/rfc/rfc5869#appendix-A.1",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "L": 42,
+    "prk": "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5",
+    "okm": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
+  },
+  "npamp_inputs": {
+    "description": "Fixed inputs for the N-PAMP Standard-profile key schedule. ikm_mlkem_ss and ikm_x25519_ss are real standard shared secrets reused from the KEM-wire KAT (NIST ACVP ML-KEM decaps K; RFC 7748 §6.1 shared secret) — the key schedule consumes the KEM output, so this provides continuity. th_kem and th_ccv are fixed synthetic 32-octet transcript-hash inputs (the KAT pins the DERIVATION from them; the transcript CONSTRUCTION is a separate KAT).",
+    "profile": "Standard",
+    "hash": "SHA-256",
+    "label_prefix": "n-pamp ",
+    "ikm_mlkem_ss": "11B62291B1A9D307C8240D70BE0B45436DB445793173F6E79FCD2B273D7F3B01",
+    "ikm_x25519_ss": "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
+    "th_kem": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+    "th_ccv": "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"
+  },
+  "construction": {
+    "ikm": "ML-KEM_SS || X25519_SS (ML-KEM-first, ADR-0005) = ikm_mlkem_ss || ikm_x25519_ss",
+    "handshake_secret": "HKDF-Extract(salt = 32 zero octets, IKM = ikm)",
+    "c_hs": "HKDF-Expand-Label(handshake_secret, 'c hs', th_kem, 32)",
+    "s_hs": "HKDF-Expand-Label(handshake_secret, 's hs', th_kem, 32)",
+    "master": "HKDF-Expand-Label(handshake_secret, 'master', th_ccv, 32)",
+    "traffic_secret": "HKDF-Expand-Label(parent, 'traffic', ctx, 32); ctx = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE). handshake-phase parent = c_hs/s_hs (epoch 0, channel Control=0x0000); application-phase parent = master.",
+    "key": "HKDF-Expand-Label(traffic_secret, 'key', '', 32)",
+    "iv": "HKDF-Expand-Label(traffic_secret, 'iv', '', 12)",
+    "finished_key": "HKDF-Expand-Label(c_hs/s_hs per direction, 'finished', '', 32)",
+    "suite_handshake": "AES-256-GCM (npamp.AEADAES256GCM, per draft-00 cryptographic-suites registry)",
+    "channel_control": "0x0000"
+  },
+  "coverage": {
+    "anchored": [
+      "raw HKDF-Extract/Expand vs RFC 5869 TC1",
+      "HKDF-Expand-Label mechanism vs RFC 8448 (tls13 prefix): key/iv/finished",
+      "N-PAMP key schedule (handshake_secret ladder, traffic key/iv, finished_key) vs the RFC-8448-validated oracle applied with the n-pamp prefix"
+    ],
+    "not_covered_here": [
+      "transcript CONSTRUCTION (frames/TLVs -> TH_*): separate transcript KAT",
+      "High/Sovereign profiles (SHA-384): this vector is Standard/SHA-256",
+      "CertVerify signature: separate CertVerify KAT"
+    ]
+  }
+}

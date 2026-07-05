@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Canonical build descriptor for CI / any host with the .NET SDK.
+       Run "dotnet run" against this project to emit the conformance vectors.
+       Hosts with only the .NET runtime (no SDK) build via build-local.ps1
+       using the Roslyn csc from VS Build Tools. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>npamp-vectors</AssemblyName>
+    <RootNamespace>Sh.Bubblefish.Npamp</RootNamespace>
+    <StartupObject>Sh.Bubblefish.Npamp.Vectors</StartupObject>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The conformance test (test/ConformanceTest.cs) has its own entry point;
+         keep it out of the generator assembly. -->
+    <Compile Remove="test/**/*.cs" />
+  </ItemGroup>
+
+</Project>

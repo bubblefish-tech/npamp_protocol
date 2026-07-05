@@ -1,0 +1,14 @@
+[package]
+name = "npamp-native"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP wire-format native Python extension: a thin PyO3/abi3 binding over the audited Rust core (the pyca/cryptography distribution model)."
+
+[lib]
+name = "npamp_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+npamp = { path = "../../rust" }
+pyo3 = { version = "0.28", features = ["abi3-py39", "extension-module"] }

@@ -10,7 +10,7 @@ repository-code: "https://github.com/bubblefish-tech/npamp_protocol"
 url: "https://datatracker.ietf.org/doc/draft-bubblefish-npamp/"
 identifiers:
   - type: other
-    value: "draft-bubblefish-npamp-00"
+    value: "draft-bubblefish-npamp-01"
     description: "IETF Internet-Draft (Independent Submission stream, Informational)"
 keywords:
   - post-quantum

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "npamp_00 transcript KAT vector",
+  "description": "Schema for the N-PAMP draft-00 spec/10 §3 transcript-construction Known Answer Test. A standards-anchored, NON-CIRCULAR KAT carrying a FIPS 180-4 SHA-256 anchor plus fixed frame/TLV inputs whose independent per-TLV byte-construction yields the TH_* transcript points — these are reference inputs and expected digests, not implementation output bytes.",
+  "type": "object",
+  "required": [
+    "coverage",
+    "cut_points",
+    "expected_transcript_points",
+    "fips180_4_sha256_abc",
+    "frames",
+    "hash",
+    "name",
+    "profile",
+    "provenance",
+    "rule",
+    "spec"
+  ],
+  "properties": {
+    "coverage": {
+      "type": "object",
+      "description": "What this KAT does and does not anchor.",
+      "required": ["anchored", "not_covered_here"],
+      "properties": {
+        "anchored": {
+          "type": "array",
+          "description": "Properties this vector pins (SHA-256 primitive, oracle leg, impl leg).",
+          "items": { "type": "string" }
+        },
+        "not_covered_here": {
+          "type": "array",
+          "description": "Explicit non-scope (crypto realism, High/Sovereign SHA-384, Finished/CertVerify KATs).",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "cut_points": {
+      "type": "object",
+      "description": "Prose definition of where each TH_* transcript point is taken in the handshake.",
+      "required": ["th_ccv", "th_cid", "th_kem", "th_scv", "th_sid"],
+      "properties": {
+        "th_ccv": { "type": "string" },
+        "th_cid": { "type": "string" },
+        "th_kem": { "type": "string" },
+        "th_scv": { "type": "string" },
+        "th_sid": { "type": "string" }
+      }
+    },
+    "expected_transcript_points": {
+      "type": "object",
+      "description": "Expected TH_* values: SHA-256 (32-byte) digests over all bytes absorbed up to each cut point.",
+      "required": ["th_ccv", "th_cid", "th_kem", "th_scv", "th_sid"],
+      "properties": {
+        "th_ccv": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_cid": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_kem": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_scv": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 },
+        "th_sid": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64 }
+      }
+    },
+    "fips180_4_sha256_abc": {
+      "type": "object",
+      "description": "FIPS 180-4 SHA-256(\"abc\") anchor that proves the test's hash primitive before trusting the TH points.",
+      "required": ["description", "digest", "input_ascii"],
+      "properties": {
+        "description": { "type": "string" },
+        "digest": {
+          "type": "string",
+          "description": "Expected SHA-256 (32-byte) digest of the ASCII input.",
+          "pattern": "^[0-9a-fA-F]+$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "input_ascii": { "const": "abc" }
+      }
+    },
+    "frames": {
+      "type": "array",
+      "description": "Ordered handshake frames whose frame-type and per-TLV bytes are absorbed into the transcript.",
+      "items": {
+        "type": "object",
+        "required": ["frame_type", "name", "tlvs"],
+        "properties": {
+          "frame_type": {
+            "type": "string",
+            "description": "Frame type as a 2-octet big-endian code point, written 0x followed by 4 hex digits.",
+            "pattern": "^0x[0-9a-fA-F]{4}$"
+          },
+          "name": { "type": "string" },
+          "tlvs": {
+            "type": "array",
+            "description": "TLVs absorbed as Type(2 BE)||Length(2 BE)||Value at per-TLV granularity.",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "value"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": {
+                  "type": "string",
+                  "description": "TLV type as a 2-octet big-endian code point, written 0x followed by 4 hex digits.",
+                  "pattern": "^0x[0-9a-fA-F]{4}$"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "TLV value bytes, hex-encoded (even number of hex digits).",
+                  "pattern": "^([0-9a-fA-F]{2})+$"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hash": { "const": "SHA-256", "description": "Standard-profile transcript hash for this vector." },
+    "name": { "const": "N-PAMP transcript KAT" },
+    "profile": { "const": "Standard", "description": "N-PAMP profile fixing SHA-256 as the transcript hash." },
+    "provenance": {
+      "type": "string",
+      "description": "Statement that the expected TH_* are produced by an independent byte-constructor, not the type under test (non-circular)."
+    },
+    "rule": {
+      "type": "string",
+      "description": "Absorption rule: frame-type as 2-octet BE; each TLV as Type(2 BE)||Length(2 BE)||Value; point = SHA-256 over all bytes so far."
+    },
+    "spec": {
+      "type": "string",
+      "description": "Spec clause this KAT anchors (N-PAMP draft-00 handshake binding §3 transcript construction).",
+      "pattern": "^N-PAMP draft-00"
+    }
+  }
+}

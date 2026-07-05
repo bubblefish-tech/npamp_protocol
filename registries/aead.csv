@@ -1,0 +1,3 @@
+code_point,name,key_bytes,nonce_bytes,tag_bytes,reference
+0x0001,AES-256-GCM,32,12,16,"RFC 5116"
+0x0002,ChaCha20-Poly1305,32,12,16,"RFC 8439"
