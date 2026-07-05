@@ -9,17 +9,17 @@ import PackageDescription
 let package = Package(
     name: "NpampAdapter",
     dependencies: [
-        // Local path to the OPEN Swift reference implementation package (impl/swift).
-        // Its directory name "swift" collides with THIS adapter package's own directory
-        // (harness/adapters/swift) under SwiftPM's last-path-component identity rule, so
-        // `package: "swift"` resolves back to this package. Give the dependency an explicit
-        // identity ("Npamp", its declared package name) to disambiguate.
-        .package(name: "Npamp", path: "../../../impl/swift"),
+        // Local path to the OPEN Swift reference implementation package (impl/swift),
+        // whose SwiftPM identity is its directory name "swift". This adapter deliberately
+        // lives in harness/adapters/swift-adapter (identity "swift-adapter") so its own
+        // identity does NOT collide with impl/swift under SwiftPM's last-path-component
+        // identity rule; the product reference below therefore resolves unambiguously.
+        .package(path: "../../../impl/swift"),
     ],
     targets: [
         .executableTarget(
             name: "npamp-adapter",
-            dependencies: [.product(name: "Npamp", package: "Npamp")]
+            dependencies: [.product(name: "Npamp", package: "swift")]
         ),
     ]
 )

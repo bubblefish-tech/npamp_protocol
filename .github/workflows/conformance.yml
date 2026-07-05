@@ -106,6 +106,6 @@ jobs:
       - name: Build swift reference implementation
         run: swift build --package-path impl/swift
       - name: Build swift conformance adapter
-        run: swift build --package-path harness/adapters/swift
+        run: swift build --package-path harness/adapters/swift-adapter
       - name: Run swift tests
         run: swift test --package-path impl/swift

@@ -90,7 +90,7 @@ Ten idiomatic reference implementations live under [`impl/`](impl/), co-located 
 | Python | [`impl/python/`](impl/python/) | [QUICKSTART](impl/python/QUICKSTART.md) | the `npamp` package (`pyproject.toml`) | [`harness/adapters/python/`](harness/adapters/python/) |
 | TypeScript | [`impl/typescript/`](impl/typescript/) | [QUICKSTART](impl/typescript/QUICKSTART.md) | `npm` — sources in `src/` (`package.json`) | [`harness/adapters/typescript/`](harness/adapters/typescript/) |
 | C# | [`impl/csharp/`](impl/csharp/) | [QUICKSTART](impl/csharp/QUICKSTART.md) | `dotnet build` (`Npamp.csproj`) | [`harness/adapters/csharp/`](harness/adapters/csharp/) |
-| Swift | [`impl/swift/`](impl/swift/) | [QUICKSTART](impl/swift/QUICKSTART.md) | `swift build` (`Package.swift`) | [`harness/adapters/swift/`](harness/adapters/swift/) |
+| Swift | [`impl/swift/`](impl/swift/) | [QUICKSTART](impl/swift/QUICKSTART.md) | `swift build` (`Package.swift`) | [`harness/adapters/swift-adapter/`](harness/adapters/swift-adapter/) |
 | Java | [`impl/java/`](impl/java/) | [QUICKSTART](impl/java/QUICKSTART.md) | JDK — sources in `src/` | [`harness/adapters/java/`](harness/adapters/java/) |
 | Kotlin | [`impl/kotlin/`](impl/kotlin/) | [QUICKSTART](impl/kotlin/QUICKSTART.md) | Kotlin/JVM — sources in `src/` | [`harness/adapters/kotlin/`](harness/adapters/kotlin/) |
 | PHP | [`impl/php/`](impl/php/) | [QUICKSTART](impl/php/QUICKSTART.md) | sources in `src/` | [`harness/adapters/php/`](harness/adapters/php/) |
@@ -137,7 +137,7 @@ Copy a reference adapter from [`harness/adapters/`](harness/adapters/) and re-po
 | | | | | |
 |---|---|---|---|---|
 | [`adapters/go/`](harness/adapters/go/) | [`adapters/rust/`](harness/adapters/rust/) | [`adapters/python/`](harness/adapters/python/) | [`adapters/typescript/`](harness/adapters/typescript/) | [`adapters/csharp/`](harness/adapters/csharp/) |
-| [`adapters/swift/`](harness/adapters/swift/) | [`adapters/java/`](harness/adapters/java/) | [`adapters/kotlin/`](harness/adapters/kotlin/) | [`adapters/php/`](harness/adapters/php/) | [`adapters/ruby/`](harness/adapters/ruby/) |
+| [`adapters/swift-adapter/`](harness/adapters/swift-adapter/) | [`adapters/java/`](harness/adapters/java/) | [`adapters/kotlin/`](harness/adapters/kotlin/) | [`adapters/php/`](harness/adapters/php/) | [`adapters/ruby/`](harness/adapters/ruby/) |
 
 The adapter contract covers these eight operations (full detail in [`harness/INSTRUCTIONS.md`](harness/INSTRUCTIONS.md)):
 
