@@ -33,8 +33,8 @@ seq `0`, frame type as below; AUTH frames set `FlagENC` and are AEAD-sealed (§6
 |-------|------|-------|-----------------|------------|
 | CLIENT_HELLO | `0x0100` | Cleartext | ProfileOffer `0x01`, KEMOffer `0x03`, SigOffer `0x05`, AEADOffer `0x0C`, KEMShare `0x07` | None |
 | SERVER_HELLO | `0x0101` | Cleartext | ProfileSelect `0x02`, KEMSelect `0x04`, SigSelect `0x06`, AEADSelect `0x0D`, KEMCiphertext `0x08` | None |
-| SERVER_AUTH | `0x0102` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | AES-256-GCM (handshake key, §6.4) |
-| CLIENT_AUTH | `0x0103` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | AES-256-GCM (handshake key, §6.4) |
+| SERVER_AUTH | `0x0102` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | negotiated AEAD (handshake key, §6.4) |
+| CLIENT_AUTH | `0x0103` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | negotiated AEAD (handshake key, §6.4) |
 
 A server reaches the keyed/Established state only after CLIENT_AUTH (the master secret is
 derived at the client-auth boundary, §5). **[D→N-PAMP]**
@@ -200,10 +200,11 @@ ServerHello.Random `DOWNGRD` sentinel).
 
 ### 6.4 AUTH-frame sealing
 
-SERVER_AUTH/CLIENT_AUTH are sealed with AES-256-GCM under the per-direction handshake key/iv
+SERVER_AUTH/CLIENT_AUTH are sealed with the negotiated AEAD (the primary suite = `AEADSelect[0]`,
+the server's selected handshake suite) under the per-direction handshake key/iv
 (§5): `Flags = FlagENC`, `Channel = 0x0000`, `Seq = 0`; AAD = the 21-octet frame header prefix;
 nonce = `iv XOR seq` (§4 of `06_cryptographic_suites.md`). On open, exactly three TLVs in order
-(IdentityKey, CertVerify, Finished) are required. **[STD/P]** AEAD; **[D→N-PAMP]** the 3-TLV AUTH layout.
+(IdentityKey, CertVerify, Finished) are required. **[negotiated per AEADSelect `0x0D`]** AEAD; **[D→N-PAMP]** the 3-TLV AUTH layout.
 
 ## 7. Security considerations (summary of divergences from TLS 1.3)
 
@@ -253,8 +254,9 @@ non-circular vectors are required and are tracked as corpus growth:
   non-circularly across all reference impls — Go as the reference implementation; TypeScript / Python / Java /
   Kotlin / Ruby / PHP / Rust / C# under `impl/` — gated by `impl/_conformance-harness/kat-handshake-all-langs.sh`.
   Each `impl/` language carries the full trunk (HKDF-Extract → `handshake_secret` → `c_hs`/`s_hs`/`master`
-  → `finished_key` + the handshake-phase traffic key/iv); the §7.5 traffic context binds the AES-256-GCM
-  AEAD code point `0x0001` (`registries/aead.csv`; `0x0002` is ChaCha20-Poly1305). Mutation-proven per
+  → `finished_key` + the handshake-phase traffic key/iv); the §7.5 traffic context binds the AEAD code
+  point the reference vector fixes as its test input — AES-256-GCM `0x0001` (`registries/aead.csv`; `0x0002`
+  is ChaCha20-Poly1305) — the KAT fixture, NOT the AUTH-sealing rule (AUTH uses the negotiated AEAD, §6.4). Mutation-proven per
   language (an X25519-first IKM order — violating ML-KEM-first / ADR-0005 — fails the impl leg only).
 - **Transcript KAT** — **DELIVERED** (`test-vectors/v1/transcript-kat.json`, ADR-0009). Fixed
   frame/TLV inputs → each `TH_*` point (`TH_kem`/`TH_sId`/`TH_sCV`/`TH_cId`/`TH_cCV`). Non-circular by
@@ -293,6 +295,6 @@ self-interop-tested. The key-schedule / transcript / Finished / CertVerify KATs 
 non-circularly across all reference impls (gated by `impl/_conformance-harness/kat-handshake-all-langs.sh`;
 Go is covered by its own KATs) — each `impl/` language carries the full handshake key
 schedule (HKDF-Extract → `handshake_secret` → `c_hs`/`s_hs`/`master` ladder → `finished_key` +
-handshake-phase traffic key/iv, binding the AES-256-GCM AEAD code point `0x0001`). Only the KEM-wire KAT
+handshake-phase traffic key/iv, binding the AEAD code point the vector fixes as its test input — AES-256-GCM `0x0001`, the KAT fixture, not the AUTH-sealing rule; AUTH uses the negotiated AEAD per §6.4). Only the KEM-wire KAT
 remains on the Go reference — broadening it across the `impl/` languages is follow-on work: the ML-KEM
 KEM-wire layout needs a per-language ML-KEM dependency that is not generally available.
