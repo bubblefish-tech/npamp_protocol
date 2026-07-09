@@ -90,7 +90,7 @@ Ten idiomatic reference implementations live under [`impl/`](impl/), co-located 
 | Python | [`impl/python/`](impl/python/) | [QUICKSTART](impl/python/QUICKSTART.md) | the `npamp` package (`pyproject.toml`) | [`harness/adapters/python/`](harness/adapters/python/) |
 | TypeScript | [`impl/typescript/`](impl/typescript/) | [QUICKSTART](impl/typescript/QUICKSTART.md) | `npm` — sources in `src/` (`package.json`) | [`harness/adapters/typescript/`](harness/adapters/typescript/) |
 | C# | [`impl/csharp/`](impl/csharp/) | [QUICKSTART](impl/csharp/QUICKSTART.md) | `dotnet build` (`Npamp.csproj`) | [`harness/adapters/csharp/`](harness/adapters/csharp/) |
-| Swift | [`impl/swift/`](impl/swift/) | [QUICKSTART](impl/swift/QUICKSTART.md) | `swift build` (`Package.swift`) | [`harness/adapters/swift-adapter/`](harness/adapters/swift-adapter/) |
+| Swift | [`impl/swift/`](impl/swift/) | [QUICKSTART](impl/swift/QUICKSTART.md) | `swift build` (`Package.swift`) | [`harness/adapters/swift/`](harness/adapters/swift/) |
 | Java | [`impl/java/`](impl/java/) | [QUICKSTART](impl/java/QUICKSTART.md) | JDK — sources in `src/` | [`harness/adapters/java/`](harness/adapters/java/) |
 | Kotlin | [`impl/kotlin/`](impl/kotlin/) | [QUICKSTART](impl/kotlin/QUICKSTART.md) | Kotlin/JVM — sources in `src/` | [`harness/adapters/kotlin/`](harness/adapters/kotlin/) |
 | PHP | [`impl/php/`](impl/php/) | [QUICKSTART](impl/php/QUICKSTART.md) | sources in `src/` | [`harness/adapters/php/`](harness/adapters/php/) |
@@ -137,7 +137,7 @@ Copy a reference adapter from [`harness/adapters/`](harness/adapters/) and re-po
 | | | | | |
 |---|---|---|---|---|
 | [`adapters/go/`](harness/adapters/go/) | [`adapters/rust/`](harness/adapters/rust/) | [`adapters/python/`](harness/adapters/python/) | [`adapters/typescript/`](harness/adapters/typescript/) | [`adapters/csharp/`](harness/adapters/csharp/) |
-| [`adapters/swift-adapter/`](harness/adapters/swift-adapter/) | [`adapters/java/`](harness/adapters/java/) | [`adapters/kotlin/`](harness/adapters/kotlin/) | [`adapters/php/`](harness/adapters/php/) | [`adapters/ruby/`](harness/adapters/ruby/) |
+| [`adapters/swift/`](harness/adapters/swift/) | [`adapters/java/`](harness/adapters/java/) | [`adapters/kotlin/`](harness/adapters/kotlin/) | [`adapters/php/`](harness/adapters/php/) | [`adapters/ruby/`](harness/adapters/ruby/) |
 
 The adapter contract covers these eight operations (full detail in [`harness/INSTRUCTIONS.md`](harness/INSTRUCTIONS.md)):
 
@@ -160,7 +160,7 @@ The [`test-vectors/`](test-vectors/) tree is the **canonical** conformance oracl
 
 | Vector set | What it pins | Standards anchor |
 |---|---|---|
-| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 253 frame / codec / reject vectors (cross-implementation golden) | draft-01 wire format; AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli |
+| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 253 primitive + frame / codec / reject vectors (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 and draft-01 (the draft-01 KEM-combiner change is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
 | [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 — [ADR-0005](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md) / [ADR-0007](decisions/0007-kem-wire-kat-anchor-keygen-x25519-order-defer-decaps-ss.md) |
 | [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 — [ADR-0008](decisions/0008-key-schedule-kat-via-rfc8448-validated-oracle.md) |
 | [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor — [ADR-0009](decisions/0009-transcript-kat-independent-byte-constructor-fips180-anchor.md) |
