@@ -8,6 +8,7 @@ import (
 	"crypto/ed25519"
 	"crypto/tls"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -25,6 +26,12 @@ const ALPN = "n-pamp/2"
 // maxFrameSize caps a single frame (header + payload) accepted off the wire, so
 // a peer cannot force an unbounded allocation with a hostile length field.
 const maxFrameSize = 16 << 20 // 16 MiB
+
+// errClosed is returned by the key-derivation gateways (sendState/recvState) once
+// the connection's master secret has been wiped by Zeroize/Close, so no frame is
+// ever sealed or opened under an all-zero key after teardown. Send/Recv surface it
+// wrapped.
+var errClosed = errors.New("npamp/sdk: connection is closed")
 
 // Config configures Dial and Listen.
 //
@@ -47,6 +54,23 @@ type Config struct {
 	// fails on a mismatch. On the client the check runs BEFORE CLIENT_AUTH is
 	// sent, so the client never authenticates to an impostor.
 	ExpectedPeerKey ed25519.PublicKey
+
+	// HandshakeTimeout bounds the server-side handshake (TLS + N-PAMP) per
+	// connection in Listener.Accept. The deadline starts AFTER a raw connection is
+	// accepted, so it bounds only the handshake work — never the idle wait for the
+	// next connection (the underlying net.Listener.Accept does not observe a
+	// context). This closes the pre-authentication stalled-handshake denial of
+	// service in which a peer completes TCP/TLS setup but never finishes the N-PAMP
+	// handshake, otherwise pinning the accepting goroutine and socket indefinitely.
+	// It bounds each individual handshake but does not by itself provide accept-loop
+	// concurrency: Accept blocks on the full per-connection handshake, so a server
+	// expecting many concurrent or slow handshakes should run several concurrent
+	// Accept goroutines (Accept is safe for concurrent use); the timeout then
+	// guarantees no such goroutine is held longer than HandshakeTimeout. Zero means
+	// no per-connection handshake deadline (only the caller's Accept context
+	// applies). It has no effect on Dial, whose handshake is already bounded by its
+	// context.
+	HandshakeTimeout time.Duration
 }
 
 // Conn is an established, mutually-authenticated N-PAMP session. It is
@@ -67,6 +91,10 @@ type Conn struct {
 	recvKeys map[npamp.ChannelID]*epochKeys
 
 	closeOnce sync.Once
+
+	// closed is set true by Zeroize under wmu+rmu and read by sendState/recvState
+	// under wmu/rmu, so no traffic key is derived from the master after it is wiped.
+	closed bool
 }
 
 // epochKeys is the cached AEAD key material for one (channel, direction) at the
@@ -139,11 +167,49 @@ func (c *Conn) PeerIdentity() ed25519.PublicKey {
 	return append(ed25519.PublicKey(nil), c.peerID...)
 }
 
-// Close tears down the underlying transport. It is safe to call more than once.
+// Close tears down the underlying transport and zeroizes the connection's key
+// material. It is safe to call more than once; the socket teardown and the wipe
+// each run exactly once. The socket is closed FIRST so any Send or Recv blocked in
+// I/O unblocks and releases its direction lock, letting the wipe acquire both locks
+// without racing an in-flight key derivation from the master secret.
 func (c *Conn) Close() error {
 	var err error
-	c.closeOnce.Do(func() { err = c.raw.Close() })
+	c.closeOnce.Do(func() {
+		err = c.raw.Close()
+		c.Zeroize()
+	})
 	return err
+}
+
+// Zeroize wipes the connection's master secret and every cached per-epoch traffic
+// key from memory, under both direction locks so it cannot race an in-flight
+// Send/Recv deriving a key from the master. It is idempotent and safe to call more
+// than once (Close calls it). It bounds how long the long-lived master secret —
+// from which any epoch's traffic key is derivable — lingers in the process heap
+// after a session ends; it does NOT substitute for the transport's ephemeral
+// (re)handshake as the source of whole-session forward secrecy. After Zeroize the
+// connection can no longer Send or Recv, as derivation from the wiped master would
+// no longer be correct.
+//
+// Lock order: wmu before rmu (the canonical order in this type). No other method
+// holds both locks at once — Send/KeyUpdate take wmu alone, Recv takes rmu alone,
+// and the KEY_UPDATE ACK is dispatched off the receive path — so Zeroize cannot
+// deadlock against them.
+func (c *Conn) Zeroize() {
+	c.wmu.Lock()
+	defer c.wmu.Unlock()
+	c.rmu.Lock()
+	defer c.rmu.Unlock()
+	c.closed = true
+	for i := range c.master {
+		c.master[i] = 0
+	}
+	for _, st := range c.sendKeys {
+		st.zeroize()
+	}
+	for _, st := range c.recvKeys {
+		st.zeroize()
+	}
 }
 
 // Send AEAD-seals payload into one frame on channel with the given application
@@ -183,6 +249,9 @@ func (c *Conn) sendLocked(ctx context.Context, channel npamp.ChannelID, frameTyp
 // sendState returns the send AEAD state for channel, deriving + caching the
 // epoch-0 key on first use. Caller holds wmu.
 func (c *Conn) sendState(channel npamp.ChannelID) (*epochKeys, error) {
+	if c.closed {
+		return nil, errClosed
+	}
 	st := c.sendKeys[channel]
 	if st == nil {
 		st = &epochKeys{}
@@ -245,6 +314,9 @@ func (c *Conn) Recv(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []by
 // recvState returns the recv AEAD state for channel, deriving + caching the
 // epoch-0 key on first use. Caller holds rmu.
 func (c *Conn) recvState(channel npamp.ChannelID) (*epochKeys, error) {
+	if c.closed {
+		return nil, errClosed
+	}
 	st := c.recvKeys[channel]
 	if st == nil {
 		st = &epochKeys{}

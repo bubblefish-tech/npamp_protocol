@@ -85,10 +85,22 @@ func (l *Listener) Accept(ctx context.Context) (*Conn, error) {
 		_ = raw.Close()
 		return nil, err
 	}
+	// Bound the handshake (TLS + N-PAMP) per connection, starting AFTER the raw
+	// accept — so the deadline covers only the handshake work, not the idle wait for
+	// a connection (l.ln.Accept does not observe ctx). This closes the pre-auth
+	// stalled-handshake DoS: a peer that completes TCP/TLS but never finishes the
+	// N-PAMP handshake is dropped after HandshakeTimeout instead of pinning this
+	// goroutine and socket. A zero HandshakeTimeout leaves only the caller's ctx.
+	hctx := ctx
+	if l.cfg.HandshakeTimeout > 0 {
+		var cancel context.CancelFunc
+		hctx, cancel = context.WithTimeout(ctx, l.cfg.HandshakeTimeout)
+		defer cancel()
+	}
 	// Force the TLS handshake here, in the per-connection path, so ALPN is
 	// populated and a slow client cannot stall the accept loop.
 	if tc, ok := raw.(*tls.Conn); ok {
-		if err := tc.HandshakeContext(ctx); err != nil {
+		if err := tc.HandshakeContext(hctx); err != nil {
 			_ = raw.Close()
 			return nil, fmt.Errorf("npamp/sdk: TLS handshake: %w", err)
 		}
@@ -97,7 +109,7 @@ func (l *Listener) Accept(ctx context.Context) (*Conn, error) {
 		_ = raw.Close()
 		return nil, err
 	}
-	master, peerID, err := runServerHandshake(ctx, raw, priv, pub, l.cfg.ExpectedPeerKey)
+	master, peerID, err := runServerHandshake(hctx, raw, priv, pub, l.cfg.ExpectedPeerKey)
 	if err != nil {
 		_ = raw.Close()
 		return nil, err

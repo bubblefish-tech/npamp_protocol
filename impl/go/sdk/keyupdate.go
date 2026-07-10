@@ -59,9 +59,10 @@ func (c *Conn) KeyUpdate(ctx context.Context, channel npamp.ChannelID) error {
 // marker announces exactly the next epoch, advances the receive epoch (zeroizing
 // the retired recv key), and replies with KEY_UPDATE_ACK on the local send
 // direction under a bounded write deadline (ackWriteTimeout), so a peer that
-// stalls its socket cannot wedge the receive loop indefinitely. The caller
-// (Recv) holds rmu; the ACK acquires wmu. This rmu→wmu order is the only nesting
-// in the type (Send/KeyUpdate take wmu alone), so it cannot deadlock.
+// stalls its socket cannot wedge the receive loop indefinitely. The ACK is sent
+// OFF the receive path, on its own goroutine (sendKeyUpdateAck), which takes wmu
+// alone; Recv holds rmu alone. No single goroutine holds both locks, so there is
+// no lock nesting to deadlock on.
 func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext []byte) error {
 	next, err := parseKeyUpdateMarker(plaintext)
 	if err != nil {
@@ -89,23 +90,39 @@ func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext
 // informational (the peer ignores it), so a derivation/seal error simply skips
 // it without tearing the connection down.
 func (c *Conn) sendKeyUpdateAck(channel npamp.ChannelID, epoch uint64) {
+	ctx, cancel := context.WithTimeout(context.Background(), ackWriteTimeout)
+	defer cancel()
+
+	// Seal + write under wmu (serializing with Send/KeyUpdate so wire order matches
+	// sequence order). Capture whether the write failed inside the locked region,
+	// but tear the connection down only AFTER releasing wmu: Close acquires wmu (to
+	// zeroize the master), so calling it while still holding wmu would self-deadlock
+	// on the non-reentrant mutex. A closed/zeroized connection makes sendState
+	// return errClosed here, so this never seals under a wiped key.
 	c.wmu.Lock()
-	defer c.wmu.Unlock()
 	st, err := c.sendState(channel)
 	if err != nil {
+		c.wmu.Unlock()
 		return
 	}
 	ack, err := sealWith(st, channel, npamp.FrameKeyUpdateAck, keyUpdateMarker(epoch))
 	if err != nil {
+		c.wmu.Unlock()
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), ackWriteTimeout)
-	defer cancel()
-	if err := c.writeWire(ctx, ack); err != nil {
+	werr := c.writeWire(ctx, ack)
+	if werr == nil {
+		st.seq++
+	}
+	c.wmu.Unlock()
+
+	// A failed or partial ACK write corrupts our send stream; tear the connection
+	// down — now that wmu is released, Close's zeroize can acquire it. The ACK is
+	// informational (the peer ignores it), so a seal/derive error above simply skips
+	// the ACK without a teardown.
+	if werr != nil {
 		_ = c.Close()
-		return
 	}
-	st.seq++
 }
 
 // keyUpdateMarker encodes the TLV 0x17 KeyUpdateMarker carrying the epoch as an
