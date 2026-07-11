@@ -51,24 +51,27 @@ skip() { echo "SKIP  $1 ($2)"; skips="$skips $1"; }
 
 # --- typescript (node built-in test runner; positive token: a nonzero 'pass N' with exit 0 => fail 0) ---
 if command -v node >/dev/null; then
-  o="$(node --test "$IMPL/typescript/test/transcript-kat.test.ts" "$IMPL/typescript/test/key-schedule-kat.test.ts" "$IMPL/typescript/test/finished-kat.test.ts" "$IMPL/typescript/test/certverify-kat.test.ts" 2>&1)"; ec=$?
+  o="$(node --test "$IMPL/typescript/test/transcript-kat.test.ts" "$IMPL/typescript/test/key-schedule-kat.test.ts" "$IMPL/typescript/test/finished-kat.test.ts" "$IMPL/typescript/test/certverify-kat.test.ts" "$IMPL/typescript/test/handshake-flow-kat.test.ts" 2>&1)"; ec=$?
   chk typescript "$o" "$ec" 'pass [1-9]'
 else skip typescript "no node"; fi
 
 # --- python (positive token: 'PASS test_' present) ---
 if command -v python >/dev/null; then
   o=""; ec=0
-  for t in transcript key_schedule finished certverify; do
+  for t in transcript key_schedule finished certverify handshake_flow; do
     out="$(PYTHONPATH="$IMPL/python" python "$IMPL/python/tests/test_${t}_kat.py" 2>&1)" || ec=1
     o="$o$out"$'\n'
   done
   chk python "$o" "$ec" 'PASS test_'
 else skip python "no python"; fi
 
-# --- rust (integration test handshake_kat.rs; positive token: 'N passed' with N>=1) ---
+# --- rust (integration tests handshake_kat.rs + handshake_flow_kat.rs; positive token: 'N passed' with N>=1) ---
 if command -v cargo >/dev/null; then
   o="$(cargo test --quiet --manifest-path "$IMPL/rust/Cargo.toml" --test handshake_kat 2>&1)"; ec=$?
-  chk rust "$o" "$ec" 'test result: ok\. [1-9][0-9]* passed'
+  of="$(cargo test --quiet --manifest-path "$IMPL/rust/Cargo.toml" --test handshake_flow_kat 2>&1)"; ecf=$?
+  # Combine both legs: PASS requires BOTH exit 0 AND both emit the positive 'N passed' token.
+  if [ "$ec" -ne 0 ] || [ "$ecf" -ne 0 ]; then rec=1; else rec=0; fi
+  chk rust "$o"$'\n'"$of" "$rec" 'test result: ok\. [1-9][0-9]* passed'
 else skip rust "no cargo"; fi
 
 # --- java (compile main+handshake+tests to a temp dir, run each main(); token: 'ALL PASS') ---
@@ -81,9 +84,10 @@ if command -v javac >/dev/null && command -v java >/dev/null; then
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/TranscriptKat.java \
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/KeyScheduleKat.java \
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/FinishedKat.java \
-      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/CertVerifyKat.java 2>"$JE"; then
+      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/CertVerifyKat.java \
+      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/HandshakeFlowKat.java 2>"$JE"; then
     ec=0; jo=""
-    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat; do
+    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat; do
       out="$( cd "$IMPL/java" && java -cp "$JT" "sh.bubblefish.npamp.$K" 2>&1 )" || ec=1
       jo="$jo$out"$'\n'
     done
@@ -103,10 +107,11 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/TranscriptKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/KeyScheduleKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/FinishedKat.kt \
-      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/CertVerifyKat.kt -d "$KT/out" 2>"$KE"; then
+      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/CertVerifyKat.kt \
+      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/HandshakeFlowKat.kt -d "$KT/out" 2>"$KE"; then
     STDLIB="$(dirname "$(command -v kotlinc)")/../lib/kotlin-stdlib.jar"
     ec=0; ko=""
-    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat; do
+    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat; do
       out="$( java -cp "$(kp "$KT/out")$KSEP$(kp "$STDLIB")" "sh.bubblefish.npamp.$K" "$(kp "$VEC")" 2>&1 )" || ec=1
       ko="$ko$out"$'\n'
     done
@@ -118,7 +123,7 @@ else skip kotlin "no kotlinc/java"; fi
 # --- ruby (token: 'ALL PASS') ---
 if command -v ruby >/dev/null; then
   o=""; ec=0
-  for t in transcript key_schedule finished certverify; do
+  for t in transcript key_schedule finished certverify handshake_flow; do
     out="$(ruby "$IMPL/ruby/test/${t}_kat.rb" 2>&1)" || ec=1
     o="$o$out"$'\n'
   done
@@ -128,7 +133,7 @@ else skip ruby "no ruby"; fi
 # --- php (token: 'ALL PASS') ---
 if command -v php >/dev/null; then
   o=""; ec=0
-  for t in transcript key_schedule finished certverify; do
+  for t in transcript key_schedule finished certverify handshake_flow; do
     out="$(php "$IMPL/php/test/${t}_kat.php" 2>&1)" || ec=1
     o="$o$out"$'\n'
   done

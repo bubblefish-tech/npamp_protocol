@@ -30,7 +30,8 @@ $tests = @(
   @{ Class = 'Sh.Bubblefish.Npamp.TranscriptKat'; File = 'TranscriptKat.cs'; Name = 'transcript-kat' },
   @{ Class = 'Sh.Bubblefish.Npamp.FinishedKat';   File = 'FinishedKat.cs';   Name = 'finished-kat'   },
   @{ Class = 'Sh.Bubblefish.Npamp.CertVerifyKat'; File = 'CertVerifyKat.cs'; Name = 'certverify-kat' },
-  @{ Class = 'Sh.Bubblefish.Npamp.KeyScheduleKat'; File = 'KeyScheduleKat.cs'; Name = 'key-schedule-kat' }
+  @{ Class = 'Sh.Bubblefish.Npamp.KeyScheduleKat'; File = 'KeyScheduleKat.cs'; Name = 'key-schedule-kat' },
+  @{ Class = 'Sh.Bubblefish.Npamp.HandshakeFlowKat'; File = 'HandshakeFlowKat.cs'; Name = 'handshake-flow-kat' }
 )
 
 $haveSdk = $false

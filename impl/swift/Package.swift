@@ -17,6 +17,7 @@ let package = Package(
         .executableTarget(name: "npamp-conformance", dependencies: ["Npamp"]),
         .executableTarget(name: "npamp-kat", dependencies: ["Npamp"]),
         .executableTarget(name: "npamp-handshake-kat", dependencies: ["Npamp"]),
+        .executableTarget(name: "npamp-handshake-flow-kat", dependencies: ["Npamp"]),
         .executableTarget(name: "npamp-adapter", dependencies: ["Npamp"]),
         .executableTarget(name: "npamp-example", dependencies: ["Npamp"]),
     ]

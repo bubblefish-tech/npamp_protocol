@@ -1,7 +1,7 @@
 // Open reference implementation of the N-PAMP wire format (draft-bubblefish-npamp-00).
 // OPEN protocol layer only: framing, registries, AEAD record layer, key schedule.
 // No proprietary methods, parameters, or weights.
-import { createHash, createHmac, createCipheriv, createDecipheriv, timingSafeEqual, createPrivateKey, createPublicKey, sign, verify, KeyObject } from "node:crypto";
+import { createHash, createHmac, createCipheriv, createDecipheriv, timingSafeEqual, createPrivateKey, createPublicKey, sign, verify, diffieHellman, KeyObject } from "node:crypto";
 
 export const HEADER_SIZE = 36;
 export const PROTOCOL_VERSION = 0x2;
@@ -183,6 +183,91 @@ export function deriveFinishedKey(secret: Buffer, standard: boolean): Buffer {
 
 // Handshake frame types (spec §1), carried on the control channel.
 export const FRAME_CLIENT_HELLO = 0x0100, FRAME_SERVER_HELLO = 0x0101, FRAME_SERVER_AUTH = 0x0102, FRAME_CLIENT_AUTH = 0x0103;
+
+// Security profiles (draft-00 §6). Standard = 0x01 (SHA-256, 32-octet secrets).
+export const PROFILE_STANDARD = 0x01, PROFILE_HIGH = 0x02, PROFILE_SOVEREIGN = 0x03;
+
+// KEM/Sig/AEAD registry code points used by the handshake flights (spec §1/§4).
+export const KEM_X25519_MLKEM768_CP = KEM_X25519_MLKEM768;
+
+// Handshake TLV types (registry §9.4 / spec/10 §1.1) beyond the negotiation TLVs declared above.
+export const TLV_KEM_OFFER = 0x03, TLV_SIG_OFFER = 0x05, TLV_KEM_SHARE = 0x07;
+export const TLV_PROFILE_SELECT = 0x02, TLV_KEM_SELECT = 0x04, TLV_SIG_SELECT = 0x06, TLV_AEAD_SELECT = 0x0d;
+export const TLV_IDENTITY_KEY = 0x09, TLV_CERT_VERIFY = 0x0a, TLV_FINISHED = 0x0b, TLV_AEAD_OFFER = 0x0c;
+
+// encodeTLV appends one TLV to dst in canonical wire form (Type u16 BE || Length u16 BE || Value),
+// the draft-00 §4.5 encoding shared by every handshake flight and the AUTH plaintext.
+export function encodeTLV(type: number, value: Buffer): Buffer {
+  const hdr = Buffer.alloc(4);
+  hdr.writeUInt16BE(type & 0xffff, 0);
+  hdr.writeUInt16BE(value.length, 2);
+  return Buffer.concat([hdr, value]);
+}
+
+function u16be(v: number): Buffer {
+  const b = Buffer.alloc(2);
+  b.writeUInt16BE(v & 0xffff, 0);
+  return b;
+}
+
+// encodeClientHello returns the CLIENT_HELLO frame payload (spec/10 §1): the five TLVs
+// ProfileOffer, KEMOffer, SigOffer, AEADOffer, KEMShare, in that order.
+//
+// ProfileOffer is the draft-01 VARIABLE-LENGTH form: ONE OCTET PER PROFILE (a single 0x01 for
+// {Standard}). The draft-00 fixed 4-octet ProfileOffer (Buffer.alloc(4)) would produce different
+// bytes and FAIL the handshake-flow KAT client_hello byte-equality — this encoder is the drift guard.
+export function encodeClientHello(profiles: number[], kems: number[], sigs: number[], aeads: number[], kemShare: Buffer): Buffer {
+  const profileOffer = Buffer.from(profiles.map((p) => p & 0xff)); // one octet per profile (draft-01)
+  const u16list = (ids: number[]) => Buffer.concat(ids.map(u16be));
+  return Buffer.concat([
+    encodeTLV(TLV_PROFILE_OFFER, profileOffer),
+    encodeTLV(TLV_KEM_OFFER, u16list(kems)),
+    encodeTLV(TLV_SIG_OFFER, u16list(sigs)),
+    encodeTLV(TLV_AEAD_OFFER, u16list(aeads)),
+    encodeTLV(TLV_KEM_SHARE, kemShare),
+  ]);
+}
+
+// encodeServerHello returns the SERVER_HELLO frame payload (spec/10 §1): ProfileSelect (1 octet),
+// KEMSelect, SigSelect, AEADSelect (2 octets each), KEMCiphertext, in that order.
+export function encodeServerHello(profile: number, kem: number, sig: number, aead: number, kemCiphertext: Buffer): Buffer {
+  return Buffer.concat([
+    encodeTLV(TLV_PROFILE_SELECT, Buffer.from([profile & 0xff])),
+    encodeTLV(TLV_KEM_SELECT, u16be(kem)),
+    encodeTLV(TLV_SIG_SELECT, u16be(sig)),
+    encodeTLV(TLV_AEAD_SELECT, u16be(aead)),
+    encodeTLV(TLV_KEM_CIPHERTEXT, kemCiphertext),
+  ]);
+}
+
+// encodeAuthMessage returns the SERVER_AUTH / CLIENT_AUTH plaintext (spec/10 §6.4): exactly three
+// TLVs in order — IdentityKey, CertVerify, Finished — sealed by the record layer at the call site.
+export function encodeAuthMessage(identityKey: Buffer, certVerify: Buffer, finished: Buffer): Buffer {
+  return Buffer.concat([
+    encodeTLV(TLV_IDENTITY_KEY, identityKey),
+    encodeTLV(TLV_CERT_VERIFY, certVerify),
+    encodeTLV(TLV_FINISHED, finished),
+  ]);
+}
+
+// RFC 8410 DER prefixes that wrap a raw 32-octet X25519 scalar / public u-coordinate into a
+// KeyObject (Node has no raw-scalar X25519 constructor). OID 1.3.101.110 = id-X25519.
+const X25519_PKCS8_PREFIX = Buffer.from("302e020100300506032b656e04220420", "hex");
+const X25519_SPKI_PREFIX = Buffer.from("302a300506032b656e032100", "hex");
+
+export function x25519PrivateKeyFromRaw(raw: Buffer): KeyObject {
+  return createPrivateKey({ key: Buffer.concat([X25519_PKCS8_PREFIX, raw]), format: "der", type: "pkcs8" });
+}
+
+export function x25519PublicKeyFromRaw(raw: Buffer): KeyObject {
+  return createPublicKey({ key: Buffer.concat([X25519_SPKI_PREFIX, raw]), format: "der", type: "spki" });
+}
+
+// x25519SharedSecret performs the raw RFC 7748 ECDH (client scalar × server public u), the X25519
+// leg of the X25519MLKEM768 hybrid KEM (spec/10 §4). Returns the 32-octet shared secret.
+export function x25519SharedSecret(privateKey: KeyObject, publicKey: KeyObject): Buffer {
+  return diffieHellman({ privateKey, publicKey });
+}
 
 // Transcript accumulates the draft-00 handshake transcript (binding spec/10 §3) and hashes it at a
 // cut point. Absorption granularity is per-TLV: addFrameType appends the 2-octet frame type ONLY

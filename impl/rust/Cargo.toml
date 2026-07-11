@@ -11,3 +11,14 @@ hkdf = "0.12"
 aes-gcm = "0.10"
 hmac = "0.12"
 ed25519-dalek = "2.2"
+
+[dev-dependencies]
+# ML-KEM-768 (FIPS 203) for the handshake-flow KAT: it decapsulates the pinned
+# captured-once ciphertext under the pinned d||z seed and MUST recover the pinned
+# ML-KEM shared secret. Kept a dev-dependency so the OPEN wire-format library
+# proper adds no post-quantum KEM dependency.
+ml-kem = { version = "0.2", features = ["deterministic"] }
+# The Decapsulate trait ml-kem's DecapsulationKey implements lives in the `kem`
+# crate (ml-kem re-uses RustCrypto's KEM trait); import it to call decapsulate.
+kem = "=0.3.0-pre.0"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
