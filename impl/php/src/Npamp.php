@@ -476,8 +476,8 @@ final class Handshake
     public const FRAME_CLIENT_AUTH = 0x0103;
 
     /** CertVerify role context strings (spec section 6.1). */
-    public const CONTEXT_SERVER_CERTVERIFY = 'N-PAMP draft-00, server CertificateVerify';
-    public const CONTEXT_CLIENT_CERTVERIFY = 'N-PAMP draft-00, client CertificateVerify';
+    public const CONTEXT_SERVER_CERTVERIFY = 'N-PAMP/2, server CertificateVerify';
+    public const CONTEXT_CLIENT_CERTVERIFY = 'N-PAMP/2, client CertificateVerify';
 
     /**
      * Finished (binding spec/10 section 6.2; RFC 8446 section 4.4.4):

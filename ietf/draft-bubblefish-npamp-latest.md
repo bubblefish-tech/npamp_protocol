@@ -630,8 +630,8 @@ TLS 1.3 {{RFC8446}} Section 4.4.3 with N-PAMP context strings:
 
 ~~~
 signing_input = (0x20 x 64) || context || 0x00 || transcript_hash
-context (server) = "N-PAMP draft-00, server CertificateVerify"
-context (client) = "N-PAMP draft-00, client CertificateVerify"
+context (server) = "N-PAMP/2, server CertificateVerify"
+context (client) = "N-PAMP/2, client CertificateVerify"
 ~~~
 
 The context strings are fixed protocol constants (they are the values bound into

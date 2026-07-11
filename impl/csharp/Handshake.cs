@@ -31,8 +31,8 @@ public static class Handshake
         FrameServerAuth = 0x0102, FrameClientAuth = 0x0103;
 
     /// <summary>CertVerify role context strings (binding spec/10 section 6.1).</summary>
-    public const string ContextServerCertVerify = "N-PAMP draft-00, server CertificateVerify";
-    public const string ContextClientCertVerify = "N-PAMP draft-00, client CertificateVerify";
+    public const string ContextServerCertVerify = "N-PAMP/2, server CertificateVerify";
+    public const string ContextClientCertVerify = "N-PAMP/2, client CertificateVerify";
 
     // -- Big-endian helpers ------------------------------------------------
 

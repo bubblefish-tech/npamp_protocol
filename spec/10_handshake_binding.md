@@ -165,8 +165,8 @@ A signature over the transcript, structured per RFC 8446 §4.4.3 with N-PAMP con
 
 ```
 signing_input = 0x20 × 64  ‖  context  ‖  0x00  ‖  transcript_hash
-context (server) = "N-PAMP draft-00, server CertificateVerify"   // [D→N-PAMP]
-context (client) = "N-PAMP draft-00, client CertificateVerify"
+context (server) = "N-PAMP/2, server CertificateVerify"   // [D→N-PAMP]
+context (client) = "N-PAMP/2, client CertificateVerify"
 ```
 
 The signed `transcript_hash` is `TH_sId` (server) / `TH_cId` (client) — the transcript through

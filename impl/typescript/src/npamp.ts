@@ -306,8 +306,8 @@ export function verifyFinished(finishedKey: Buffer, transcriptHash: Buffer, veri
 }
 
 // CertVerify (binding spec/10 §6.1; RFC 8446 §4.4.3 structure; Ed25519 signatures per RFC 8032).
-export const CONTEXT_SERVER_CERTVERIFY = "N-PAMP draft-00, server CertificateVerify";
-export const CONTEXT_CLIENT_CERTVERIFY = "N-PAMP draft-00, client CertificateVerify";
+export const CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify";
+export const CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify";
 
 // RFC 8410 DER prefixes that wrap a raw 32-octet Ed25519 seed / public key into a KeyObject (Node
 // has no raw-seed Ed25519 constructor). The anchored KAT proves these reproduce RFC 8032 keys.

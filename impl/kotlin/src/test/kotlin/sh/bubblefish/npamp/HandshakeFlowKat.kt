@@ -41,7 +41,7 @@ import kotlin.system.exitProcess
 
 object HandshakeFlowKat {
 
-    private const val PIN = "0c89003cd95c4bef744e021797ccd169b062e0a058d2a6e2b17e164eb4e9bad2"
+    private const val PIN = "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9"
 
     // Standard profile => SHA-256 KDF/transcript.
     private const val STANDARD = true

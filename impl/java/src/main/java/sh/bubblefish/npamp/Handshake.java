@@ -36,8 +36,8 @@ public final class Handshake {
             FRAME_SERVER_AUTH = 0x0102, FRAME_CLIENT_AUTH = 0x0103;
 
     /** CertVerify role context strings (binding spec/10 section 6.1). */
-    public static final String CONTEXT_SERVER_CERTVERIFY = "N-PAMP draft-00, server CertificateVerify";
-    public static final String CONTEXT_CLIENT_CERTVERIFY = "N-PAMP draft-00, client CertificateVerify";
+    public static final String CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify";
+    public static final String CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify";
 
     // -- Big-endian helpers ------------------------------------------------
 

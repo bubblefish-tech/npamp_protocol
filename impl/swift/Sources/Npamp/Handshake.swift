@@ -25,8 +25,8 @@ public enum Handshake {
     public static let frameClientAuth = 0x0103
 
     // CertVerify context strings (spec/10 §6.1).
-    public static let contextServerCertVerify = "N-PAMP draft-00, server CertificateVerify"
-    public static let contextClientCertVerify = "N-PAMP draft-00, client CertificateVerify"
+    public static let contextServerCertVerify = "N-PAMP/2, server CertificateVerify"
+    public static let contextClientCertVerify = "N-PAMP/2, client CertificateVerify"
 
     // X25519MLKEM768 component sizes (spec/10 §4; FIPS 203 / RFC 7748).
     public static let mlkem768EncapsulationKeySize = 1184

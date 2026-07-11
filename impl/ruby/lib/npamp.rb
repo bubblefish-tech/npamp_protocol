@@ -296,8 +296,8 @@ module Npamp
   FRAME_CLIENT_AUTH  = 0x0103
 
   # CertVerify context strings (spec 6.1).
-  CONTEXT_SERVER_CERTVERIFY = "N-PAMP draft-00, server CertificateVerify"
-  CONTEXT_CLIENT_CERTVERIFY = "N-PAMP draft-00, client CertificateVerify"
+  CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify"
+  CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify"
 
   # Transcript accumulates the draft-00 handshake transcript (binding spec/10 sec 3)
   # and hashes it at a cut point. Per-TLV granularity: add_frame_type appends the

@@ -420,7 +420,7 @@ Structure per RFC 8446 §4.4.3 with N-PAMP context strings (binding §6.1):
 
 ```
 signing_input = 0x20 × 64 ‖ context ‖ 0x00 ‖ transcript_hash
-context (server) = "N-PAMP draft-00, server CertificateVerify"
+context (server) = "N-PAMP/2, server CertificateVerify"
 TLV value = SignatureScheme uint16 (Ed25519 = 0x0807) ‖ signature
 ```
 
@@ -433,7 +433,7 @@ its own CertVerify. Worked numbers, all pinned: **[KAT:certverify]**
   Standard profile the IdentityKey TLV (`0x09`) carries this 32-octet Ed25519
   public key.
 - `signing_input` (server) =
-  `2020…20` (64 octets) ‖ `4e2d50414d502064726166742d30302c2073657276657220436572746966696361746556657269667900` ("N-PAMP draft-00, server CertificateVerify" + the 0x00 separator) ‖ `e71beafb…24c84c` (`TH_sId`) — 64 + 41 + 1 + 32 = 138 octets, pinned in full in the KAT.
+  `2020…20` (64 octets) ‖ `4e2d50414d502f322c2073657276657220436572746966696361746556657269667900` ("N-PAMP/2, server CertificateVerify" + the 0x00 separator) ‖ `e71beafb…24c84c` (`TH_sId`) — 64 + 34 + 1 + 32 = 131 octets, pinned in full in the KAT.
 - Ed25519 signature (deterministic, so any conforming signer reproduces it):
   `504cb67cf28d4fc9a8db676465359e6b27a19b1c5d63600923219879d02c963ff41fe1bb681da3f6057285ddf4fed6c86a6db5d60472ac4b04c3b7105c4d6906`
 - CertVerify TLV value = `0807` ‖ signature = 66 octets.
@@ -492,7 +492,7 @@ client-side worked numbers: **[KAT:certverify]** / **[KAT:finished]**
   `4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb`, public key
   `3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c`.
 - The client signs `TH_cId` (`7447a177…6fba386`) under context
-  `"N-PAMP draft-00, client CertificateVerify"`; signature
+  `"N-PAMP/2, client CertificateVerify"`; signature
   `1c20ff13f0eb4b3c4df0f82dc04849ceae558392e1a81f22e167124255ad26dd38982fa3dd7967a03197fd0f5be1c387543567016f1b8cd3189275c6ee550406`;
   CertVerify TLV value = `0807` ‖ signature.
 - The client's Finished MACs `TH_cCV` (`09c24d05…dd0d2d`); with the KAT's

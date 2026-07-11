@@ -45,9 +45,9 @@ var (
 func (r Role) certVerifyContext() string {
 	switch r {
 	case RoleClient:
-		return "N-PAMP draft-00, client CertificateVerify"
+		return "N-PAMP/2, client CertificateVerify"
 	case RoleServer:
-		return "N-PAMP draft-00, server CertificateVerify"
+		return "N-PAMP/2, server CertificateVerify"
 	default:
 		return ""
 	}

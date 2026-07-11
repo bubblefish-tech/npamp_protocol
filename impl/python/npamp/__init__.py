@@ -172,8 +172,8 @@ def derive_finished_key(secret: bytes, standard: bool) -> bytes:
 FRAME_CLIENT_HELLO, FRAME_SERVER_HELLO, FRAME_SERVER_AUTH, FRAME_CLIENT_AUTH = 0x0100, 0x0101, 0x0102, 0x0103
 
 # CertVerify context strings (spec 6.1).
-CONTEXT_SERVER_CERTVERIFY = "N-PAMP draft-00, server CertificateVerify"
-CONTEXT_CLIENT_CERTVERIFY = "N-PAMP draft-00, client CertificateVerify"
+CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify"
+CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify"
 
 
 class Transcript:

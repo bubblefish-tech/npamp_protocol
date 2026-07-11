@@ -28,7 +28,7 @@ public final class CertVerifyKat {
     private CertVerifyKat() {
     }
 
-    static final String CERTVERIFY_KAT_SHA256 = "f56ec6ba250ba8f8c6c84214a16f580a3e476e9b2cfd05720c3352de299fe555";
+    static final String CERTVERIFY_KAT_SHA256 = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f";
 
     private static int failures = 0;
 

@@ -287,7 +287,7 @@ fn load_pinned(file: &str, want_sha256: &str) -> Json {
 // ---------------------------------------------------------------------------
 
 const HANDSHAKE_FLOW_KAT_SHA256: &str =
-    "0c89003cd95c4bef744e021797ccd169b062e0a058d2a6e2b17e164eb4e9bad2";
+    "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9";
 
 // draft-01 handshake TLV code points (binding spec/10 §1.1; registry §9.4). The
 // OPEN wire-format library exposes only a subset as public constants, so the

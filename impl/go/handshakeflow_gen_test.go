@@ -349,10 +349,10 @@ func TestGenHandshakeFlow(t *testing.T) {
 
 	// Oracle CertVerify verification (independent ed25519.Verify against the
 	// hand-built signing input) — proves the pinned sigs are valid.
-	if !oVerifyCertVerify(serverPub, "N-PAMP draft-00, server CertificateVerify", oTHSID, sCV) {
+	if !oVerifyCertVerify(serverPub, "N-PAMP/2, server CertificateVerify", oTHSID, sCV) {
 		t.Fatalf("oracle: server CertVerify does not verify")
 	}
-	if !oVerifyCertVerify(clientPub, "N-PAMP draft-00, client CertificateVerify", oTHCID, cCV) {
+	if !oVerifyCertVerify(clientPub, "N-PAMP/2, client CertificateVerify", oTHCID, cCV) {
 		t.Fatalf("oracle: client CertVerify does not verify")
 	}
 

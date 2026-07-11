@@ -40,7 +40,7 @@ import Npamp
 let transcriptKatPin = "fab6d852497b6ff56405595e9a014d0c45cabc5cde80a60a17444b337d556ee5"
 let keyScheduleKatPin = "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c"
 let finishedKatPin = "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f"
-let certVerifyKatPin = "f56ec6ba250ba8f8c6c84214a16f580a3e476e9b2cfd05720c3352de299fe555"
+let certVerifyKatPin = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f"
 let kemWireKatPin = "3edd3e0c1e96fa8a3b45b0e998a2b12082a7b4e66cd5acf3883f2de8ff12c222"
 
 /// Every executable leg below, in order. The summary hard-checks this count so

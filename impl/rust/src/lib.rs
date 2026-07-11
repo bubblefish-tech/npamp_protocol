@@ -294,8 +294,8 @@ pub mod handshake {
     pub const FRAME_CLIENT_AUTH: u16 = 0x0103;
 
     /// CertVerify role context strings (binding spec/10 section 6.1).
-    pub const CONTEXT_SERVER_CERTVERIFY: &str = "N-PAMP draft-00, server CertificateVerify";
-    pub const CONTEXT_CLIENT_CERTVERIFY: &str = "N-PAMP draft-00, client CertificateVerify";
+    pub const CONTEXT_SERVER_CERTVERIFY: &str = "N-PAMP/2, server CertificateVerify";
+    pub const CONTEXT_CLIENT_CERTVERIFY: &str = "N-PAMP/2, client CertificateVerify";
 
     /// Accumulates the draft-00 handshake transcript (binding spec/10 section 3) and hashes
     /// it at a cut point. Absorption granularity is per-TLV: [`Transcript::add_frame_type`]
