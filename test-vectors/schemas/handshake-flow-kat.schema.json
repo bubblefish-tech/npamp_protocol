@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "N-PAMP draft-01 handshake-flow conformance KAT vector",
+  "description": "Schema for the byte-pinned handshake-flow conformance vector (issue #60). Class golden-interop: unlike the standards-anchored primitive/transcript/finished/certverify/kem-wire KATs, this vector pins the SERIALIZED on-wire handshake FRAMES (CLIENT_HELLO/SERVER_HELLO/SERVER_AUTH/CLIENT_AUTH) so every language impl reproduces them byte-for-byte from six fixed seeds. Profile Standard, SHA-256, AES-256-GCM. The ML-KEM ciphertext is captured-once and pinned as a self-validating INPUT (crypto/mlkem has no seed-injectable encapsulation); each verifier decapsulates it and recovers mlkem_shared_secret. Non-circularity: the generator drives the real reference code path to produce the bytes AND re-derives every EXPECTED field a second time via an independent inline oracle (hand-built TLV byte construction + raw crypto/hkdf + crypto/hmac + crypto/sha256), failing on any disagreement.",
+  "type": "object",
+  "required": ["name", "class", "spec", "profile", "hash", "aead", "provenance", "inputs", "expected"],
+  "properties": {
+    "name": { "const": "N-PAMP handshake-flow KAT" },
+    "class": {
+      "const": "golden-interop",
+      "description": "Pins Go-reference wire bytes for cross-impl byte-for-byte agreement (not standards-anchored KAT bytes)."
+    },
+    "spec": {
+      "type": "string",
+      "description": "Spec anchor; MUST reference N-PAMP draft-01.",
+      "pattern": "draft-01"
+    },
+    "profile": {
+      "const": "Standard",
+      "description": "N-PAMP profile; Standard pins SHA-256 / HashLen 32."
+    },
+    "hash": {
+      "const": "SHA-256",
+      "description": "KDF/transcript hash for the Standard profile."
+    },
+    "aead": {
+      "const": "AES-256-GCM",
+      "description": "AEAD suite (0x0001) sealing the SERVER_AUTH / CLIENT_AUTH frames."
+    },
+    "provenance": {
+      "type": "string",
+      "description": "Why this vector is trustworthy: produced by the real reference path AND cross-checked against an independent inline oracle."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "The six fixed seeds that fully determine the flow, plus the captured-once ML-KEM ciphertext and the three shared-secret self-check targets.",
+      "required": [
+        "description",
+        "client_x25519_private",
+        "server_x25519_private",
+        "mlkem768_seed_dz",
+        "mlkem_ciphertext",
+        "client_identity_ed25519_seed",
+        "server_identity_ed25519_seed",
+        "mlkem_shared_secret",
+        "x25519_shared_secret",
+        "combined_secret"
+      ],
+      "properties": {
+        "description": { "type": "string" },
+        "client_x25519_private": {
+          "type": "string", "description": "RFC 7748 alice_private (reused from kem-wire-kat); 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "server_x25519_private": {
+          "type": "string", "description": "RFC 7748 bob_private (reused from kem-wire-kat); 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mlkem768_seed_dz": {
+          "type": "string", "description": "ML-KEM-768 FIPS 203 d||z seed (reused from kem-wire-kat); 64 bytes as 128 hex chars.",
+          "pattern": "^[0-9a-f]{128}$"
+        },
+        "mlkem_ciphertext": {
+          "type": "string", "description": "Captured-once ML-KEM-768 ciphertext (1088 bytes) as 2176 hex chars. Self-validating input: decapsulating it under mlkem768_seed_dz MUST recover mlkem_shared_secret.",
+          "pattern": "^[0-9a-f]{2176}$"
+        },
+        "client_identity_ed25519_seed": {
+          "type": "string", "description": "Fixed 32-octet Ed25519 seed for the client identity key (ed25519.NewKeyFromSeed); 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "server_identity_ed25519_seed": {
+          "type": "string", "description": "Fixed 32-octet Ed25519 seed for the server identity key (ed25519.NewKeyFromSeed); 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mlkem_shared_secret": {
+          "type": "string", "description": "ML-KEM-768 shared secret recovered by decapsulating mlkem_ciphertext; 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "x25519_shared_secret": {
+          "type": "string", "description": "X25519 shared secret (client_priv x server_pub); 32 bytes as 64 hex chars.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "combined_secret": {
+          "type": "string", "description": "ML-KEM-first combined IKM = mlkem_shared_secret || x25519_shared_secret; 64 bytes as 128 hex chars.",
+          "pattern": "^[0-9a-f]{128}$"
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Every byte-pinned artifact of the flow, all lowercase hex.",
+      "required": ["frames", "auth_plaintext", "transcript", "secrets", "finished_keys", "finished", "cert_verify", "kem"],
+      "properties": {
+        "frames": {
+          "type": "object",
+          "description": "Full on-wire frame bytes (36-octet header || payload; AUTH payloads AEAD-sealed).",
+          "required": ["client_hello", "server_hello", "server_auth", "client_auth"],
+          "properties": {
+            "client_hello": { "type": "string", "pattern": "^[0-9a-f]+$" },
+            "server_hello": { "type": "string", "pattern": "^[0-9a-f]+$" },
+            "server_auth": { "type": "string", "pattern": "^[0-9a-f]+$" },
+            "client_auth": { "type": "string", "pattern": "^[0-9a-f]+$" }
+          }
+        },
+        "auth_plaintext": {
+          "type": "object",
+          "description": "The AUTH TLV plaintext (IdentityKey||CertVerify||Finished) sealed inside each AUTH frame.",
+          "required": ["server_auth", "client_auth"],
+          "properties": {
+            "server_auth": { "type": "string", "pattern": "^[0-9a-f]+$" },
+            "client_auth": { "type": "string", "pattern": "^[0-9a-f]+$" }
+          }
+        },
+        "transcript": {
+          "type": "object",
+          "description": "The five spec/10 §3 transcript-hash cut points; 32 bytes each.",
+          "required": ["th_kem", "th_sid", "th_scv", "th_cid", "th_ccv"],
+          "properties": {
+            "th_kem": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "th_sid": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "th_scv": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "th_cid": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "th_ccv": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "description": "The spec/10 §5 key ladder. All handshake/master secrets and traffic secrets are 32 bytes (64 hex); keys 32 bytes (64 hex); ivs 12 bytes (24 hex).",
+          "required": [
+            "handshake_secret", "c_hs_secret", "s_hs_secret", "master_secret",
+            "c_hs_traffic_secret", "c_hs_key", "c_hs_iv",
+            "s_hs_traffic_secret", "s_hs_key", "s_hs_iv",
+            "app_c2s_traffic_secret", "app_c2s_key", "app_c2s_iv",
+            "app_s2c_traffic_secret", "app_s2c_key", "app_s2c_iv"
+          ],
+          "properties": {
+            "handshake_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "c_hs_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "s_hs_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "master_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "c_hs_traffic_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "c_hs_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "c_hs_iv": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+            "s_hs_traffic_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "s_hs_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "s_hs_iv": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+            "app_c2s_traffic_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "app_c2s_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "app_c2s_iv": { "type": "string", "pattern": "^[0-9a-f]{24}$" },
+            "app_s2c_traffic_secret": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "app_s2c_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "app_s2c_iv": { "type": "string", "pattern": "^[0-9a-f]{24}$" }
+          }
+        },
+        "finished_keys": {
+          "type": "object",
+          "description": "Finished MAC keys derived from s_hs_secret (server) / c_hs_secret (client); 32 bytes each.",
+          "required": ["server", "client"],
+          "properties": {
+            "server": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "client": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "finished": {
+          "type": "object",
+          "description": "Finished verify_data: HMAC-SHA256(finished_key, TH_sCV/TH_cCV); 32 bytes each.",
+          "required": ["server", "client"],
+          "properties": {
+            "server": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "client": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "cert_verify": {
+          "type": "object",
+          "description": "CertVerify TLV values: SignatureScheme uint16 (0x0807) || Ed25519 signature (64); 66 bytes = 132 hex chars each.",
+          "required": ["server", "client"],
+          "properties": {
+            "server": { "type": "string", "pattern": "^[0-9a-f]{132}$" },
+            "client": { "type": "string", "pattern": "^[0-9a-f]{132}$" }
+          }
+        },
+        "kem": {
+          "type": "object",
+          "description": "The KEM wire fields carried in CLIENT_HELLO / SERVER_HELLO.",
+          "required": ["kem_share", "kem_ciphertext"],
+          "properties": {
+            "kem_share": {
+              "type": "string", "description": "TLV 0x07 value: ML-KEM ek (1184) || client X25519 public (32) = 1216 bytes = 2432 hex chars.",
+              "pattern": "^[0-9a-f]{2432}$"
+            },
+            "kem_ciphertext": {
+              "type": "string", "description": "TLV 0x08 value: ML-KEM ciphertext (1088) || server X25519 public (32) = 1120 bytes = 2240 hex chars.",
+              "pattern": "^[0-9a-f]{2240}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}
