@@ -111,7 +111,7 @@ jobs:
       - name: Embedded corpus equals the pinned corpus
         run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
       - name: Build runner (npamp-conform)
-        run: go build -C harness/runner -o npamp-conform .
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
       - name: Build Go reference adapter
         run: go build -C harness/adapters/go -o npamp-adapter-go .
       - name: Run conformance suite
@@ -160,7 +160,7 @@ jobs:
       - name: Embedded corpus equals the pinned corpus
         run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
       - name: Build runner (npamp-conform)
-        run: go build -C harness/runner -o npamp-conform .
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
       - name: Run conformance suite against the Rust adapter
         run: ./harness/runner/npamp-conform run --testee "./harness/adapters/rust/target/debug/npamp-adapter" --junit conformance-report-rust.xml
       - name: Upload Rust conformance JUnit report
@@ -197,7 +197,7 @@ jobs:
       - name: Embedded corpus equals the pinned corpus
         run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
       - name: Build runner (npamp-conform)
-        run: go build -C harness/runner -o npamp-conform .
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
       - name: Locate the built Swift adapter binary
         run: echo "SWIFT_ADAPTER_BIN=$(swift build --package-path harness/adapters/swift-adapter --show-bin-path)/npamp-adapter" >> "$GITHUB_ENV"
       - name: Run conformance suite against the Swift adapter

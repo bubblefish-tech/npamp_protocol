@@ -61,7 +61,7 @@ define required behavior and make no statement about any implementation.
 
 | File | Short name | Defines | Status |
 |---|---|---|---|
-| `55_conformance_requirements.md` | NPAMP-CONFORM | The normative conformance classes for draft-00 — wire-primitives (Class W, graded by the pinned 253-vector corpus), handshake (Class H, graded by the five standards-anchored KATs, Standard profile), and bridge/companion (Class B, specification-audited; no bridge vectors exist yet) — plus the required content of a conformance claim, the prohibited claims, and an explicit statement of what the current corpus does NOT cover. | **DRAFT** |
+| `55_conformance_requirements.md` | NPAMP-CONFORM | The normative conformance classes for draft-00 — wire-primitives (Class W, graded by the pinned 255-vector corpus), handshake (Class H, graded by the five standards-anchored KATs, Standard profile), and bridge/companion (Class B, specification-audited; no bridge vectors exist yet) — plus the required content of a conformance claim, the prohibited claims, and an explicit statement of what the current corpus does NOT cover. | **DRAFT** |
 
 ### Worked examples (informative)
 

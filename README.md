@@ -9,7 +9,7 @@ This repository is the **public reference home** of N-PAMP: the Internet-Draft, 
 | **Specification** | [`draft-bubblefish-npamp-01`](ietf/draft-bubblefish-npamp-latest.md) (Internet-Draft, Independent Submission stream, Informational) |
 | **License** | [Apache-2.0](LICENSE) |
 | **Reference implementations** | 10 languages (Go, Rust, Python, TypeScript, C#, Swift, Java, Kotlin, PHP, Ruby) |
-| **Conformance corpus** | 253-vector conformance corpus (byte-identical across all 10 languages) + 5 NIST/RFC-anchored handshake KAT sets |
+| **Conformance corpus** | 255-vector conformance corpus (byte-identical across all 10 languages) + 5 NIST/RFC-anchored handshake KAT sets |
 
 ---
 
@@ -160,7 +160,7 @@ The [`test-vectors/`](test-vectors/) tree is the **canonical** conformance oracl
 
 | Vector set | What it pins | Standards anchor |
 |---|---|---|
-| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 253 primitive + frame / codec / reject vectors (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 and draft-01 (the draft-01 KEM-combiner change is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
+| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 255 primitive + frame / codec / reject vectors (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 and draft-01 (the draft-01 KEM-combiner change is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
 | [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 — [ADR-0005](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md) / [ADR-0007](decisions/0007-kem-wire-kat-anchor-keygen-x25519-order-defer-decaps-ss.md) |
 | [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 — [ADR-0008](decisions/0008-key-schedule-kat-via-rfc8448-validated-oracle.md) |
 | [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor — [ADR-0009](decisions/0009-transcript-kat-independent-byte-constructor-fips180-anchor.md) |
