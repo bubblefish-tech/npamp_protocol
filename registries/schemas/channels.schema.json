@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/channels.schema.json",
+  "title": "N-PAMP Channel Registry",
+  "description": "Schema for the JSON representation of registries/channels.csv: an array of row objects, one per registered channel. The CI check converts the CSV to this array (header row -> object keys) before validating. Format/required/enum defects (wrong-format channel_id, missing column, out-of-enum min_profile or direction) are caught here; DUPLICATE channel_id values are caught by the companion validate-registries.py (JSON Schema cannot assert single-field uniqueness across rows).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["channel_id", "name", "purpose", "min_profile", "direction"],
+    "properties": {
+      "channel_id": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "16-bit channel identifier, hex-prefixed, exactly 4 hex digits (e.g. 0x0000)." },
+      "name": { "type": "string", "minLength": 1, "description": "Channel name; MUST be non-empty." },
+      "purpose": { "type": "string", "minLength": 1, "description": "One-line purpose of the channel; MUST be non-empty." },
+      "min_profile": { "type": "string", "enum": ["Standard", "High", "Sovereign"], "description": "Minimum negotiated profile required to open this channel." },
+      "direction": { "type": "string", "enum": ["Bidirectional", "Multi-stream"], "description": "Directionality / multiplexing mode of the channel." }
+    }
+  }
+}

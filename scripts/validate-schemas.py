@@ -31,6 +31,7 @@ PAIRS = [
     ("finished-kat.json", "finished-kat.schema.json"),
     ("certverify-kat.json", "certverify-kat.schema.json"),
     ("kem-wire-kat.json", "kem-wire-kat.schema.json"),
+    ("handshake-flow-kat.json", "handshake-flow-kat.schema.json"),
 ]
 
 

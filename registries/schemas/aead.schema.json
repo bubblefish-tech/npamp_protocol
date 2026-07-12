@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/aead.schema.json",
+  "title": "N-PAMP AEAD Registry",
+  "description": "Schema for the JSON representation of registries/aead.csv: an array of row objects, one per registered AEAD suite. code_point is a 16-bit value (4 hex digits). key_bytes/nonce_bytes/tag_bytes are byte counts constrained to their declared ranges. Wrong-format code_point, missing column, out-of-declared-range byte counts, and empty name/reference are caught here; DUPLICATE code_point values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["code_point", "name", "key_bytes", "nonce_bytes", "tag_bytes", "reference"],
+    "properties": {
+      "code_point": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "16-bit AEAD code point, hex-prefixed, exactly 4 hex digits (e.g. 0x0001)." },
+      "name": { "type": "string", "minLength": 1, "description": "AEAD suite name; MUST be non-empty." },
+      "key_bytes": { "type": "integer", "minimum": 16, "maximum": 32, "description": "AEAD key length in octets; declared range 16-32 (128-256 bit keys)." },
+      "nonce_bytes": { "type": "integer", "minimum": 8, "maximum": 16, "description": "AEAD nonce length in octets; declared range 8-16." },
+      "tag_bytes": { "type": "integer", "minimum": 16, "maximum": 16, "description": "AEAD authentication-tag length in octets; MUST be 16." },
+      "reference": { "type": "string", "minLength": 1, "description": "Normative reference (e.g. RFC 5116); MUST be non-empty." }
+    }
+  }
+}

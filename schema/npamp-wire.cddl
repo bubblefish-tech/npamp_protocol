@@ -1,0 +1,554 @@
+; ============================================================================
+; N-PAMP/2 BINARY WIRE FORMAT — CDDL DATA MODEL (RFC 8610)
+; ============================================================================
+;
+; Protocol : N-PAMP/2 (draft-bubblefish-npamp-01), ALPN "n-pamp/2".
+; Source of truth : this repository — spec/*.md + registries/*.csv, cross-verified
+;                   against the Go reference impl (impl/go/*.go). Both agree
+;                   byte-for-byte.
+;
+; ---------------------------------------------------------------------------
+; HONEST SCOPE CAVEAT (RFC 8610 §1, Abstract)
+; ---------------------------------------------------------------------------
+; RFC 8610 CDDL is a notation for CBOR/JSON data structures. It has NO
+; octet-concatenation operator, NO field-endianness annotation, and NO
+; bit-order / sub-byte-integer primitive. N-PAMP/2 is a byte-exact binary
+; wire, NOT CBOR/JSON. Therefore this file constrains ONLY lengths and
+; permitted bit-sets/values; the sequential octet layout, big-endianness of
+; integer fields, and the nibble split of octet 4 are carried in the PROSE
+; comments below and are normative in spec/02_frame_format.md — CDDL cannot
+; express them. Every rule states, in comment, exactly what it does and does
+; NOT enforce. Nothing here invents non-RFC-8610 syntax.
+;
+; Idiom key (RFC 8610 section -> use):
+;   bstr .size N          fixes an N-octet field width               (§3.8.1)
+;   bstr .size 1 .bits …  permits only listed bit positions in an octet(§3.8.2)
+;                         bit n set == (str[n>>3] & (1<<(n&7))); LSB-first
+;   h'..'                 byte-string literal value (magic/reserved)  (§3.1)
+;   & (name: val, …)      integer enum built from a group            (§2.2.2.2)
+;   / and //              type choice and group choice                (§2.2.2)
+;   .. and ...            inclusive / exclusive-upper ranges         (§2.2.2.1)
+;
+; INTENTIONALLY-UNREFERENCED REFERENCE RULES
+;   `npamp-frame` is the only root. Many rules below — the u16-value/u32-value/
+;   u64-value numeric-domain aliases, `channels`, `system-frame-types`, the
+;   channel-* / frame-type-* / tlv-tag-* code-point range rules, and
+;   ver-flags-defined-bits — are REFERENCE sub-types documenting a field's value
+;   domain or a registry's code-point space. They are deliberately NOT reached
+;   from `npamp-frame`, so a root-walking validator (e.g. `cddl <file> generate`)
+;   prints "unused rule" notices for them. Those notices are EXPECTED, not
+;   defects: the rules exist to record the value spaces the prose references.
+;
+; VALIDATOR NOTE (which tool, and why)
+;   Validate with the RFC 8610 reference implementation — Carsten Bormann's
+;   `cddl` Ruby gem (`gem install cddl`; `cddl npamp-wire.cddl generate`).
+;   RFC 8610 §2.1 permits hex integer literals (uint = … / "0x" 1*HEXDIG / …);
+;   the anweiss/cddl Rust port (0.10.6) mis-lexes `0x0000` as a hexfloat and
+;   cannot parse this file, so it is NOT used as the conformance gate here.
+; ============================================================================
+
+
+; ===========================================================================
+; 1. FULL FRAME  — spec/02 §Frame structure (lines 8-20)
+; ===========================================================================
+; Wire order (prose; the [ ] below is a CBOR-array ANNOTATION, NOT the octet
+; layout — CDDL has no concatenation operator):
+;
+;   Header (36 B) || Extension TLVs (var) || Payload (var, AEAD-sealed) || Tag (16 B)
+;
+; - The 36-octet header is fixed-size (spec/02:15).
+; - Zero or more extension TLVs MAY accompany a frame (spec/02:16).
+; - The payload is AEAD-sealed (spec/02:17).
+; - The 16-octet AEAD Tag is the MANDATORY final component of every frame
+;   (spec/02:18).
+; - AEAD associated data (AD) = the 21-octet header prefix, octets 0-20 — the
+;   same octets the header CRC32C covers (spec/02:19-20; impl/go/frame.go:50-64).
+;
+; ENFORCED by CDDL below: header is exactly 36 octets, tag is exactly 16 octets,
+;   each TLV is well-formed, payload is an opaque byte run.
+; NOT ENFORCED (prose only): the end-to-end octet concatenation order; that the
+;   payload is actually sealed under the tag; the AD binding of header<->tag.
+npamp-frame = [
+  header:      npamp-header,      ; 36 octets, fixed (§2 below)
+  ext-tlvs:    tlv-sequence,      ; 0..* extension TLVs (§3 below)
+  payload:     bstr,              ; var, AEAD-sealed ciphertext (opaque here)
+  aead-tag:    aead-tag,          ; 16 octets, mandatory (§7 below)
+]
+
+; A run of zero or more TLVs. CDDL models this as an array of TLV groups; on the
+; wire it is their Type||Length||Value encodings concatenated (spec/02:52-63).
+tlv-sequence = [* extension-tlv]
+
+
+; ===========================================================================
+; 2. FIXED 36-OCTET FRAME HEADER — spec/02 §Fixed 36-octet header (lines 22-39)
+; ===========================================================================
+; Multi-octet integers are BIG-ENDIAN (spec/02:24; impl/go/frame.go:60-63
+; uses binary.BigEndian). Endianness is NOT expressible in CDDL — normative in
+; prose. Offsets are 0-indexed, inclusive.
+;
+;   offset  0..3   Magic            4 B  ASCII "NPAM" (0x4E 0x50 0x41 0x4D)
+;   offset  4      Ver|Flags        1 B  high nibble=Ver(=0x2), low nibble=Flags
+;   offset  5..6   Frame Type       2 B  big-endian u16
+;   offset  7..8   Channel ID       2 B  big-endian u16
+;   offset  9..16  Sequence Number  8 B  big-endian u64
+;   offset 17..20  Payload Length   4 B  big-endian u32
+;   offset 21..24  CRC32C           4 B  big-endian u32 over octets 0..20
+;   offset 25..35  Reserved        11 B  MUST be zero
+;   total          36 octets
+;
+; --- NORMATIVE wire type (RFC 8610 §3.8.1): the whole header is 36 octets. ---
+; This is the only form that matches the wire (a header IS a run of octets). A
+; CDDL validator checks the 36-octet length; the internal field structure is
+; documented by npamp-header-fields below (annotative) and by this prose.
+npamp-header = bstr .size 36
+
+; --- ANNOTATIVE field decomposition (documentation; NOT the wire encoding) ---
+; The [ ] denotes a CBOR array per RFC 8610, NOT eight octet runs laid end to
+; end. Read this as the field map; the wire type is npamp-header above.
+npamp-header-fields = [
+  magic:        npamp-magic,        ; offset 0..3   — 4 B constant (§2a)
+  ver-flags:    ver-flags-octet,    ; offset 4      — 1 B version|flags (§2b)
+  frame-type:   u16,                ; offset 5..6   — BE u16 (§5 enum)
+  channel-id:   u16,                ; offset 7..8   — BE u16 (§4 enum)
+  seq:          u64,                ; offset 9..16  — BE u64, per-(chan,dir)
+  payload-len:  u32,                ; offset 17..20 — BE u32, payload byte count
+  crc32c:       u32,                ; offset 21..24 — BE u32 over octets 0..20
+  reserved:     reserved11,         ; offset 25..35 — 11 B, MUST be zero (§2g)
+]
+
+; --- 2a. Magic — spec/02:28; impl/go/frame.go:17 -------------------------
+; ASCII "NPAM" = 0x4E 0x50 0x41 0x4D, exactly 4 octets. Byte-string literal
+; (RFC 8610 §3.1) fixes both width AND value; a decoder rejects any other bytes.
+npamp-magic = h'4E50414D'          ; "NPAM"
+
+; --- 2b. Ver|Flags octet — spec/02:29-30,43-48; impl/go/frame.go:59,102-116 --
+; One octet: high nibble (bits 4..7) = Ver = 0x2; low nibble (bits 0..3) = Flags.
+; RFC 8610 §3.8.2 numbers bits LSB-first within the byte, so the version nibble
+; is bit positions 4..7 and the flags nibble is bit positions 0..3.
+;
+; HONEST LIMITATION: .bits is a permitted-bits MASK, not a field-partition and
+; not a value assignment. It CANNOT encode "high nibble == 2" nor "these 4 bits
+; are the version integer." The 4/4 split and the Ver==0x2 value live in prose
+; and are enforced by the impl (frame.go:102-105 rejects ver != 0x2). Here we
+; only permit all 8 bit positions to be set within the single octet.
+;
+; GRAMMAR NOTE: RFC 8610 §B `type1 = type2 [(rangeop / ctlop) type2]` permits
+; only ONE control operator per type1, so `.size` and `.bits` cannot be chained
+; bare. To pin BOTH the octet width and the permitted bits, the left operand of
+; `.bits` is parenthesized — `(bstr .size 1)` is itself a type2 — which is the
+; grammar-valid way to apply a second control.
+ver-flags-octet = (bstr .size 1) .bits (0..7)
+
+; Flag bit positions in the low nibble (spec/02:43-48; impl/go/frame.go:20-25).
+; Documentation only — CDDL cannot bind a name to a bit here.
+;   bit 0 (0x01) URG  — urgent-priority scheduling
+;   bit 1 (0x02) ENC  — payload is AEAD-encrypted
+;   bit 2 (0x04) COMP — payload is compressed
+;   bit 3 (0x08) FRAG — frame is a fragment of a larger logical message
+; A reference helper that ENUMERATES the defined bit positions — flag bits 0-3
+; and version-nibble bits 4-7. Because an octet has only those 8 positions, this
+; enumeration is functionally IDENTICAL to ver-flags-octet's `.bits (0..7)`: it
+; is not a narrower constraint. `.bits` permits (does not require) the listed
+; positions, so every single-octet value matches either rule. Its purpose is to
+; DOCUMENT which bits are defined, not to restrict; the real constraints
+; (Ver == 0x2; only flag bits 0-3 are assigned) are prose + impl (frame.go:102).
+; Parenthesized left operand per the one-control-per-type1 grammar note above.
+ver-flags-defined-bits = (bstr .size 1) .bits (0 / 1 / 2 / 3 / 4 / 5 / 6 / 7)
+
+; --- 2c. Big-endian fixed-width unsigned integer fields (RFC 8610 §3.8.1) ---
+; bstr .size N pins the ON-WIRE octet count. Big-endian numeric interpretation
+; is prose-only (CDDL has no endianness keyword). Do NOT use `uint .size N`
+; here: that is a VALUE-RANGE control (0 ... 256**N, exclusive) and does not
+; pin octet width (RFC 8610 §3.8.1).
+u16 = bstr .size 2                  ; big-endian uint16, 2 octets
+u32 = bstr .size 4                  ; big-endian uint32, 4 octets
+u64 = bstr .size 8                  ; big-endian uint64, 8 octets
+
+; Companion numeric-range types documenting each field's VALUE domain (RFC 8610
+; §3.8.1 value semantics). These are NOT the wire types (those are the sized
+; bstrs above); they record the permissible integer ranges for reference.
+u16-value = uint .size 2            ; 0 <= v < 65536
+u32-value = uint .size 4            ; 0 <= v < 4294967296
+u64-value = uint .size 8            ; 0 <= v < 2**64
+
+; --- 2g. Reserved octets, MUST be zero — spec/02:36; impl/go/frame.go:70-72,106-110 ---
+; Exactly 11 octets, all zero. Byte-string literal (RFC 8610 §3.1) fixes width
+; AND value; any non-zero octet fails validation.
+; HONEST LIMITATION: this enforces "equals all-zero" only. The receiver-side
+; "MUST reject if non-zero" rejection semantics are prose (spec/02:36) — CDDL
+; expresses the permitted value, not the reject-vs-ignore reaction.
+reserved11 = h'0000000000000000000000'   ; 11 octets, all zero
+
+
+; ===========================================================================
+; 3. EXTENSION TLV — spec/02 §Extension TLV encoding (lines 50-63)
+;    codec: impl/go/tlv.go:44-69
+; ===========================================================================
+; Wire order (prose): Type(2 B, BE u16) || Length(2 B, BE u16) || Value(Length B).
+; Length is the byte count of Value, range 0..65535 (spec/02:59-60).
+;
+; ENFORCED by CDDL: type is 2 octets, length is 2 octets, value is a byte run.
+; NOT ENFORCED (prose only): that Length == the actual octet count of Value on
+;   the wire (CDDL cannot cross-reference one field's numeric value to another
+;   field's length in a raw binary layout); the big-endianness of Type/Length;
+;   the octet concatenation order.
+extension-tlv = [
+  type:   u16,                     ; TLV type/tag, BE u16 (registry §6c)
+  length: u16,                     ; BE u16 = byte count of value (0..65535)
+  value:  bstr,                    ; opaque, `length` octets on the wire
+]
+
+; --- Must-understand rule — spec/02:61-63; impl/go/tlv.go:40-42 ------------
+; Unknown TLV, Type high bit (0x8000) CLEAR  -> MUST ignore that TLV.
+; Unknown TLV, Type high bit (0x8000) SET    -> forward-incompatible, MUST
+;   reject the whole frame. Predicate: (type & 0x8000) != 0.
+; HONEST LIMITATION: CDDL cannot test a single bit of a 2-octet BE integer that
+; is modeled as a bstr, and cannot express "reject the frame." This is prose /
+; impl behavior. The value-range types below document the two Type partitions.
+tlv-type-understand-value      = 0x0000 .. 0x7FFF   ; high bit clear: may ignore if unknown
+tlv-type-forward-incompat-value = 0x8000 .. 0xFFFF  ; high bit set: reject if unknown
+
+
+; ===========================================================================
+; 4. CHANNEL ID ENUM (u16) — registries/channels.csv:2-21;
+;    impl/go/channels.go:8-28; spec/03_channels.md:17-36
+; ===========================================================================
+; On-wire value semantics for the 2-octet Channel ID field (offset 7..8).
+; Enum built with the & group-to-choice operator (RFC 8610 §2.2.2.2).
+channel-id-value = &channels
+channels = (
+  control:     0x0000,   ; Control      (Standard, bidirectional)
+  memory:      0x0001,   ; Memory       (Standard, multi-stream)
+  capability:  0x0002,   ; Capability   (Standard, bidirectional)
+  identity:    0x0003,   ; Identity     (Standard, bidirectional)
+  governance:  0x0004,   ; Governance   (High,     bidirectional)
+  immune:      0x0005,   ; Immune       (Standard, bidirectional)
+  federation:  0x0006,   ; Federation   (High,     multi-stream)
+  settlement:  0x0007,   ; Settlement   (Standard, bidirectional)
+  compliance:  0x0008,   ; Compliance   (High,     bidirectional)
+  sensory:     0x0009,   ; Sensory      (High,     multi-stream)
+  telemetry:   0x000A,   ; Telemetry    (Standard, bidirectional)
+  audit:       0x000B,   ; Audit        (Sovereign, bidirectional)
+  stream:      0x000C,   ; Stream       (Standard, multi-stream)
+  bridge:      0x000D,   ; Bridge       (Standard, bidirectional)
+  commerce:    0x000E,   ; Commerce     (Standard, bidirectional)
+  interaction: 0x000F,   ; Interaction  (Standard, bidirectional)
+  discovery:   0x0010,   ; Discovery    (Standard, bidirectional)
+  workflow:    0x0011,   ; Workflow     (Standard, bidirectional)
+  knowledge:   0x0012,   ; Knowledge    (Standard, multi-stream)
+  spatial:     0x0013,   ; Spatial      (High,     multi-stream)
+)
+
+; Reserved channel-ID ranges — spec/03_channels.md:57-61;
+; spec/09_extension_points.md:29-32; impl/go/channels.go:42 (Reserved()=c>=0x0014).
+channel-reserved-future-core = 0x0014 .. 0x001F   ; future core (Spec Required)
+channel-extension            = 0x0020 .. 0xEFFF   ; extension channels
+channel-grease               = 0xF000 .. 0xFFFE   ; GREASE, receivers MUST ignore
+; 0xFFFF MUST NOT appear on the wire (spec/03:60).
+channel-forbidden            = 0xFFFF
+
+
+; ===========================================================================
+; 5. FRAME TYPE ENUM (u16) — registries/frame_types_reserved.csv:2-24;
+;    impl/go/frametypes.go:8-22; spec/04_frame_types.md:13-30
+; ===========================================================================
+; On-wire value semantics for the 2-octet Frame Type field (offset 5..6).
+; Reserved system frame types (same meaning on every channel). 0x0000 MUST NOT
+; be used, so it is excluded from this enum.
+frame-type-value = &system-frame-types / handshake-frame-type-value
+system-frame-types = (
+  ping:           0x0001,   ; PING
+  pong:           0x0002,   ; PONG
+  close:          0x0003,   ; CLOSE (AEAD-protected)
+  close-ack:      0x0004,   ; CLOSE_ACK
+  error:          0x0005,   ; ERROR (AEAD-protected)
+  key-update:     0x0006,   ; KEY_UPDATE
+  key-update-ack: 0x0007,   ; KEY_UPDATE_ACK
+  path-challenge: 0x0008,   ; PATH_CHALLENGE
+  path-response:  0x0009,   ; PATH_RESPONSE
+  flow-update:    0x000A,   ; FLOW_UPDATE
+)
+; 0x0000 is reserved and MUST NOT be used (frame_types_reserved.csv:2).
+frame-type-forbidden = 0x0000
+
+; Control-channel handshake frame types (Control channel 0x0000) —
+; frame_types_reserved.csv:20-23; impl/go/handshake.go:16-21.
+handshake-frame-type-value = &handshake-frame-types
+handshake-frame-types = (
+  client-hello: 0x0100,   ; CLIENT_HELLO (cleartext)
+  server-hello: 0x0101,   ; SERVER_HELLO (cleartext)
+  server-auth:  0x0102,   ; SERVER_AUTH  (AEAD-encrypted)
+  client-auth:  0x0103,   ; CLIENT_AUTH  (AEAD-encrypted)
+)
+; Channel-specific frame types begin at 0x0100 (impl/go/frametypes.go:22,
+; ChannelSpecificBase). Companion-reserved ranges (spec/04:37-45, spec/09:11-20,
+; frame_types_reserved.csv:13-19) — modeled as-registered, NOT "fixed":
+frame-type-mem-evict-revive  = 0x0035 .. 0x0036   ; Memory eviction/revive
+frame-type-cap-token         = 0x0060 .. 0x0063   ; Capability token
+frame-type-ctrl-flow-ext     = 0x0080           ; Control flow-extension
+frame-type-audit-integrity   = 0x0090           ; Audit per-frame integrity
+frame-type-batch-commit      = 0x00A0 .. 0x00A3   ; Settlement/Audit batch-commit
+frame-type-gov-quorum        = 0x00B0 .. 0x00B4   ; Governance quorum
+frame-type-immune-propagation = 0x00C0 .. 0x00C4  ; Immune propagation
+
+
+; ===========================================================================
+; 6. TLV TAG ENUM (u16 on wire) — registries/tlv_tags.csv:2-23;
+;    impl/go/tlv.go:11-30; spec/07_tlv_registry.md:11-32
+; ===========================================================================
+; On-wire value semantics for the TLV Type field. NOTE: tags 0x0E, 0x0F, 0x11
+; have no assignment (registry gaps) — do NOT model TLV tags as a contiguous
+; range. Only the assigned tags are listed.
+tlv-tag-value = &tlv-tags
+tlv-tags = (
+  profile-offer:     0x01,   ; ProfileOffer   (var; 1 octet/profile; handshake)
+  profile-select:    0x02,   ; ProfileSelect  (1 octet; handshake)
+  kem-offer:         0x03,   ; KEMOffer       (var)
+  kem-select:        0x04,   ; KEMSelect      (2 octets)
+  sig-offer:         0x05,   ; SigOffer       (var)
+  sig-select:        0x06,   ; SigSelect      (2 octets)
+  kem-share:         0x07,   ; KEMShare       (var)
+  kem-ciphertext:    0x08,   ; KEMCiphertext  (var)
+  identity-key:      0x09,   ; IdentityKey    (var; handshake AUTH)
+  cert-verify:       0x0A,   ; CertVerify     (var = u16 scheme || sig; AUTH)
+  finished:          0x0B,   ; Finished       (var = HashLen; AUTH)
+  aead-offer:        0x0C,   ; AEADOffer      (var; handshake)
+  aead-select:       0x0D,   ; AEADSelect     (2 octets; handshake)
+  anomaly-charge:    0x12,   ; AnomalyCharge  (32 octets)
+  path-challenge:    0x15,   ; PathChallenge  (32 octets)
+  path-response:     0x16,   ; PathResponse   (64 octets)
+  key-update-marker: 0x17,   ; KeyUpdateMarker (8 octets)
+  protection-mode:   0x18,   ; ProtectionMode (1 octet)
+)
+; Companion-reserved TLV tags (spec/07:24-27; spec/09:22-26): 0x10 (var), 0x13
+; (var), 0x14 (32 octets, handshake only). 0x8000 .. 0xFFFF forward-incompatible.
+tlv-tag-companion-reserved   = 0x10 / 0x13 / 0x14
+tlv-tag-forward-incompatible = 0x8000 .. 0xFFFF
+
+
+; ===========================================================================
+; 6a. SUPPORTING NEGOTIATION CODE POINTS (carried inside TLV values)
+;     registries/{profiles,kem,aead,signatures,bridge_protocol_ids}.csv;
+;     impl/go/{profiles,suites}.go
+; ===========================================================================
+; Profile (u8 code) — profiles.csv:2-4; impl/go/profiles.go:8-12.
+profile-value = &profiles
+profiles = (
+  standard:  0x01,
+  high:      0x02,
+  sovereign: 0x03,
+)
+; Reserved profiles: 0x00 and 0x04 .. 0xFF (impl/go/profiles.go:5).
+
+; KEM (u16) — kem.csv:2-3; impl/go/suites.go:9-12. Wire secret order ML-KEM-first.
+kem-value = &kems
+kems = (
+  x25519-mlkem768:  0x11EC,   ; Standard, High
+  x25519-mlkem1024: 0x11ED,   ; High, Sovereign
+)
+
+; AEAD (u16) — aead.csv:2-3; impl/go/suites.go:17-20. Both: key 32, nonce 12, tag 16.
+aead-value = &aeads
+aeads = (
+  aes-256-gcm:       0x0001,
+  chacha20-poly1305: 0x0002,
+)
+
+; Signature scheme (u16) — signatures.csv:2-3; impl/go/suites.go:25-28.
+sig-value = &sigs
+sigs = (
+  ed25519:   0x0807,   ; all profiles
+  ml-dsa-87: 0x0905,   ; High, Sovereign
+)
+
+; Bridge Protocol ID (u8; Bridge channel 0x000D BridgeEnvelope) —
+; bridge_protocol_ids.csv:2-9. BridgeEnvelope byte layout is defined in the
+; companion specs, NOT the core draft (spec/09:45-48) — only IDs are modeled.
+bridge-protocol-id-value = &bridge-protocol-ids / bridge-protocol-id-ranges
+bridge-protocol-ids = (
+  mcp:       0x01,
+  a2a:       0x02,
+  http2:     0x03,
+  websocket: 0x04,
+)
+; 0x00 reserved, MUST reject; 0x05 .. 0x0F unassigned (Spec Required);
+; 0x10 .. 0x7F experimental; 0x80 .. 0xFF private use.
+bridge-protocol-id-reserved     = 0x00
+bridge-protocol-id-ranges       = 0x05 .. 0x0F / 0x10 .. 0x7F / 0x80 .. 0xFF
+
+
+; ===========================================================================
+; 7. AEAD TAG — spec/02:18; impl/go/aead.go:24-25
+; ===========================================================================
+; The 16-octet AEAD tag, mandatory final component of every frame. For the two
+; defined AEAD suites (AES-256-GCM, ChaCha20-Poly1305) the tag is 16 octets.
+aead-tag = bstr .size 16
+
+; --- AEAD nonce / AAD construction (prose; needed to model sealed frames) ---
+; spec/06_cryptographic_suites.md:61-66; impl/go/aead.go:9-21 (DeriveNonce):
+;   nonce = 12-octet AEAD IV XOR (left-zero-padded 8-octet BE sequence number).
+;     The seq occupies the low 8 octets (n[4:12]); high 4 octets are zero before
+;     XOR. Channel ID is NOT part of the nonce.
+;   AAD   = the 21-octet header prefix (octets 0..20) (spec/02:19-20; spec/10:206).
+; These are cryptographic construction rules, NOT structural fields; CDDL models
+; neither the XOR nor the AAD binding. Recorded here for completeness.
+
+
+; ===========================================================================
+; 8. HANDSHAKE MESSAGE PAYLOADS — spec/10_handshake_binding.md;
+;    impl/go/handshake.go
+; ===========================================================================
+; Four frames, 1.5-RTT, mutual auth, all on the Control channel 0x0000, seq 0
+; (spec/10:16-30). Each is a standard 36-octet frame; its payload is a sequence
+; of TLVs in a FIXED order. There is NO separate Finished frame — the Finished
+; MAC is a TLV inside each AUTH frame (spec/10:19-20).
+;
+;   CLIENT_HELLO 0x0100 (cleartext)  -> SERVER_HELLO 0x0101 (cleartext)
+;   -> SERVER_AUTH 0x0102 (encrypted) -> CLIENT_AUTH 0x0103 (encrypted)
+;   (spec/10:22-27)
+;
+; The payloads below model each frame's DECRYPTED TLV sequence (for AUTH frames,
+; the plaintext before AEAD sealing). Each TLV uses the extension-tlv shape (§3).
+;
+; ENFORCED by CDDL: the number of TLVs, their fixed tag values, and the fixed
+;   Value sizes where the spec pins them (marked "fixed").
+; NOT ENFORCED (prose only): TLV ORDER (a CDDL group with distinct members does
+;   not by itself pin encounter order in this array-of-groups modeling), the
+;   big-endianness of multi-octet Values, and cross-field length consistency.
+;   TLV order is normative in spec/10 and enforced by impl/go/handshake.go.
+
+; --- 8a. CLIENT_HELLO (0x0100, cleartext) — spec/10:34;
+;         impl/go/handshake.go:59-65,125-137,151-188 ------------------------
+; Payload = exactly 5 TLVs, this order:
+;   1 ProfileOffer 0x01 : var, >=1 octet (1 octet per offered profile)
+;   2 KEMOffer     0x03 : var, non-empty even length (list of BE u16 KEM codes)
+;   3 SigOffer     0x05 : var, non-empty even length (list of BE u16 Sig codes)
+;   4 AEADOffer    0x0C : var, non-empty even length (list of BE u16 AEAD codes)
+;   5 KEMShare     0x07 : var, >=1 (public KEM share bytes;
+;                         @X25519MLKEM768 = ML-KEM-768 ek(1184) || X25519 pk(32)
+;                         = 1216 octets, spec/10:104-105)
+client-hello-payload = [
+  hs-tlv-profile-offer,
+  hs-tlv-kem-offer,
+  hs-tlv-sig-offer,
+  hs-tlv-aead-offer,
+  hs-tlv-kem-share,
+]
+
+; --- 8b. SERVER_HELLO (0x0101, cleartext) — spec/10:35;
+;         impl/go/handshake.go:70-76,191-199,214-243 ------------------------
+; Payload = exactly 5 TLVs, this order (Value sizes fixed where noted):
+;   1 ProfileSelect 0x02 : 1 octet  (fixed; handshake.go:222-224)
+;   2 KEMSelect     0x04 : 2 octets (fixed; BE u16 KEM code)
+;   3 SigSelect     0x06 : 2 octets (fixed; BE u16 Sig code)
+;   4 AEADSelect    0x0D : 2 octets (fixed; BE u16 AEAD code)
+;   5 KEMCiphertext 0x08 : var, >=1 (@X25519MLKEM768 = ML-KEM-768 ct(1088) ||
+;                          server X25519 pk(32) = 1120 octets, spec/10:106-107)
+server-hello-payload = [
+  hs-tlv-profile-select,
+  hs-tlv-kem-select,
+  hs-tlv-sig-select,
+  hs-tlv-aead-select,
+  hs-tlv-kem-ciphertext,
+]
+
+; --- 8c. SERVER_AUTH (0x0102) / CLIENT_AUTH (0x0103), AEAD-sealed — spec/10:36-37;
+;         impl/go/handshake.go:82-86,246-252,264-285 ------------------------
+; Plaintext = exactly 3 TLVs, this order:
+;   1 IdentityKey 0x09 : var, >=1 (Ed25519 = 32 octets at Standard)
+;   2 CertVerify  0x0A : var = u16 scheme(=Ed25519 0x0807) || signature
+;                        (@Ed25519 = 2 + 64 = 66 octets; spec/10:174-176)
+;   3 Finished    0x0B : var = HashLen (32 @ SHA-256, 48 @ SHA-384;
+;                        spec/10:52-53,189)
+; Both SERVER_AUTH and CLIENT_AUTH share this plaintext TLV shape. Sealing:
+; AEAD = negotiated primary suite (AEADSelect[0]); Flags = ENC; Channel = 0x0000;
+; Seq = 0; AAD = 21-octet header prefix; nonce = iv XOR seq (spec/10:202-207).
+auth-payload = [
+  hs-tlv-identity-key,
+  hs-tlv-cert-verify,
+  hs-tlv-finished,
+]
+server-auth-payload = auth-payload
+client-auth-payload = auth-payload
+
+; --- Handshake TLV shapes (extension-tlv with the tag/size pinned) ---------
+; Each pins the 2-octet tag literal and, where the spec fixes it, the Value size.
+; Where the size is variable, the value is `bstr` and the semantic length lives
+; in the comment (CDDL cannot express "even-length non-empty list of BE u16").
+
+; CLIENT_HELLO TLVs
+hs-tlv-profile-offer = [ type: 0x0001, length: u16, value: bstr ]   ; 0x01 var >=1
+hs-tlv-kem-offer     = [ type: 0x0003, length: u16, value: bstr ]   ; 0x03 var even>=2
+hs-tlv-sig-offer     = [ type: 0x0005, length: u16, value: bstr ]   ; 0x05 var even>=2
+hs-tlv-aead-offer    = [ type: 0x000C, length: u16, value: bstr ]   ; 0x0C var even>=2
+hs-tlv-kem-share     = [ type: 0x0007, length: u16, value: bstr ]   ; 0x07 var >=1
+
+; SERVER_HELLO TLVs (fixed sizes enforced via bstr .size where the spec pins them)
+hs-tlv-profile-select  = [ type: 0x0002, length: u16, value: bstr .size 1 ] ; 0x02
+hs-tlv-kem-select      = [ type: 0x0004, length: u16, value: bstr .size 2 ] ; 0x04 BE u16
+hs-tlv-sig-select      = [ type: 0x0006, length: u16, value: bstr .size 2 ] ; 0x06 BE u16
+hs-tlv-aead-select     = [ type: 0x000D, length: u16, value: bstr .size 2 ] ; 0x0D BE u16
+hs-tlv-kem-ciphertext  = [ type: 0x0008, length: u16, value: bstr ]         ; 0x08 var >=1
+
+; AUTH TLVs
+hs-tlv-identity-key = [ type: 0x0009, length: u16, value: bstr ]   ; 0x09 var >=1 (Ed25519=32)
+hs-tlv-cert-verify  = [ type: 0x000A, length: u16, value: cert-verify-value ] ; 0x0A
+hs-tlv-finished     = [ type: 0x000B, length: u16, value: bstr ]   ; 0x0B var = HashLen (32/48)
+
+; --- 8d. CertVerify Value (TLV 0x0A) — spec/10:166-176; handshake.go:294-320 ---
+; value = SignatureScheme (BE u16) || signature. The inner signature has NO
+; length prefix; the TLV Length delimits it. @Ed25519 = 2 + 64 = 66 octets.
+; scheme is one of the negotiated signature code points (Ed25519 0x0807 / ML-DSA-87 0x0905).
+; HONEST LIMITATION: the u16-scheme and signature are shown as an annotative
+; [ ] pair; on the wire they are concatenated octets, and the signature length
+; is implied by (TLV Length - 2), which CDDL cannot compute across fields.
+cert-verify-value = [
+  scheme:    u16,     ; BE u16 signature scheme (§6a sig-value)
+  signature: bstr,    ; raw signature bytes; @Ed25519 = 64 octets
+]
+; signing_input (prose; spec/10:166-170; handshake.go:294-306):
+;   0x20 x 64 || context || 0x00 || transcript_hash
+;   context(server) = "N-PAMP/2, server CertificateVerify"
+;   context(client) = "N-PAMP/2, client CertificateVerify"
+;   signed transcript_hash = TH_sId (server) / TH_cId (client) (spec/10:172-173)
+
+; --- 8e. Finished Value (TLV 0x0B) — spec/10:183-189; handshake.go:355-359 ---
+; verify_data = HMAC(finished_key, transcript_hash), hash = profile H.
+;   finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)
+;   length = HashLen: 32 @ SHA-256, 48 @ SHA-384.
+;   MAC'd transcript_hash = TH_sCV (server) / TH_cCV (client) (spec/10:188-189).
+; Modeled as hs-tlv-finished above (value = bstr, length = HashLen). CDDL cannot
+; tie the byte length to the negotiated KDF hash — prose-only.
+
+; --- 8f. Transcript construction (prose; governs handshake TLV hashing) -----
+; spec/10:73-96:
+;   AddFrameType(ft) absorbs the 2-octet BE frame type ONLY; the other 34 header
+;     octets and the AEAD tag are NOT absorbed (spec/10:79-81).
+;   AddTLV(t) absorbs one TLV as Type(2) || Length(2) || Value (spec/10:82).
+;   Five transcript points: TH_kem, TH_sId, TH_sCV, TH_cId, TH_cCV (spec/10:88-94).
+; This is a hashing procedure, not a wire structure; CDDL models none of it.
+
+
+; ===========================================================================
+; 9. WHAT THIS CDDL ENFORCES vs. WHAT IS PROSE-ONLY (honest separation)
+; ===========================================================================
+; ENFORCED by a CDDL validator:
+;   - header is exactly 36 octets; aead-tag is exactly 16 octets;
+;   - magic is exactly the 4 bytes 4E 50 41 4D; reserved is exactly 11 zero bytes;
+;   - each u16/u32/u64 field / sized TLV value is exactly 2/4/8 / pinned octets;
+;   - each enum field's value is one of the registered code points;
+;   - each handshake payload has exactly the listed count of TLVs with the
+;     pinned tag literals and pinned fixed Value sizes.
+;
+; PROSE-ONLY (CDDL cannot express — normative in spec/02 and spec/10):
+;   - big-endianness of every multi-octet integer field;
+;   - the sequential octet layout of the frame and of the header (the [ ]
+;     decompositions are CBOR-array annotations, not the wire byte order);
+;   - octet 4's 4-bit Ver (=0x2) / 4-bit Flags split and the flag bit meanings;
+;   - that TLV Length equals the actual Value octet count on the wire;
+;   - the must-understand 0x8000 high-bit reject-the-frame behavior;
+;   - "reserved MUST be rejected if non-zero" (only "equals zero" is enforced);
+;   - handshake TLV ORDER, and Value contents being even-length BE-u16 lists;
+;   - AEAD sealing, the iv-XOR-seq nonce, and the 21-octet-header-prefix AAD.
+; ============================================================================

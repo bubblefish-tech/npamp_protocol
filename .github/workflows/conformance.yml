@@ -2,6 +2,14 @@
 #
 #   schemas     - scripts/validate-schemas.py: every vector in test-vectors/v1
 #                 validates against its JSON Schema (draft 2020-12).
+#   registries  - scripts/validate-registries.py: every registries/*.csv code-point
+#                 table validates against its registries/schemas/*.schema.json (draft
+#                 2020-12) AND passes a duplicate/partial-overlap code-point pass that
+#                 JSON Schema cannot express (single-field cross-row uniqueness).
+#   cddl        - schema/npamp-wire.cddl (the N-PAMP/2 binary-wire data model, RFC
+#                 8610) parses well-formed under the reference tool — Carsten Bormann's
+#                 `cddl` gem (`cddl <file> generate` exits non-zero on any parse error;
+#                 the anweiss/cddl Rust port mis-lexes hex uints and is not used here).
 #   conformance - the Go conformance runner (harness/runner, `npamp-conform`) drives
 #                 the in-tree Go reference adapter (harness/adapters/go) over the
 #                 embedded corpus; any MUST failure exits non-zero. Invocation per
@@ -41,6 +49,38 @@ jobs:
         run: python -m pip install jsonschema
       - name: Validate vectors against schemas
         run: python scripts/validate-schemas.py
+
+  registries:
+    name: registry CSV schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      # validate-registries.py exits 2 (SKIP) when jsonschema is absent, mirroring
+      # validate-schemas.py; install it so the gate validates instead of skipping.
+      - name: Install jsonschema
+        run: python -m pip install jsonschema
+      - name: Validate registry CSVs against schemas (+ duplicate/overlap pass)
+        run: python scripts/validate-registries.py
+
+  cddl:
+    name: wire-format CDDL well-formedness (RFC 8610)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Carsten Bormann's cddl gem is the RFC 8610 reference implementation. `cddl
+      # <file> generate` runs a full parse of the whole grammar (then instantiates the
+      # root rule) and exits non-zero on any parse error; the anweiss/cddl Rust port
+      # mis-lexes RFC-8610-legal hex uints (0x0000) and cannot parse this file.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - name: Install cddl reference tool
+        run: gem install cddl --no-document
+      - name: Check schema/npamp-wire.cddl is well-formed
+        run: cddl schema/npamp-wire.cddl generate > /dev/null
 
   conformance:
     name: conformance runner (Go reference adapter)

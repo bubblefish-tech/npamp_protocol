@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/profiles.schema.json",
+  "title": "N-PAMP Profile Registry",
+  "description": "Schema for the JSON representation of registries/profiles.csv: an array of row objects, one per security profile. The code column is an 8-bit profile code (2 hex digits). On/Off toggle columns are constrained to their observed token sets. Wrong-format code, out-of-enum profile/toggle, missing column, and empty free-text columns are caught here; DUPLICATE profile or code values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["profile", "code", "min_kem", "allowed_signatures", "kdf_hash", "per_frame_aead_diversification", "downgrade_refusal", "mandatory_key_update", "summary"],
+    "properties": {
+      "profile": { "type": "string", "enum": ["Standard", "High", "Sovereign"], "description": "Profile name." },
+      "code": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "8-bit profile code, hex-prefixed, exactly 2 hex digits (e.g. 0x01)." },
+      "min_kem": { "type": "string", "minLength": 1, "description": "Minimum required hybrid KEM suite name (e.g. X25519MLKEM768); MUST be non-empty." },
+      "allowed_signatures": { "type": "string", "minLength": 1, "description": "Comma-separated allowed signature algorithms; MUST be non-empty." },
+      "kdf_hash": { "type": "string", "enum": ["SHA-256", "SHA-384", "SHA-512"], "description": "Negotiated KDF hash for this profile." },
+      "per_frame_aead_diversification": { "type": "string", "enum": ["On", "Off"], "description": "Whether per-frame AEAD key diversification is mandatory." },
+      "downgrade_refusal": { "type": "string", "minLength": 1, "description": "Downgrade-refusal policy (Off, or a 'Refuses ...' clause); MUST be non-empty." },
+      "mandatory_key_update": { "type": "string", "minLength": 1, "description": "Mandatory key-update policy for this profile; MUST be non-empty." },
+      "summary": { "type": "string", "minLength": 1, "description": "One-line summary of the profile; MUST be non-empty." }
+    }
+  }
+}
