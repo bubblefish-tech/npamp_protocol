@@ -20,6 +20,24 @@
 ; express them. Every rule states, in comment, exactly what it does and does
 ; NOT enforce. Nothing here invents non-RFC-8610 syntax.
 ;
+; WHERE THE BYTE-EXACT PROPERTIES ARE ENFORCED (complementary, NOT by this file)
+; The properties CDDL cannot assert here — big-endian integer fields, the
+; sequential octet concatenation order, the octet-4 Ver==0x2 nibble value, CRC32C
+; correctness, and reserved-nonzero rejection — are enforced elsewhere, executably:
+;   - The conformance corpus test-vectors/v1/conformance-corpus.json (byte-identical
+;     to harness/runner/corpus/conformance-corpus.json, which the Go runner embeds).
+;     Group header.decode: tc1 golden PING decode (valid), tc2 reserved-nonzero
+;     MUST-reject, tc3 bad-CRC MUST-reject, tc4 wrong-magic MUST-reject, tc5
+;     wrong-version MUST-reject; group header.encode: golden PING encode; group
+;     crc32c: Castagnoli CRC over header octets 0..20. These are driven through the
+;     reference decoders by the conformance harness (harness/runner, binary
+;     npamp-conform), which grades each MUST-reject vector as Pass iff the decoder
+;     returns a non-empty error.
+;   - The Go reference impl unit tests impl/go/frame_test.go (CRC-before-other-fields,
+;     bad-magic, bad-version, reserved-nonzero, wire-vector rejects).
+; This file (CDDL structural shape) and those corpus/harness/unit tests together
+; form the enforcement surface; neither substitutes for the other.
+;
 ; Idiom key (RFC 8610 section -> use):
 ;   bstr .size N          fixes an N-octet field width               (§3.8.1)
 ;   bstr .size 1 .bits …  permits only listed bit positions in an octet(§3.8.2)
@@ -68,6 +86,12 @@
 ;   each TLV is well-formed, payload is an opaque byte run.
 ; NOT ENFORCED (prose only): the end-to-end octet concatenation order; that the
 ;   payload is actually sealed under the tag; the AD binding of header<->tag.
+; ENFORCED ELSEWHERE (complementary): the byte-exact header properties (magic,
+;   Ver==0x2 nibble, CRC32C, reserved-zero) are checked executably by the
+;   conformance corpus (test-vectors/v1/conformance-corpus.json, groups
+;   header.decode tc1-tc5 / header.encode / crc32c) driven through the reference
+;   decoders by the harness (harness/runner) plus impl/go/frame_test.go. See the
+;   "WHERE THE BYTE-EXACT PROPERTIES ARE ENFORCED" note in the file header above.
 npamp-frame = [
   header:      npamp-header,      ; 36 octets, fixed (§2 below)
   ext-tlvs:    tlv-sequence,      ; 0..* extension TLVs (§3 below)

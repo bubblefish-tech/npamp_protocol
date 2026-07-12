@@ -27,9 +27,20 @@
 # actions/upload-artifact@v7.
 name: conformance
 
+# Trigger scoping avoids the push-event + pull_request-event double-run: a push to a
+# branch that has an open PR previously fired TWO identical runs. `push` now runs only
+# for `main` (post-merge verification); PR branches are covered by `pull_request`.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# One in-flight run per ref. A newer PR sync cancels the older in-progress run of the
+# same group (saves CI on rapid re-pushes); main-branch runs are never cancelled, so
+# every merged commit is fully verified.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -127,6 +138,9 @@ jobs:
   rust:
     name: rust reference build + KAT/conformance tests
     runs-on: ubuntu-latest
+    env:
+      # Build the Go runner standalone even if an ambient Go workspace is present.
+      GOWORK: "off"
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -136,11 +150,33 @@ jobs:
         run: cargo build --manifest-path harness/adapters/rust/Cargo.toml
       - name: Run rust tests (conformance + handshake KAT)
         run: cargo test --manifest-path impl/rust/Cargo.toml
+      # Drive the SAME embedded corpus (incl. tc4 wrong-magic + tc5 wrong-version)
+      # through the Rust adapter via the Go runner, so those MUST-reject frames gate
+      # the Rust reference impl too. Ops the Rust adapter does not provide
+      # (tlv.decode, profile.check) grade Unimplemented (not Fail).
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: harness/runner/go.mod
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -o npamp-conform .
+      - name: Run conformance suite against the Rust adapter
+        run: ./harness/runner/npamp-conform run --testee "./harness/adapters/rust/target/debug/npamp-adapter" --junit conformance-report-rust.xml
+      - name: Upload Rust conformance JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit-rust
+          path: conformance-report-rust.xml
 
   swift:
     name: swift reference build + tests
     runs-on: ubuntu-latest
     container: swift:6.0
+    env:
+      # Build the Go runner standalone even if an ambient Go workspace is present.
+      GOWORK: "off"
     steps:
       - uses: actions/checkout@v7
       - name: Build swift reference implementation
@@ -149,6 +185,29 @@ jobs:
         run: swift build --package-path harness/adapters/swift-adapter
       - name: Run swift handshake KAT (npamp-handshake-kat validates the in-repo vectors)
         run: swift run --package-path impl/swift npamp-handshake-kat test-vectors/v1
+      # Drive the SAME embedded corpus (incl. tc4 wrong-magic + tc5 wrong-version)
+      # through the Swift adapter via the Go runner, inside this swift:6.0 container so
+      # the corpus gates the Swift reference impl on the exact toolchain that just built
+      # the adapter. actions/setup-go@v6 provisions Go inside the container. Ops the
+      # Swift adapter does not provide (tlv.decode, hkdf.expand, profile.check) grade
+      # Unimplemented (not Fail).
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: harness/runner/go.mod
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -o npamp-conform .
+      - name: Locate the built Swift adapter binary
+        run: echo "SWIFT_ADAPTER_BIN=$(swift build --package-path harness/adapters/swift-adapter --show-bin-path)/npamp-adapter" >> "$GITHUB_ENV"
+      - name: Run conformance suite against the Swift adapter
+        run: ./harness/runner/npamp-conform run --testee "$SWIFT_ADAPTER_BIN" --junit conformance-report-swift.xml
+      - name: Upload Swift conformance JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit-swift
+          path: conformance-report-swift.xml
 
   impl-go:
     name: go reference build + handshake/KAT + sdk tests
