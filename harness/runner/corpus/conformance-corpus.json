@@ -1,7 +1,7 @@
 {
   "algorithm": "npamp_00",
   "schemaVersion": "1.0.0",
-  "specRevision": "draft-bubblefish-npamp-00",
+  "specRevision": "draft-bubblefish-npamp-01",
   "testGroups": [
     {
       "op": "header.decode",

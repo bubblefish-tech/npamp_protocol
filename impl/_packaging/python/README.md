@@ -1,6 +1,6 @@
 # npamp-native
 
-Native Python extension for the **N-PAMP** wire format (draft-bubblefish-npamp-00):
+Native Python extension for the **N-PAMP** wire format (draft-bubblefish-npamp-01):
 A thin [PyO3](https://pyo3.rs) binding over the audited Rust core (`impl/rust`),
 shipped as a pre-built **abi3** wheel so users never need a Rust toolchain. This is the
 distribution model used by [pyca/cryptography](https://github.com/pyca/cryptography).

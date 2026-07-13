@@ -59,7 +59,7 @@ For reference, the octet-to-character mapping is:
 
 ### Reference
 
-draft-bubblefish-npamp-00 (Internet-Draft, Independent Submission stream,
+draft-bubblefish-npamp-01 (Internet-Draft, Independent Submission stream,
 category Informational), which specifies the N-PAMP wire format, channel
 architecture, profile negotiation, and cryptographic suites, and contains the
 IANA Considerations requesting this ALPN registration. Upon publication, the
@@ -132,7 +132,7 @@ of the referenced Internet-Draft.
 
 **Change controller:** Shawn Sammartano, BubbleFish Technologies, Inc
 
-**Reference:** draft-bubblefish-npamp-00 (to be updated to the assigned RFC number
+**Reference:** draft-bubblefish-npamp-01 (to be updated to the assigned RFC number
 upon publication).
 
 # 3. Notes
