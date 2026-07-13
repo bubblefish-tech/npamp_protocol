@@ -5,7 +5,7 @@
 > "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as
 > described in BCP 14 (RFC 2119, RFC 8174) when, and only when, they appear in all
 > capitals, as shown here. This document is a **developer-facing worked example**:
-> It walks one complete N-PAMP draft-00 association at the **Standard profile** —
+> It walks one complete N-PAMP draft-01 association at the **Standard profile** —
 > the four handshake flights, the transcript points, the key-schedule stages, both
 > authentication flights, and one application frame exchange — with real numbers.
 > It defines no new wire behavior and consumes no code points. Requirement words
@@ -32,7 +32,7 @@ in this document carries a provenance tag:
 | **[KAT:certverify]** | Pinned in `test-vectors/v1/certverify-kat.json`. |
 | **[CORPUS]** | Pinned in `test-vectors/v1/conformance-corpus.json`. |
 | **[INTEROP]** | Reproduced from a recorded live inter-implementation capture (not included in this public set). |
-| **[REGISTRY]** | From the draft-00 wire-format and registry references (`../02_frame_format.md`, `../05_profiles.md`, `../06_cryptographic_suites.md`, `../07_tlv_registry.md`, `../04_frame_types.md`). |
+| **[REGISTRY]** | From the draft-01 wire-format and registry references (`../02_frame_format.md`, `../05_profiles.md`, `../06_cryptographic_suites.md`, `../07_tlv_registry.md`, `../04_frame_types.md`). |
 | **[DERIVED]** | Computed for this document from pinned inputs by the §12 recipe, using an oracle first proven against the RFC anchors carried inside the pinned KAT files. Informative; NOT a pinned vector. |
 
 **This example is a composite, not a single recorded session.** The pinned corpus

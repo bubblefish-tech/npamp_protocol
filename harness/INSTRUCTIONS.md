@@ -1,6 +1,6 @@
 # npamp-conform — Instructions
 
-This document explains how to test an N-PAMP (`draft-bubblefish-npamp-00`) implementation
+This document explains how to test an N-PAMP (`draft-bubblefish-npamp-01`) implementation
 for conformance. There are two ways to use the tool; pick whichever fits your project.
 
 ## Tier A — vectors only (no adapter code)

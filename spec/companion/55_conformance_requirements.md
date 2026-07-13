@@ -4,7 +4,7 @@
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
 > and "OPTIONAL" in this document are to be interpreted as described in BCP 14
 > (RFC 2119, RFC 8174) when, and only when, they appear in all capitals, as shown
-> here. This document defines the **conformance classes** for N-PAMP draft-00, the
+> here. This document defines the **conformance classes** for N-PAMP draft-01, the
 > requirements an implementation MUST satisfy to claim each class, the evidence a
 > claim MUST carry, and — explicitly — what the current conformance corpus does
 > and does not verify. It builds on the N-PAMP core specification
@@ -20,7 +20,7 @@
 
 This document specifies:
 
-- Three conformance classes for N-PAMP draft-00 — wire-primitives conformance
+- Three conformance classes for N-PAMP draft-01 — wire-primitives conformance
   (Class W, §3), handshake conformance (Class H, §4), and bridge/companion
   conformance (Class B, §5) — and the requirements of each;
 - The conformance oracle set: the pinned vector corpus, its JSON Schemas, the
@@ -457,7 +457,7 @@ evidence path against the same pinned bytes and obtain the same verdicts.
 ## 10. Conformance
 
 An implementation conforms to NPAMP-CONFORM if and only if every conformance
-claim it publishes for N-PAMP draft-00:
+claim it publishes for N-PAMP draft-01:
 
 1. Names one or more of the classes defined here and satisfies that class's
    requirements in full — §3.1-§3.2 for Class W, §4.3 for Class H, §5.1 for

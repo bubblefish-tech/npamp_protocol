@@ -1,4 +1,4 @@
-# NPAMP-CH-0010 — Discovery Channel `0x0010` (per-channel interface reference; companion to draft-bubblefish-npamp-00)
+# NPAMP-CH-0010 — Discovery Channel `0x0010` (per-channel interface reference; companion to draft-bubblefish-npamp-01)
 
 > Status: **DRAFT companion specification.** The key words "MUST", "MUST NOT",
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
@@ -6,7 +6,7 @@
 > (RFC 2119, RFC 8174) when, and only when, they appear in all capitals, as shown
 > here. This document is a **per-channel interface reference** for the N-PAMP
 > **Discovery channel `0x0010`**. It is derived from the core specification's
-> §5 "Channel Architecture" (draft-bubblefish-npamp-00, the "core specification");
+> §5 "Channel Architecture" (draft-bubblefish-npamp-01, the "core specification");
 > where this reference and the core specification differ, **the draft governs**. It
 > restates the channel's registry facts and public frame-type framing, and it points
 > to the companion specifications that define the channel's operations — it does not

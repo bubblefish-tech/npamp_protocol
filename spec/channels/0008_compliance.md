@@ -1,4 +1,4 @@
-# NPAMP-CH-0008 — Compliance Channel (`0x0008`) Interface Reference (companion to draft-bubblefish-npamp-00)
+# NPAMP-CH-0008 — Compliance Channel (`0x0008`) Interface Reference (companion to draft-bubblefish-npamp-01)
 
 > Status: **DRAFT companion specification.** The key words "MUST", "MUST NOT",
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
@@ -6,7 +6,7 @@
 > (RFC 2119, RFC 8174) when, and only when, they appear in all capitals, as shown
 > here. This document is a **per-channel interface reference** for the N-PAMP
 > Compliance channel (`0x0008`), derived from the N-PAMP core specification
-> (draft-bubblefish-npamp-00, the "core specification"), §5 Channel Architecture
+> (draft-bubblefish-npamp-01, the "core specification"), §5 Channel Architecture
 > and its Profile Negotiation section. It restates the channel's registry entry,
 > its public frame-type reservations, and its public profile gating, and describes
 > the channel's attestation and regulatory-export interface **at the public level

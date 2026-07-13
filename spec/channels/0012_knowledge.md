@@ -1,4 +1,4 @@
-# NPAMP-CH-0012 — Knowledge Channel `0x0012` Interface Reference (companion to draft-bubblefish-npamp-00)
+# NPAMP-CH-0012 — Knowledge Channel `0x0012` Interface Reference (companion to draft-bubblefish-npamp-01)
 
 > Status: **DRAFT companion specification.** The key words "MUST", "MUST NOT",
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
@@ -6,7 +6,7 @@
 > (RFC 2119, RFC 8174) when, and only when, they appear in all capitals, as shown
 > here. This document is a **public per-channel interface reference** for the
 > N-PAMP **Knowledge channel `0x0012`**, derived from the N-PAMP core specification
-> (draft-bubblefish-npamp-00, the "core specification") §5 "Channel Architecture";
+> (draft-bubblefish-npamp-01, the "core specification") §5 "Channel Architecture";
 > the **draft governs**, and where this reference and the core specification differ,
 > the core specification prevails. It builds on the core specification and, for
 > foreign retrieval traffic that is bridged rather than native, on NPAMP-BRIDGE

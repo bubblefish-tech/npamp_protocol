@@ -9,7 +9,7 @@
 
 | Protocol | Identification Sequence | Reference |
 |---|---|---|
-| N-PAMP, wire major version 2 | `0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32` ("n-pamp/2") | draft-bubblefish-npamp-00 |
+| N-PAMP, wire major version 2 | `0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32` ("n-pamp/2") | draft-bubblefish-npamp-01 |
 
 - The identification sequence is the 8-octet UTF-8 string **`n-pamp/2`**.
 - The trailing digit `2` equals the N-PAMP wire major version (the value `0x02`

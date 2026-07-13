@@ -1,4 +1,4 @@
-# NPAMP-CH-0011 — Workflow Channel (`0x0011`) Interface Reference (companion to draft-bubblefish-npamp-00)
+# NPAMP-CH-0011 — Workflow Channel (`0x0011`) Interface Reference (companion to draft-bubblefish-npamp-01)
 
 > Status: **DRAFT companion specification.** The key words "MUST", "MUST NOT",
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
@@ -6,7 +6,7 @@
 > (RFC 2119, RFC 8174) when, and only when, they appear in all capitals, as shown
 > here. This document is a **public per-channel interface reference** for the
 > N-PAMP Workflow channel (`0x0011`), derived from the N-PAMP core specification
-> (draft-bubblefish-npamp-00, the "core specification"), §5 Channel Architecture
+> (draft-bubblefish-npamp-01, the "core specification"), §5 Channel Architecture
 > and §8 Extension Points. It restates the channel's registry entry and its public
 > frame-type reservations and describes the channel's multi-agent-orchestration and
 > task-delegation interface **at the public level only**. It builds on the core
