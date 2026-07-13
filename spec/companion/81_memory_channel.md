@@ -22,7 +22,7 @@ This document specifies, over the Memory channel `0x0001` of the N-PAMP core
 specification (the "core specification", draft-bubblefish-npamp-02):
 
 1. A set of Memory-channel frame types, drawn from the channel-specific
-   application band that begins at `0x0100` (core specification §4.5,
+   application band that begins at `0x0100` (core specification §4.6,
    frame-type namespace), plus the two reserved companion-band code points
    `0x0035`–`0x0036` this document finally defines;
 2. Per-operation request and response frame pairs realizing the five operation
@@ -30,7 +30,7 @@ specification (the "core specification", draft-bubblefish-npamp-02):
    delete, and retrieval of persistent-state memory records — plus a store status
    query and an eviction/revive lifecycle pair;
 3. The **deterministic-CBOR** encoding of every operation body (RFC 8949, core
-   specification §4.5 and §11.10), keyed by unsigned integers;
+   specification §4.5 and §11.9), keyed by unsigned integers;
 4. An **in-body correlation** discipline that matches a reply to its request by a
    correlation token carried inside the CBOR body — consuming no shared TLV tag;
    and
@@ -105,7 +105,7 @@ operation is routed by its N-PAMP **frame type** (§3) rather than by any
 method-name or tool-name field parsed from a body.
 
 **Frame-type namespace bands.** The core specification partitions each channel's
-`0x0000`–`0xFFFF` frame-type space into four bands (core specification §4.5,
+`0x0000`–`0xFFFF` frame-type space into four bands (core specification §4.6,
 Frame-Type Namespace): `0x0000`–`0x000A` reserved all-channel frame types with the
 same meaning on every channel; `0x000B`–`0x002F` unassigned, reserved to the core
 for future all-channel additions; `0x0030`–`0x00FF` the **companion-extension
@@ -154,7 +154,7 @@ for the same request.
 The reserved all-channel frame types (PING `0x0001`, PONG `0x0002`, CLOSE
 `0x0003`, CLOSE_ACK `0x0004`, ERROR `0x0005`, KEY_UPDATE `0x0006`,
 KEY_UPDATE_ACK `0x0007`, PATH_CHALLENGE `0x0008`, PATH_RESPONSE `0x0009`, and
-FLOW_UPDATE `0x000A`; core specification §4.5) retain their core meaning on the
+FLOW_UPDATE `0x000A`; core specification §4.6) retain their core meaning on the
 Memory channel. An implementation MUST NOT reuse them for Memory application
 traffic and MUST NOT define Memory operation semantics in the reserved all-channel
 range `0x0000`–`0x000A`.
@@ -192,10 +192,10 @@ reserves none in the core specification's cross-channel reserved ranges.
 
 A Memory frame's payload (the octets after the core frame header and any
 extension TLVs, and before the AEAD tag) is a single **deterministically encoded
-CBOR** object as defined by the core specification §4.5 and §11.10 (deterministic
+CBOR** object as defined by the core specification §4.5 and §11.9 (deterministic
 CBOR, RFC 8949). The payload MUST be a CBOR map whose keys are the unsigned
 integers defined in §4.2 and §5–§8 for the relevant frame type. A sender MUST
-produce the deterministic encoding (core specification §11.10): byte-identical
+produce the deterministic encoding (core specification §11.9): byte-identical
 output for identical inputs, with the canonical key ordering and shortest-form
 integer encoding RFC 8949 §4.2 requires, and definite-length maps and arrays.
 
@@ -602,7 +602,7 @@ core-conformant N-PAMP wire implementation and, on the Memory channel `0x0001`, 
 2. Uses only the Memory frame types defined in §3 — the application-band operation
    frames `0x0100`–`0x010E` and the eviction/revive frames `0x0035`–`0x0036` —
    preserves the core meaning of the reserved all-channel frame types
-   `0x0001`–`0x000A`, and assigns `0x0035`–`0x0036` to no purpose other than
+   `0x0000`–`0x000A`, and assigns `0x0035`–`0x0036` to no purpose other than
    eviction and revive (§3);
 3. Encodes every operation body as a deterministic-CBOR map (§4.1) with the
    integer keys of §4.2 and §5–§8; rejects a non-deterministically-encoded body, a

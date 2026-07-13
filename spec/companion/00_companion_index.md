@@ -72,7 +72,8 @@ define required behavior and make no statement about any implementation.
 ### Native channel operations
 
 Operational companions for the substrate's own semantic channels. Each defines one
-channel's native `0x0100`+ application frame types, their deterministic-CBOR bodies,
+channel's native operational frame types (in the `0x0100`+ application band, plus any
+companion-extension range the core reserves for that channel), their deterministic-CBOR bodies,
 and a conformance clause — distinct from Bridge carriage, which encapsulates *foreign*
 protocols. Frame bodies use deterministic CBOR (RFC 8949), the same native-channel
 encoding as NPAMP-DISC.

@@ -26,7 +26,7 @@ This document specifies, over the Sensory channel `0x0009` of the core
 specification (draft-bubblefish-npamp-02):
 
 1. A set of Sensory-channel frame types (§3), drawn from the channel-application
-   frame-type band that begins at `0x0100` (core specification §4.5);
+   frame-type band that begins at `0x0100` (core specification §4.6);
 2. The encoding of an **observation batch** — a deterministically encoded CBOR
    payload carrying one or more typed sensor readings, each with a source
    identifier, timestamp, unit, value, and optional quality (§5);
@@ -104,7 +104,7 @@ own contract.
 ## 3. Sensory-channel frame types
 
 The core specification partitions the per-channel frame-type namespace into four
-bands (core specification §4.5):
+bands (core specification §4.6):
 
 * `0x0000`–`0x000A` — reserved all-channel frame types (`0x0000` reserved; PING
   `0x0001` … FLOW_UPDATE `0x000A`), with the same meaning on every channel;
@@ -139,7 +139,7 @@ extension TLV.
 A Sensory frame's payload — the octets after the 36-octet core frame header and
 before the AEAD tag — is a single **deterministically encoded CBOR** map, as defined
 by the core specification's Payload Encoding clause (core specification §4.5) and
-its deterministic-encoding requirement (core specification §11.10; RFC 8949). A
+its deterministic-encoding requirement (core specification §11.9; RFC 8949). A
 sender MUST produce the deterministic encoding: byte-identical output for identical
 inputs, with the canonical key ordering and shortest-form integer encoding RFC 8949
 §4.2 requires. The payload MUST be a CBOR map whose keys are the unsigned integers
@@ -449,7 +449,9 @@ An implementation conforms to NPAMP-SENSORY if and only if, on the Sensory chann
    Profile Negotiation, and publishes or relies on none of them through this document
    (§1.2, §2).
 
-A conformance test suite SHOULD assert each clause above with a recorded Sensory
+No machine-gradable conformance vectors exist for the Sensory channel yet: a claim of
+conformance to this document is therefore specification-audited and MUST NOT be
+represented as corpus-verified. A conformance test suite SHOULD assert each clause above with a recorded Sensory
 exchange on channel `0x0009`: an unsolicited OBSERVE batch (no `corr`); a
 SENSORY_SUBSCRIBE → SENSORY_SUB_ACK → OBSERVE (repeated until credit reaches zero) →
 SENSORY_CREDIT → OBSERVE → SENSORY_UNSUBSCRIBE sequence; a producer that pauses at

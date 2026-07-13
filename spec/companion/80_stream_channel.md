@@ -23,7 +23,7 @@ specification (the "core specification", draft-bubblefish-npamp-02):
    the concurrent sub-streams the core specification's channel registry advertises for
    `0x000C` but leaves unencoded;
 2. The encoding of each frame's body as a **deterministically encoded CBOR** map
-   (core specification §4.5, §11.10; RFC 8949);
+   (core specification §4.5, §11.9; RFC 8949);
 3. A **sub-stream identifier** space whose parity is bound to the handshake role, so
    that both peers may open sub-streams concurrently without collision;
 4. A **two-level flow-control** model in which every write MUST respect both a
@@ -172,10 +172,10 @@ the core specification's cross-channel reserved ranges.
 
 A Stream frame's payload (the octets after the core frame header and any extension TLVs,
 and before the AEAD tag) is a single **deterministically encoded CBOR** object as
-defined by core specification §4.5 and §11.10 (deterministic CBOR, RFC 8949). The
+defined by core specification §4.5 and §11.9 (deterministic CBOR, RFC 8949). The
 payload MUST be a CBOR map whose keys are the unsigned integers defined in §4.2 and
 §5 for the relevant frame type. A sender MUST produce the deterministic encoding
-(core specification §11.10): byte-identical output for identical inputs, with the
+(core specification §11.9): byte-identical output for identical inputs, with the
 canonical key ordering and shortest-form integer encoding RFC 8949 §4.2 requires. A
 receiver MUST reject (STREAM_RESET, error code `StreamStateError`, or — where the frame
 carries no usable `sub_stream_id` — a connection-level ERROR `0x0005`) any Stream frame
@@ -528,7 +528,9 @@ An implementation conforms to NPAMP-STREAM if and only if, on the Stream channel
 9. Scopes all sub-stream identifiers and offsets to the association and carries no
    sub-stream state across associations (§7.4, §9).
 
-A conformance test suite SHOULD assert each clause above with a recorded exchange on the
+No machine-gradable conformance vectors exist for the Stream channel yet: a claim of
+conformance to this document is therefore specification-audited and MUST NOT be
+represented as corpus-verified. A conformance test suite SHOULD assert each clause above with a recorded exchange on the
 Stream channel `0x000C`: a handshake that advertises the channel; a bidirectional
 STREAM_OPEN/STREAM_OPEN handshake at each parity; at least two concurrent sub-streams
 carrying STREAM_DATA in both directions; a STREAM_WINDOW_UPDATE that raises an absolute

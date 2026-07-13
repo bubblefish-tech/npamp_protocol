@@ -140,10 +140,10 @@ Frames `0x0100`–`0x0104` are one-way, best-effort, high-frequency state stream
 
 A Spatial frame's payload (the octets after the 36-octet core frame header and any
 extension TLVs, and before the AEAD tag) is a single **deterministically encoded CBOR**
-object as defined by core specification §4.5 and §11.10 (deterministic CBOR, RFC 8949).
+object as defined by core specification §4.5 and §11.9 (deterministic CBOR, RFC 8949).
 The payload MUST be a CBOR map whose keys are the unsigned integers defined in §4.2 and
 §5 for the relevant frame type. A sender MUST produce the deterministic encoding (core
-specification §11.10): byte-identical output for identical input, with the canonical key
+specification §11.9): byte-identical output for identical input, with the canonical key
 ordering and shortest-form integer encoding RFC 8949 §4.2 requires. A receiver MUST
 reject (SPATIAL_ERROR, code `MalformedPayload`) any Spatial frame whose payload is not a
 valid deterministic-CBOR map, or whose payload omits a required key or carries a key of
@@ -341,7 +341,7 @@ originating query's `corr`. Its payload carries the common envelope (§4.2) and:
 |---|---|---|
 | 1 | MalformedPayload | The payload is not valid deterministic CBOR, omits a required field, uses a wrong CBOR major type, carries an unrecognized negative key, or fails the occupancy cell-length check (§4, §5.5). |
 | 2 | KindMismatch | The payload's `frame_kind` contradicts the frame-header Frame Type (§4.2). |
-| 3 | UnknownFrame | A query or transform names a `coord_frame` or `child_frame` for which no live FRAME_DEF is held (§5.1, §5.2). |
+| 3 | UnknownFrame | A query references a `coord_frame` or `child_frame` for which no live FRAME_DEF is held (§5.1, §5.2). |
 | 4 | FrameTreeConflict | A FRAME_DEF would give a frame a second live parent or would close a cycle (§5.1). |
 | 5 | FilterUnsupported | A SPATIAL_QUERY carries a filter field the responder does not implement; the responder MUST NOT silently return an over-broad snapshot (§5.6). |
 | 6 | StaleCursor | A pagination `cursor` the responder no longer recognizes (§5.7). |
@@ -398,7 +398,9 @@ An implementation conforms to NPAMP-SPATIAL if and only if, on the Spatial chann
     specification's profile negotiation, out of scope for this application interface
     (§1.2, §2).
 
-A conformance test suite SHOULD assert each clause above with a recorded exchange on the
+No machine-gradable conformance vectors exist for the Spatial channel yet: a claim of
+conformance to this document is therefore specification-audited and MUST NOT be
+represented as corpus-verified. A conformance test suite SHOULD assert each clause above with a recorded exchange on the
 Spatial channel: a four-frame FRAME_DEF chain (`earth` → `map` → `odom` → `base_link`)
 accepted as a tree; a FRAME_DEF that introduces a second parent and one that closes a
 cycle, each rejected with `FrameTreeConflict`; a TRANSFORM carrying a quaternion and a
