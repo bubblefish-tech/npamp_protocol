@@ -1,0 +1,103 @@
+# N-PAMP
+
+> N-PAMP (Native Post-Quantum Agent Messaging Protocol) is a binary, multi-channel, wire-level protocol that sits beneath application-layer agent protocols and gives them a single fixed-size frame, a registry of multiplexed channels, and negotiated post-quantum security on the wire, before any application semantics.
+
+This is the public reference home of N-PAMP: the IETF Internet-Draft, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the per-decision record of how the protocol was designed. The current revision is `draft-bubblefish-npamp-01`. Every link below is a real file in this repository.
+
+## Specification
+
+- [Internet-Draft (draft-bubblefish-npamp-01)](ietf/draft-bubblefish-npamp-latest.md): the canonical wire-format specification, submitted to the IETF Independent Submission stream (Informational).
+- [ALPN protocol identifier](spec/01_alpn.md): the `n-pamp/2` ALPN token and how it selects N-PAMP during TLS/QUIC negotiation.
+- [Wire format](spec/02_frame_format.md): the fixed frame header, CRC32C (Castagnoli) integrity field, and TLV body rules.
+- [Channel architecture](spec/03_channels.md): how one connection multiplexes independent semantic channels by 16-bit channel ID.
+- [Frame types](spec/04_frame_types.md): the frame-type code points and their meaning on the wire.
+- [Profile negotiation](spec/05_profiles.md): Base / High / Sovereign profile selection and invariants.
+- [Cryptographic suites](spec/06_cryptographic_suites.md): the post-quantum and classical primitives (ML-KEM, ML-DSA, AES-256-GCM, HKDF) and their suite identifiers.
+- [TLV type registry](spec/07_tlv_registry.md): the type-length-value tag space carried inside frames.
+- [URI scheme `npamp://`](spec/08_uri_scheme.md): the provisionally IANA-registered URI scheme for addressing N-PAMP endpoints.
+- [Extension points & IANA posture](spec/09_extension_points.md): where and how the protocol may be extended without forking.
+- [Handshake binding (normative)](spec/10_handshake_binding.md): the 1.5-RTT authenticated post-quantum handshake and its transcript binding.
+
+## Channels
+
+- [Channel interface reference index](spec/03_channels.md): overview of the 20 reserved semantic channels; each channel below has its own interface-reference page.
+- [Control channel `0x0000`](spec/channels/0000_control.md): connection-level control frames.
+- [Memory channel `0x0001`](spec/channels/0001_memory.md): agent memory read/write/search semantics.
+- [Capability channel `0x0002`](spec/channels/0002_capability.md): capability advertisement and negotiation.
+- [Identity channel `0x0003`](spec/channels/0003_identity.md): peer identity and attestation.
+- [Governance channel `0x0004`](spec/channels/0004_governance.md): consent and admission-control policy.
+- [Bridge channel `0x000D`](spec/channels/000D_bridge.md): encapsulation of external agent protocols (the carriage entry point).
+- Remaining channels: [immune `0x0005`](spec/channels/0005_immune.md), [federation `0x0006`](spec/channels/0006_federation.md), [settlement `0x0007`](spec/channels/0007_settlement.md), [compliance `0x0008`](spec/channels/0008_compliance.md), [sensory `0x0009`](spec/channels/0009_sensory.md), [telemetry `0x000A`](spec/channels/000A_telemetry.md), [audit `0x000B`](spec/channels/000B_audit.md), [stream `0x000C`](spec/channels/000C_stream.md), [commerce `0x000E`](spec/channels/000E_commerce.md), [interaction `0x000F`](spec/channels/000F_interaction.md), [discovery `0x0010`](spec/channels/0010_discovery.md), [workflow `0x0011`](spec/channels/0011_workflow.md), [knowledge `0x0012`](spec/channels/0012_knowledge.md), [spatial `0x0013`](spec/channels/0013_spatial.md).
+
+## Companion specifications
+
+- [Companion index](spec/companion/00_companion_index.md): the map of all companion specs (bridge framework, carriage classes, protocol mappings, discovery, hello, peer-handle, conformance) — start here.
+- [Bridge framework](spec/companion/10_bridge_framework.md): the protocol-agnostic framework for carrying foreign agent protocols over N-PAMP.
+- [Protocol registry](spec/companion/30_protocol_registry.md): the extensible registry of bridged protocol identifiers.
+- [Carriage classes](spec/companion/20_carriage_jsonrpc.md): carriage-by-class covering whole protocol families — [JSON-RPC](spec/companion/20_carriage_jsonrpc.md), [HTTP](spec/companion/21_carriage_http.md), [messaging](spec/companion/22_carriage_messaging.md), [streaming](spec/companion/23_carriage_streaming.md), [documents](spec/companion/24_carriage_documents.md), [opaque](spec/companion/25_carriage_opaque.md).
+- [Discovery](spec/companion/40_discovery.md): endpoint discovery, with [signed discovery](spec/companion/41_discovery_signed.md) for authenticated advertisements.
+- [Hello bootstrap](spec/companion/45_hello_bootstrap.md): the pre-handshake hello/bootstrap exchange.
+- [Peer handle](spec/companion/50_peer_handle.md): stable peer-handle identifiers across sessions.
+- [Conformance requirements](spec/companion/55_conformance_requirements.md): the normative bridge/carriage conformance clauses.
+- [Worked handshake example](spec/companion/56_worked_example_handshake.md): a byte-level walkthrough of a full handshake.
+- [Protocol mappings (17)](spec/companion/60_map_mcp.md): thin mappings from foreign agent protocols to N-PAMP carriage — [MCP](spec/companion/60_map_mcp.md), [A2A](spec/companion/61_map_a2a.md), [ACP](spec/companion/62_map_acp.md), [ANP](spec/companion/63_map_anp.md), [AG-UI](spec/companion/64_map_agui.md), [AP2](spec/companion/65_map_ap2.md), [UCP](spec/companion/66_map_ucp.md), [AITP](spec/companion/67_map_aitp.md), [LMOS](spec/companion/68_map_lmos.md), [OASF](spec/companion/69_map_oasf.md), [FIPA-ACL](spec/companion/6a_map_fipa_acl.md), [agents.json](spec/companion/6b_map_agents_json.md), [AgentSpec](spec/companion/6c_map_agentspec.md), [AgentScript](spec/companion/6d_map_agentscript.md), [MS Agent Framework](spec/companion/6e_map_msagentfw.md), [AGNTCY](spec/companion/6f_map_agntcy.md), [NLIP](spec/companion/70_map_nlip.md).
+
+## Registries & schemas
+
+- [AEAD registry](registries/aead.csv): AEAD cipher code points ([schema](registries/schemas/aead.schema.json)).
+- [KEM registry](registries/kem.csv): key-encapsulation-mechanism code points ([schema](registries/schemas/kem.schema.json)).
+- [Signature registry](registries/signatures.csv): signature-algorithm code points ([schema](registries/schemas/signatures.schema.json)).
+- [Profiles registry](registries/profiles.csv): security-profile code points ([schema](registries/schemas/profiles.schema.json)).
+- [Channels registry](registries/channels.csv): the 20 reserved channel IDs ([schema](registries/schemas/channels.schema.json)).
+- [TLV tags registry](registries/tlv_tags.csv): TLV type code points ([schema](registries/schemas/tlv_tags.schema.json)).
+- [Reserved frame types registry](registries/frame_types_reserved.csv): reserved frame-type code points ([schema](registries/schemas/frame_types_reserved.schema.json)).
+- [Bridge protocol IDs registry](registries/bridge_protocol_ids.csv): bridged-protocol identifiers ([schema](registries/schemas/bridge_protocol_ids.schema.json)).
+- [Wire CDDL schema](schema/npamp-wire.cddl): the machine-readable Concise Data Definition Language grammar for the on-the-wire frame.
+
+## Conformance
+
+- [Conformance corpus](test-vectors/README.md): the language-agnostic, byte-pinned vector corpus and handshake KATs used to grade every implementation.
+- [Conformance corpus vectors](test-vectors/v1/conformance-corpus.json): 255 self-describing wire/crypto/profile vectors, byte-identical across all 10 languages.
+- [Handshake KATs](test-vectors/v1/kem-wire-kat.json): NIST/RFC-anchored known-answer tests — [KEM-wire](test-vectors/v1/kem-wire-kat.json), [key-schedule](test-vectors/v1/key-schedule-kat.json), [transcript](test-vectors/v1/transcript-kat.json), [Finished](test-vectors/v1/finished-kat.json), [CertVerify](test-vectors/v1/certverify-kat.json), [handshake-flow](test-vectors/v1/handshake-flow-kat.json).
+- [Harness overview](harness/README.md): the cross-implementation runner that drives every reference implementation against the corpus.
+- [Conformance tool README](harness/CONFORMANCE-README.md): the single-binary `npamp-conform` tester and what it checks.
+- [Harness instructions](harness/INSTRUCTIONS.md): how to run the conformance tool against your implementation (vectors-only or adapter tiers).
+
+## Reference implementations
+
+- [Implementations overview](impl/README.md): one subdirectory per language, co-located with the spec (C2SP model); the Go module is the primary reference.
+- [Go quickstart](impl/go/QUICKSTART.md): secure-record-layer round-trip in Go ([SDK quickstart](impl/go/sdk/QUICKSTART.md) covers transport + handshake).
+- [Rust quickstart](impl/rust/QUICKSTART.md): secure-record-layer round-trip in Rust.
+- [Python quickstart](impl/python/QUICKSTART.md): secure-record-layer round-trip in Python.
+- [TypeScript quickstart](impl/typescript/QUICKSTART.md): secure-record-layer round-trip in TypeScript.
+- [C# quickstart](impl/csharp/QUICKSTART.md): secure-record-layer round-trip in C#.
+- [Swift quickstart](impl/swift/QUICKSTART.md): secure-record-layer round-trip in Swift.
+- [Java quickstart](impl/java/QUICKSTART.md): secure-record-layer round-trip in Java.
+- [Kotlin quickstart](impl/kotlin/QUICKSTART.md): secure-record-layer round-trip in Kotlin.
+- [PHP quickstart](impl/php/QUICKSTART.md): secure-record-layer round-trip in PHP.
+- [Ruby quickstart](impl/ruby/QUICKSTART.md): secure-record-layer round-trip in Ruby.
+
+## Getting started
+
+- [README](README.md): project overview, status, trust model, and how consuming products vendor N-PAMP.
+- [Go SDK quickstart](impl/go/sdk/QUICKSTART.md): the ergonomic transport + handshake SDK — the fastest path to a live connection.
+- [Contributing](CONTRIBUTING.md): how to propose changes to the protocol and its reference material.
+
+## Design decisions
+
+- [ADR index (0001)](decisions/0001-record-architecture-decisions.md): the MADR-format record of every architecture decision and why it was made.
+- [KEM combiner alignment (ADR-0005)](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md): the draft-00 → draft-01 change aligning the X25519MLKEM768 combiner to ML-KEM-first order.
+- [1.5-RTT handshake binding (ADR-0006)](decisions/0006-fix-the-1-5-rtt-handshake-binding.md): the decision fixing the handshake binding.
+
+## Optional
+
+- [CHANGELOG](CHANGELOG.md): revision history across draft-00 and draft-01.
+- [LICENSE](LICENSE): Apache-2.0 license for this repository.
+- [NOTICE](NOTICE): attribution notices required by the license.
+- [SECURITY](SECURITY.md): security policy and vulnerability reporting.
+- [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md): community code of conduct.
+- [LINEAGE](LINEAGE.md): the lineage and provenance of the reference material.
+- [TRADEMARKS](TRADEMARKS.md): N-PAMP trademark usage terms.
+- [CITATION](CITATION.cff): machine-readable citation metadata for this repository.
+- [IANA ALPN registration request](IANA_ALPN_n-pamp-2_registration_request.md): the `n-pamp/2` ALPN registration request submitted to IANA.
+- [llms-full.txt](llms-full.txt): the core normative documents (Internet-Draft + spec/01–10) concatenated into a single file for LLM ingestion.

@@ -1,0 +1,263 @@
+# MkDocs configuration for the N-PAMP reference documentation site.
+#
+# The spec surface is pure Markdown scattered across the repository root (spec/,
+# spec/channels/, spec/companion/, decisions/, ietf/, harness/, impl/, test-vectors/),
+# not under a single docs/ tree. Rather than move or symlink those canonical files,
+# docs_dir is set to the repo root ('.') so every page is addressed at its real
+# repo-relative path and stays browsable on GitHub. A hand-authored docs/index.md is
+# the site landing page.
+#
+# Build with the pinned toolchain in requirements-docs.txt:
+#     pip install -r requirements-docs.txt
+#     mkdocs build --strict
+#
+# --strict promotes every `warn`-level validation message to a build error, so a
+# green strict build proves the whole nav resolves and no in-page link is broken.
+
+site_name: N-PAMP Protocol
+site_description: >-
+  Native Post-Quantum Agent Messaging Protocol — the public reference: Internet-Draft,
+  core and companion specifications, code-point registries, ten reference
+  implementations, conformance corpus and harness, and design decision records.
+site_author: BubbleFish Technologies, Inc.
+site_url: https://bubblefish-tech.github.io/npamp_protocol/
+
+repo_name: bubblefish-tech/npamp_protocol
+repo_url: https://github.com/bubblefish-tech/npamp_protocol
+edit_uri: edit/main/
+
+copyright: Copyright &copy; 2026 BubbleFish Technologies, Inc.
+
+# The canonical Markdown lives across the repo root, so the root is the docs_dir.
+# MkDocs normally forbids docs_dir == the config file's directory; the `same-dir`
+# plugin (enabled under `plugins:` below) lifts that guard for exactly this layout.
+# site_dir must sit OUTSIDE docs_dir, so it is placed one level up.
+docs_dir: .
+site_dir: ../site
+
+# Constrain the build to exactly the navigated documentation surface. The repo root
+# holds source trees for ten implementations, vendored SwiftPM/Cargo checkouts, the
+# harness runners, tooling, registries, and VCS metadata — none of which are docs, and
+# some of which (the vendored checkouts, README.md) contain relative links that only
+# resolve on GitHub, not in the rendered site. Excluding them keeps `--strict` honest:
+# it validates the pages we actually publish, not third-party or GitHub-only Markdown.
+#
+# Strategy: exclude broadly, then re-include (`!`) only the exact pages the nav uses.
+# Patterns are .gitignore-style, evaluated in order (later wins); a leading '/' anchors
+# to the docs_dir root. The default implicit excludes ('.*' and '/templates/') still
+# apply, so dotfiles like .github never enter the build.
+exclude_docs: |
+  # Non-documentation trees at the root.
+  /site/
+  /formal/
+  /scripts/
+  /registries/
+  /schema/
+  # The test-vector data (JSON vectors + their JSON Schemas) is not documentation; the
+  # human-readable corpus README is re-included below for the Conformance section.
+  /test-vectors/**
+  /harness/adapters/
+  /harness/runner/
+  # Every implementation subtree (source, vendored checkouts, packaging) — the docs
+  # we keep from impl/ are re-included by name just below. Uses '/**' (all descendants)
+  # rather than '/impl/' (the directory) so gitignore semantics still allow the '!'
+  # re-includes below to match — a file cannot be re-included if its parent directory
+  # itself is excluded.
+  /impl/**
+  # Root governance / meta / GitHub-only Markdown that is not part of the doc nav and
+  # whose relative links target directories or non-Markdown files.
+  /README.md
+  /CHANGELOG.md
+  /CONTRIBUTING.md
+  /SECURITY.md
+  /CODE_OF_CONDUCT.md
+  /TRADEMARKS.md
+  /LINEAGE.md
+  /IANA_ALPN_n-pamp-2_registration_request.md
+  # Re-include the human-readable conformance corpus README (its sibling JSON data
+  # stays excluded).
+  !/test-vectors/README.md
+  # Re-include the exact implementation pages the nav publishes.
+  !/impl/README.md
+  !/impl/go/QUICKSTART.md
+  !/impl/go/sdk/QUICKSTART.md
+  !/impl/rust/QUICKSTART.md
+  !/impl/python/QUICKSTART.md
+  !/impl/typescript/QUICKSTART.md
+  !/impl/csharp/QUICKSTART.md
+  !/impl/swift/QUICKSTART.md
+  !/impl/java/QUICKSTART.md
+  !/impl/kotlin/QUICKSTART.md
+  !/impl/php/QUICKSTART.md
+  !/impl/ruby/QUICKSTART.md
+
+# --strict turns each `warn` below into a hard error. `omitted_files: info` because
+# the repo intentionally contains many Markdown files outside the doc nav; every other
+# check stays at `warn` so broken links, missing files, and bad relative links fail CI.
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: info
+    absolute_links: ignore
+    unrecognized_links: warn
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  # `same-dir` permits docs_dir: . (config file co-located with the docs at the repo
+  # root); without it MkDocs aborts with a "docs_dir is the parent of the config"
+  # configuration error. It must load before other plugins that read the file tree.
+  - same-dir
+  - search
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: docs/index.md
+  - Internet-Draft: ietf/draft-bubblefish-npamp-latest.md
+  - Core specification:
+      - ALPN: spec/01_alpn.md
+      - Frame format: spec/02_frame_format.md
+      - Channels: spec/03_channels.md
+      - Frame types: spec/04_frame_types.md
+      - Profiles: spec/05_profiles.md
+      - Cryptographic suites: spec/06_cryptographic_suites.md
+      - TLV registry: spec/07_tlv_registry.md
+      - URI scheme: spec/08_uri_scheme.md
+      - Extension points: spec/09_extension_points.md
+      - Handshake binding: spec/10_handshake_binding.md
+      - Channels:
+          - Control (0x0000): spec/channels/0000_control.md
+          - Memory (0x0001): spec/channels/0001_memory.md
+          - Capability (0x0002): spec/channels/0002_capability.md
+          - Identity (0x0003): spec/channels/0003_identity.md
+          - Governance (0x0004): spec/channels/0004_governance.md
+          - Immune (0x0005): spec/channels/0005_immune.md
+          - Federation (0x0006): spec/channels/0006_federation.md
+          - Settlement (0x0007): spec/channels/0007_settlement.md
+          - Compliance (0x0008): spec/channels/0008_compliance.md
+          - Sensory (0x0009): spec/channels/0009_sensory.md
+          - Telemetry (0x000A): spec/channels/000A_telemetry.md
+          - Audit (0x000B): spec/channels/000B_audit.md
+          - Stream (0x000C): spec/channels/000C_stream.md
+          - Bridge (0x000D): spec/channels/000D_bridge.md
+          - Commerce (0x000E): spec/channels/000E_commerce.md
+          - Interaction (0x000F): spec/channels/000F_interaction.md
+          - Discovery (0x0010): spec/channels/0010_discovery.md
+          - Workflow (0x0011): spec/channels/0011_workflow.md
+          - Knowledge (0x0012): spec/channels/0012_knowledge.md
+          - Spatial (0x0013): spec/channels/0013_spatial.md
+      - Companion specifications:
+          - Companion index: spec/companion/00_companion_index.md
+          - Bridge framework: spec/companion/10_bridge_framework.md
+          - "Carriage: JSON-RPC": spec/companion/20_carriage_jsonrpc.md
+          - "Carriage: HTTP": spec/companion/21_carriage_http.md
+          - "Carriage: messaging": spec/companion/22_carriage_messaging.md
+          - "Carriage: streaming": spec/companion/23_carriage_streaming.md
+          - "Carriage: documents": spec/companion/24_carriage_documents.md
+          - "Carriage: opaque": spec/companion/25_carriage_opaque.md
+          - Protocol registry: spec/companion/30_protocol_registry.md
+          - Discovery: spec/companion/40_discovery.md
+          - Discovery (signed): spec/companion/41_discovery_signed.md
+          - Hello bootstrap: spec/companion/45_hello_bootstrap.md
+          - Peer handle: spec/companion/50_peer_handle.md
+          - Conformance requirements: spec/companion/55_conformance_requirements.md
+          - Worked example — handshake: spec/companion/56_worked_example_handshake.md
+          - "Mapping: MCP": spec/companion/60_map_mcp.md
+          - "Mapping: A2A": spec/companion/61_map_a2a.md
+          - "Mapping: ACP": spec/companion/62_map_acp.md
+          - "Mapping: ANP": spec/companion/63_map_anp.md
+          - "Mapping: AG-UI": spec/companion/64_map_agui.md
+          - "Mapping: AP2": spec/companion/65_map_ap2.md
+          - "Mapping: UCP": spec/companion/66_map_ucp.md
+          - "Mapping: AITP": spec/companion/67_map_aitp.md
+          - "Mapping: LMOS": spec/companion/68_map_lmos.md
+          - "Mapping: OASF": spec/companion/69_map_oasf.md
+          - "Mapping: FIPA-ACL": spec/companion/6a_map_fipa_acl.md
+          - "Mapping: agents.json": spec/companion/6b_map_agents_json.md
+          - "Mapping: AgentSpec": spec/companion/6c_map_agentspec.md
+          - "Mapping: AgentScript": spec/companion/6d_map_agentscript.md
+          - "Mapping: MS Agent Framework": spec/companion/6e_map_msagentfw.md
+          - "Mapping: AGNTCY": spec/companion/6f_map_agntcy.md
+          - "Mapping: NLIP": spec/companion/70_map_nlip.md
+  - Registries: spec/07_tlv_registry.md
+  - Conformance:
+      - Requirements: spec/companion/55_conformance_requirements.md
+      - Harness overview: harness/README.md
+      - Conformance manual: harness/CONFORMANCE-README.md
+      - Runner instructions: harness/INSTRUCTIONS.md
+      - Test vectors: test-vectors/README.md
+  - Implementations:
+      - Overview: impl/README.md
+      - Go: impl/go/QUICKSTART.md
+      - Go SDK (transport + handshake): impl/go/sdk/QUICKSTART.md
+      - Rust: impl/rust/QUICKSTART.md
+      - Python: impl/python/QUICKSTART.md
+      - TypeScript: impl/typescript/QUICKSTART.md
+      - C#: impl/csharp/QUICKSTART.md
+      - Swift: impl/swift/QUICKSTART.md
+      - Java: impl/java/QUICKSTART.md
+      - Kotlin: impl/kotlin/QUICKSTART.md
+      - PHP: impl/php/QUICKSTART.md
+      - Ruby: impl/ruby/QUICKSTART.md
+  - Design decisions:
+      - Record ADRs: decisions/0001-record-architecture-decisions.md
+      - "ADR-0003: One wire format": decisions/0003-profiles-share-one-wire-format-and-construction.md
+      - "ADR-0004: Public-primitives-only editions": decisions/0004-open-editions-publish-only-public-draft-primitives.md
+      - "ADR-0005: ML-KEM-first combiner": decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md
+      - "ADR-0006: 1.5-RTT handshake binding": decisions/0006-fix-the-1-5-rtt-handshake-binding.md
+      - "ADR-0007: KEM wire KAT anchor": decisions/0007-kem-wire-kat-anchor-keygen-x25519-order-defer-decaps-ss.md
+      - "ADR-0008: Key-schedule KAT": decisions/0008-key-schedule-kat-via-rfc8448-validated-oracle.md
+      - "ADR-0009: Transcript KAT": decisions/0009-transcript-kat-independent-byte-constructor-fips180-anchor.md
+      - "ADR-0010: Finished KAT": decisions/0010-finished-kat-via-rfc4231-anchored-hmac.md
+      - "ADR-0011: CertVerify KAT": decisions/0011-certverify-kat-via-rfc8032-anchored-ed25519.md
+      - "ADR-0012: CertVerify context string": decisions/0012-certverify-context-string-uses-wire-version-npamp2.md
+      - ADR template: decisions/template.md

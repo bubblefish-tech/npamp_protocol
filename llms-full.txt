@@ -1,0 +1,1735 @@
+# N-PAMP
+
+> N-PAMP (Native Post-Quantum Agent Messaging Protocol) is a binary, multi-channel, wire-level protocol that sits beneath application-layer agent protocols and gives them a single fixed-size frame, a registry of multiplexed channels, and negotiated post-quantum security on the wire, before any application semantics.
+
+This single file inlines the full text of N-PAMP's core normative documents for direct LLM ingestion: the IETF Internet-Draft (`draft-bubblefish-npamp-01`) followed by the reference specification sections spec/01 through spec/10. Each document is introduced by a `# File: <path>` separator giving its repository-relative path. For a curated link index of the whole repository (registries, companion specs, conformance corpus, and the ten reference implementations), see `llms.txt`.
+
+
+# File: ietf/draft-bubblefish-npamp-latest.md
+
+---
+title: "N-PAMP: Native Post-Quantum Agent Messaging Protocol"
+abbrev: N-PAMP
+docname: draft-bubblefish-npamp-01
+category: info
+ipr: trust200902
+submissionType: independent
+area: ART
+date: 2026
+
+keyword:
+  - post-quantum
+  - agents
+  - transport
+  - ALPN
+
+stand_alone: yes
+pi: [toc, sortrefs, symrefs]
+
+author:
+  -
+    ins: S. Sammartano
+    name: Shawn Sammartano
+    org: BubbleFish Technologies, Inc.
+    # Required: a working, MONITORED email (below). ISE correspondence, the IETF
+    # conflict review, and AUTH48 final-proof all go to this address. A postal
+    # address is OPTIONAL under current RFC Editor practice and is omitted here.
+    email: npamp-editor@bubblefish.sh
+
+normative:
+  RFC2119:
+  RFC8174:
+  RFC5116:
+  RFC5869:
+  RFC7301:
+  RFC3986:
+  RFC7595:
+  RFC8032:
+  RFC8439:
+  RFC8446:
+  RFC8949:
+  RFC9000:
+  RFC9001:
+  FIPS203:
+    title: "Module-Lattice-Based Key-Encapsulation Mechanism Standard"
+    author:
+      - org: National Institute of Standards and Technology (NIST)
+    date: 2024
+    seriesinfo:
+      FIPS: 203
+  FIPS204:
+    title: "Module-Lattice-Based Digital Signature Standard"
+    author:
+      - org: National Institute of Standards and Technology (NIST)
+    date: 2024
+    seriesinfo:
+      FIPS: 204
+  SP800-56C:
+    title: "Recommendation for Key-Derivation Methods in Key-Establishment Schemes"
+    author:
+      - org: National Institute of Standards and Technology (NIST)
+    date: 2020-08
+    target: https://csrc.nist.gov/pubs/sp/800/56/c/r2/final
+    seriesinfo:
+      NIST: Special Publication 800-56C Rev. 2
+
+informative:
+  RFC8126:
+  RFC3552:
+  I-D.ietf-tls-ecdhe-mlkem:
+
+--- abstract
+
+The Native Post-Quantum Agent Messaging Protocol (N-PAMP) is a binary,
+multi-channel, wire-level protocol for authenticated communication between
+autonomous software agents. N-PAMP operates beneath application-layer agent
+protocols and provides a single fixed-size frame format, a registry of
+multiplexed channels, and three escalating security profiles (Standard,
+High, and Sovereign) built on standard post-quantum and classical
+cryptography. The protocol uses a hybrid key-encapsulation mechanism
+combining X25519 with ML-KEM, authenticated encryption with associated
+data, and a forward-secure key schedule. N-PAMP runs over QUIC as its
+primary transport and over TCP with TLS 1.3 as a fallback, negotiated via
+the Application-Layer Protocol Negotiation (ALPN) identifier "n-pamp/2".
+This document describes the wire format, channel architecture, profile
+negotiation, and cryptographic suites of N-PAMP, and reserves code-point
+ranges for extensions defined in companion specifications.
+
+--- middle
+
+# Introduction
+
+Autonomous software agents increasingly communicate with one another over
+long-lived associations that carry control traffic, persistent state, capability
+delegation, identity attestation, and operational telemetry on a single
+connection. Existing transport-layer protocols such as TLS 1.3 {{RFC8446}} and
+QUIC {{RFC9000}}, and application-layer agent protocols layered above them, do
+not by themselves provide a unified binary frame format with semantic channel
+multiplexing, profile-negotiated cryptographic strength, and mandatory
+authenticated encryption tailored to agent-to-agent traffic.
+
+N-PAMP addresses this gap. It defines a single fixed-size frame header, a set of
+multiplexed channels each carrying a distinct class of agent traffic, and three
+negotiated security profiles that hold the wire format constant while escalating
+the cryptographic primitives and operational requirements. All three profiles
+employ a hybrid key-encapsulation mechanism (KEM) combining the classical X25519
+key agreement with a NIST-standardized module-lattice KEM (ML-KEM, {{FIPS203}}),
+so that the confidentiality of an association is preserved if either the
+classical or the post-quantum component remains unbroken.
+
+N-PAMP is deliberately scoped as a transport substrate. It does not define
+application-layer semantics for the data carried on its channels; those are the
+subject of companion specifications. This document specifies the wire format,
+the channel registry, profile negotiation, and the cryptographic suites, and it
+reserves code-point ranges so that companion extensions can be defined without
+colliding with the core protocol.
+
+## Goals
+
+The design goals of N-PAMP are:
+
+* Cryptographic agility within a stable wire format. The frame format does not
+  change between profiles; the cryptographic primitives, modes, and operational
+  requirements do.
+
+* Defense in depth through hybrid post-quantum and classical key establishment,
+  authenticated encryption, and a forward-secure key schedule.
+
+* Channel multiplexing so that a single association can carry several classes of
+  agent traffic with independent sequence spaces and per-channel keying.
+
+* Interoperability across profiles, so that an endpoint operating at a higher
+  profile MAY interoperate with a lower-profile peer when local policy permits.
+
+## Non-Goals
+
+This document does NOT:
+
+* Replace TLS for ordinary web traffic. N-PAMP is purpose-built for
+  autonomous-agent, multi-channel traffic over long-lived associations.
+
+* Define application-layer semantics for the data carried on its channels.
+
+* Define a general-purpose IP-layer tunneling or VPN protocol.
+
+## Terminology
+
+For the purposes of this document:
+
+Association:
+: A long-lived, cryptographically authenticated session between two N-PAMP
+  endpoints, identified by a stable Association ID.
+
+Channel:
+: A semantic multiplexing lane within an association, identified by a 16-bit
+  Channel ID, carrying one class of agent traffic with its own sequence space.
+
+Frame:
+: The atomic unit of transmission, consisting of a fixed 36-octet header,
+  optional extension TLVs, and an AEAD-protected payload.
+
+Profile:
+: One of three negotiated levels of cryptographic strength and operational
+  requirement (Standard, High, Sovereign).
+
+# Conventions and Definitions
+
+{::boilerplate bcp14-tagged}
+
+# Protocol Overview {#protocol-overview}
+
+N-PAMP is a binary protocol. Every unit of communication is a frame consisting
+of a fixed 36-octet header ({{wire-format}}), zero or more extension TLVs, and a
+payload protected by an authenticated-encryption-with-associated-data (AEAD)
+construction {{RFC5116}}. Frames are carried on channels ({{channel-architecture}}),
+each of which has an independent per-direction sequence space.
+
+An N-PAMP association is established by a handshake that:
+
+1. establishes a hybrid X25519 + ML-KEM shared secret;
+
+2. negotiates a security profile, a KEM, a signature algorithm, and one or more
+   AEAD suites;
+
+3. authenticates both peers by signing a transcript that binds the negotiated
+   parameters and both peer identities; and
+
+4. derives a forward-secure key schedule from which per-channel, per-direction
+   traffic keys are obtained.
+
+The negotiated profile, the KEM identifier, the signature identifier, the
+selected AEAD suite(s), and both peer identities are all bound into the
+handshake transcript and confirmed by a Finished message authentication code
+(MAC). A man-in-the-middle that alters any negotiated parameter or substitutes
+an identity invalidates the Finished MAC and aborts the handshake; this is the
+structural defense against downgrade, unknown-key-share, and
+identity-substitution attacks (see {{security-considerations}}).
+
+N-PAMP uses QUIC {{RFC9000}} (secured with TLS 1.3, {{RFC9001}}) as its primary
+transport and TCP with TLS 1.3 {{RFC8446}} as a fallback. In both cases, the
+application protocol is negotiated using the ALPN extension {{RFC7301}} with the
+identifier "n-pamp/2" ({{iana-considerations}}).
+
+# Wire Format {#wire-format}
+
+## Frame Structure
+
+Every N-PAMP frame has the following structure:
+
+~~~
++--------+-------------+-------------------+-----------+
+| Header | Extension   | Payload           | AEAD Tag  |
+| 36 B   | TLVs (var)  | (var, encrypted)  | (16 B)    |
++--------+-------------+-------------------+-----------+
+~~~
+{: title="N-PAMP frame structure"}
+
+The 36-octet header is fixed-size. Zero or more extension TLVs MAY accompany a
+frame. The payload is AEAD-sealed, and the associated data covers the 21-octet
+header prefix (octets 0-20, through the Payload Length field, the same octets
+protected by the header CRC32C) so that any modification to those header fields
+is detected on decryption.
+
+## Frame Header
+
+The fixed header is 36 octets, laid out as follows. Multi-octet integers are
+encoded in network byte order (big-endian) unless stated otherwise.
+
+~~~
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     'N'       |     'P'       |     'A'       |     'M'       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Ver   | Flags |          Frame Type           |  Channel ID   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                   Sequence Number (64 bits)                   +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                   Payload Length (32 bits)                    |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                   CRC32C over octets 0-20                     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++             Reserved + Padding (11 octets, zero)              +
+|                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+~~~
+{: title="36-octet N-PAMP frame header"}
+
+The fields are:
+
+| Offset | Size | Field | Description |
+|---|---|---|---|
+| 0-3 | 4 octets | Magic | ASCII "NPAM" (0x4E 0x50 0x41 0x4D). |
+| 4 | 4 bits | Ver | Protocol major version, the high nibble of octet 4. The value 0x2 designates the wire format described in this document (wire major version 2). |
+| 4 | 4 bits | Flags | The low nibble of octet 4 (see {{frame-flags}}). |
+| 5-6 | 2 octets | Frame Type | Frame type within the channel (see {{frame-types}}). |
+| 7-8 | 2 octets | Channel ID | The semantic channel ({{channel-architecture}}). |
+| 9-16 | 8 octets | Sequence Number | Per-(channel, direction) monotonic sequence number, starting at 0. |
+| 17-20 | 4 octets | Payload Length | Byte count of the payload following the header. |
+| 21-24 | 4 octets | CRC32C | CRC32C (Castagnoli polynomial 0x1EDC6F41) computed over header octets 0-20. Receivers MUST validate it before processing any other header field. |
+| 25-35 | 11 octets | Reserved | MUST be zero; receivers MUST reject frames whose reserved octets are non-zero. |
+{: title="Frame header fields"}
+
+All multi-octet integers are big-endian. The Ver field carries the wire major
+version; the value 0x02 corresponds to the ALPN identifier "n-pamp/2".
+
+## Frame Flags {#frame-flags}
+
+The low nibble of header octet 4 carries four flag bits:
+
+| Bit | Name | Meaning |
+|---|---|---|
+| 0 (0x01) | URG | Urgent-priority scheduling. |
+| 1 (0x02) | ENC | Payload is AEAD-encrypted. |
+| 2 (0x04) | COMP | Payload is compressed. |
+| 3 (0x08) | FRAG | Frame is a fragment of a larger logical message. |
+{: title="Frame flags"}
+
+## Extension TLVs
+
+Zero or more Type-Length-Value (TLV) extensions MAY accompany a frame. Each TLV
+is encoded as:
+
+~~~
++---------+---------+-----------+
+| Type    | Length  | Value     |
+| 16 bits | 16 bits | Length B  |
++---------+---------+-----------+
+~~~
+{: title="Extension TLV encoding"}
+
+Type and Length are 16-bit unsigned integers in network byte order; Length is the
+byte count of Value (0 to 65535). A receiver that encounters an unknown TLV whose
+Type has the high bit (0x8000) clear MUST ignore that TLV. A receiver that
+encounters an unknown TLV whose Type has the high bit (0x8000) set MUST treat it
+as a forward-incompatible extension and reject the frame. The TLV type registry
+maintained by this specification is given in {{tlv-registry}}.
+
+## Payload Encoding
+
+The payload carries a frame-type-specific body. The body MAY be encoded in a
+binary serialization, in deterministic CBOR {{RFC8949}}, or as raw octets. The
+selected encoding is signaled within the channel-local interpretation of the
+Frame Type field.
+
+## Reserved Frame Types {#frame-types}
+
+Each channel defines its own frame types in the 0x0000-0xFFFF space. The
+following frame types are reserved across all channels and have the same meaning
+on every channel:
+
+| Type | Name | Description |
+|---|---|---|
+| 0x0000 | (reserved) | Reserved; MUST NOT be used as a frame type. |
+| 0x0001 | PING | Liveness probe. |
+| 0x0002 | PONG | Reply to PING. |
+| 0x0003 | CLOSE | Authenticated close; AEAD-protected. |
+| 0x0004 | CLOSE_ACK | Reply to CLOSE. |
+| 0x0005 | ERROR | Error report; AEAD-protected. |
+| 0x0006 | KEY_UPDATE | Initiate key update for this (channel, direction). |
+| 0x0007 | KEY_UPDATE_ACK | Acknowledge key update. |
+| 0x0008 | PATH_CHALLENGE | Path-migration challenge. |
+| 0x0009 | PATH_RESPONSE | Path-migration response. |
+| 0x000A | FLOW_UPDATE | Connection-level flow-control credit update. |
+{: title="Reserved frame types (all channels)"}
+
+Channel-specific frame types begin at 0x0100 within each channel's frame
+namespace. Frame-type code points at or above 0x0030 that are not reserved here,
+and in particular the ranges enumerated in {{extension-points}}, are reserved
+for extensions defined in companion specifications.
+
+The Control channel (0x0000) assigns the following channel-specific frame types for
+the N-PAMP handshake ({{handshake}}):
+
+| Type | Name | Description |
+|---|---|---|
+| 0x0100 | CLIENT_HELLO | First handshake flight (client); cleartext. |
+| 0x0101 | SERVER_HELLO | Second handshake flight (server); cleartext. |
+| 0x0102 | SERVER_AUTH | Server authentication flight; AEAD-protected. |
+| 0x0103 | CLIENT_AUTH | Client authentication flight; AEAD-protected. |
+{: title="Control-channel handshake frame types"}
+
+## CLOSE Frame
+
+A CLOSE frame is authenticated like any other frame. A receiver MUST verify the
+AEAD tag before honoring a close. An unauthenticated or forged CLOSE frame MUST
+be dropped and SHOULD be counted as a security event.
+
+# Channel Architecture {#channel-architecture}
+
+N-PAMP multiplexes traffic over channels identified by a 16-bit Channel ID. Each
+channel carries one class of agent traffic and has an independent
+per-direction sequence space and independent traffic keys
+({{cryptographic-suites}}). A peer that has not advertised a channel during the
+handshake MUST NOT receive frames on that channel; frames on an unadvertised
+channel MUST be dropped.
+
+## Core Channel Registry {#channel-registry}
+
+The following channels are defined and maintained by this specification:
+
+| ID | Name | Purpose | Min Profile | Direction |
+|---|---|---|---|---|
+| 0x0000 | Control | Connection control, handshake completion, capability epoch | Standard | Bidirectional |
+| 0x0001 | Memory | Persistent-state create/read/update/delete and retrieval | Standard | Multi-stream |
+| 0x0002 | Capability | Capability issuance, delegation, revocation, lookup | Standard | Bidirectional |
+| 0x0003 | Identity | Identity resolution, attestation, presence | Standard | Bidirectional |
+| 0x0004 | Governance | Policy proposals, votes, quorum closure | High | Bidirectional |
+| 0x0005 | Immune | Anomaly reports and defensive gossip | Standard | Bidirectional |
+| 0x0006 | Federation | Cross-instance synchronization and gossip | High | Multi-stream |
+| 0x0007 | Settlement | Agent-to-agent settlement and receipts | Standard | Bidirectional |
+| 0x0008 | Compliance | Attestation and regulatory export | High | Bidirectional |
+| 0x0009 | Sensory | Bulk telemetry and low-priority observations | High | Multi-stream |
+| 0x000A | Telemetry | Operational metrics and health reporting | Standard | Bidirectional |
+| 0x000B | Audit | Audit-epoch commitments and transparency-log entries | Sovereign | Bidirectional |
+| 0x000C | Stream | Multiplexed full-duplex streaming (tokens, audio, video, file transfer) | Standard | Multi-stream |
+| 0x000D | Bridge | Encapsulation of external agent protocols within N-PAMP frames | Standard | Bidirectional |
+| 0x000E | Commerce | Multi-party agentic commerce and payment mandates | Standard | Bidirectional |
+| 0x000F | Interaction | Agent-to-human user-interface events | Standard | Bidirectional |
+| 0x0010 | Discovery | Agent, tool, and service discovery and capability advertisement | Standard | Bidirectional |
+| 0x0011 | Workflow | Multi-agent orchestration and task delegation | Standard | Bidirectional |
+| 0x0012 | Knowledge | Retrieval queries with ranked results and provenance | Standard | Multi-stream |
+| 0x0013 | Spatial | Physical-world state for robotics and IoT (high-frequency) | High | Multi-stream |
+{: title="Core channel registry"}
+
+The Min Profile column gives the lowest profile at which a channel may be
+enabled; a channel is available at that profile and at every higher profile
+(for example, a "High" channel is available at High and Sovereign). The Audit
+channel is enabled by default only at Sovereign; other profiles MAY enable it.
+The Control and Immune channels SHOULD be scheduled at higher priority than bulk
+channels (Memory, Sensory, Telemetry) during congestion.
+
+All N-PAMP channels are full-duplex: each peer maintains an independent send and
+receive sequence space and independent per-direction traffic keys, so both peers
+MAY transmit on a channel simultaneously. The Direction column classifies each
+channel as follows:
+
+| Direction | Meaning |
+|---|---|
+| Bidirectional | Both peers send and receive frames on a single stream. |
+| Multi-stream | Bidirectional, and the channel MAY open multiple concurrent transport streams within its stream family. |
+{: title="Channel directionality"}
+
+The Stream channel (0x000C) provides general-purpose multiplexed full-duplex
+streaming, carrying concurrent bidirectional sub-streams (for example token,
+audio, video, and file-transfer streams), each with independent flow control.
+
+Channel IDs not listed in {{channel-registry}}, and in particular the ranges
+enumerated in {{extension-points}}, are reserved for extensions defined in
+companion specifications.
+
+# Profile Negotiation {#profile-negotiation}
+
+N-PAMP defines three security profiles. The profiles share one wire format and
+differ in the cryptographic primitives and operational requirements they
+mandate. Each profile is an escalation of the previous one in cryptographic
+strength.
+
+| Profile | Code | Summary |
+|---|---|---|
+| Standard | 0x01 | Baseline hybrid post-quantum security. |
+| High | 0x02 | Stronger KEM parameters and stronger hash; downgrade refusal to Standard. |
+| Sovereign | 0x03 | Highest standard-crypto strength; downgrade refusal below Sovereign. |
+{: title="Security profiles"}
+
+Profile code points 0x00 and 0x04-0xFF are reserved by this specification.
+
+The profile is offered by the client and selected by the server during the
+handshake, and is carried in the handshake transcript. Because the profile is
+part of the transcript that the Finished MAC covers, an attacker who strips a
+profile from the offer or forces a lower selection invalidates the MAC and
+aborts the handshake.
+
+The profile invariants are:
+
+| Property | Standard | High | Sovereign |
+|---|---|---|---|
+| Minimum KEM | X25519MLKEM768 | X25519MLKEM1024 | X25519MLKEM1024 |
+| Allowed signatures | Ed25519 | Ed25519, ML-DSA-87 | ML-DSA-87 |
+| KDF hash | SHA-256 | SHA-384 | SHA-384 |
+| Per-frame AEAD diversification | Off | On | On |
+| Downgrade refusal | Off | Refuses Standard | Refuses below Sovereign |
+| Mandatory key update | Yes | Yes (tighter bounds) | Yes (tightest bounds) |
+{: title="Profile invariants"}
+
+The server MUST select a profile from the client's offered set. The selected
+profile MUST be no lower than the server's configured minimum acceptable peer
+profile. A Sovereign server with a minimum acceptable peer profile of Sovereign
+completes a handshake only when the client offers Sovereign and Sovereign is
+selected.
+
+A High or Sovereign endpoint MAY interoperate with a lower-profile peer for
+read-only or capability-discovery operations when local policy permits, by
+accepting a lower selected profile; otherwise it refuses the downgrade as shown
+above.
+
+# Cryptographic Suites {#cryptographic-suites}
+
+All cryptographic primitives used by N-PAMP are published standards.
+
+## Key Encapsulation Mechanisms
+
+| Code point | Name | Profiles |
+|---|---|---|
+| 0x11ec | X25519MLKEM768 | Standard, High |
+| 0x11ed | X25519MLKEM1024 | High, Sovereign |
+{: title="KEM code points"}
+
+Both are hybrid KEMs combining X25519 ECDH with ML-KEM {{FIPS203}} (ML-KEM-768
+and ML-KEM-1024, respectively). The two shared secrets are concatenated as
+(ML-KEM shared secret || X25519 shared secret) and supplied as input keying
+material to HKDF-Extract {{RFC5869}}. The ML-KEM shared secret is placed first so
+the FIPS-approved key-establishment output leads the HKDF input ({{SP800-56C}}),
+matching the X25519MLKEM768 construction of {{I-D.ietf-tls-ecdhe-mlkem}}.
+The suite name lists X25519 first, but the shared-secret concatenation and the
+on-wire KEMShare/KEMCiphertext layout are ML-KEM-first. The Sovereign profile
+MUST NOT accept X25519MLKEM768.
+
+## Authenticated Encryption
+
+| Code point | Name | Key | Nonce | Tag |
+|---|---|---|---|---|
+| 0x0001 | AES-256-GCM | 32 | 12 | 16 |
+| 0x0002 | ChaCha20-Poly1305 | 32 | 12 | 16 |
+{: title="AEAD code points"}
+
+AES-256-GCM is used as specified for AEAD ciphers in {{RFC5116}};
+ChaCha20-Poly1305 is used as specified in {{RFC8439}}. Endpoints operating at the
+High and Sovereign profiles MUST support both AEAD suites because per-frame AEAD
+diversification at those profiles selects between them. Endpoints operating at
+the Standard profile MUST support at least one of the two.
+
+## Signatures
+
+| Code point | Name | Usage | Profiles |
+|---|---|---|---|
+| 0x0807 | Ed25519 | Identity, capability tokens | All |
+| 0x0905 | ML-DSA-87 | Identity, audit epoch | High, Sovereign |
+{: title="Signature code points"}
+
+Ed25519 is used as specified in {{RFC8032}}. ML-DSA-87 is the
+module-lattice-based digital signature algorithm standardized in {{FIPS204}}. The
+Sovereign profile uses ML-DSA-87 for identity and audit signatures.
+
+## Key Derivation and Hashing
+
+All key derivation uses HKDF {{RFC5869}}. The KDF hash is SHA-256 at the Standard
+profile and SHA-384 at the High and Sovereign profiles. The HKDF-Expand-Label
+construction follows TLS 1.3 {{RFC8446}}, with the literal label prefix "n-pamp "
+(with the trailing space) in place of TLS 1.3's "tls13 ", providing domain
+separation from TLS 1.3, from QUIC, and from earlier N-PAMP versions. A conforming
+implementation MUST use the "n-pamp " prefix; use of the "tls13 " prefix is
+non-conformant. The full key-schedule ladder is specified in {{key-schedule}}.
+
+## Key Schedule and Nonces
+
+Traffic secrets are derived per (direction, epoch, AEAD suite, channel) tuple, so
+that no two distinct contexts share a key. Each traffic secret yields an AEAD
+key, an AEAD initialization vector, and a header-protection key by
+HKDF-Expand-Label. The per-frame nonce is the AEAD IV exclusive-ORed with the
+left-zero-padded sequence number, identical in form to the construction used in
+TLS 1.3 {{RFC8446}} and QUIC {{RFC9001}}. This namespace partitioning prevents
+cross-direction, cross-suite, and cross-channel nonce reuse, and supports forward
+secrecy: on key update, traffic secrets for the new epoch are derived afresh and
+the prior epoch's secrets are zeroized.
+
+## Random Number Generation
+
+All randomness that participates in security MUST come from a cryptographically
+secure random number generator. Implementations MUST NOT use a non-cryptographic
+source for any field that participates in security.
+
+# Handshake {#handshake}
+
+The N-PAMP handshake is a 1.5-RTT, mutually-authenticated exchange of four frames
+on the Control channel (0x0000, sequence 0), after which both peers are
+authenticated and a forward-secure key schedule is established. It reuses TLS 1.3
+{{RFC8446}} constructions (HKDF-Expand-Label, CertificateVerify, Finished) with
+N-PAMP framing and context; each divergence from TLS 1.3 is noted inline in the
+relevant subsection below. One construction serves all three profiles; a profile
+selects a parameter row (see {{profile-negotiation}} and {{cryptographic-suites}}),
+so H and HashLen below are read from the negotiated profile.
+
+## Message Flow
+
+| Flight | Frame | Type | TLVs (in order) | Encryption |
+|---|---|---|---|---|
+| 1 | CLIENT_HELLO | 0x0100 | ProfileOffer, KEMOffer, SigOffer, AEADOffer, KEMShare | cleartext |
+| 2 | SERVER_HELLO | 0x0101 | ProfileSelect, KEMSelect, SigSelect, AEADSelect, KEMCiphertext | cleartext |
+| 2 | SERVER_AUTH | 0x0102 | IdentityKey, CertVerify, Finished | AEAD-sealed |
+| 3 | CLIENT_AUTH | 0x0103 | IdentityKey, CertVerify, Finished | AEAD-sealed |
+{: title="Handshake flights"}
+
+There is no separate Finished frame; the Finished MAC is a TLV inside each AUTH
+frame. Each frame is a standard 36-octet N-PAMP frame ({{wire-format}}) on channel
+0x0000 with sequence 0; the AUTH frames set FlagENC and are AEAD-sealed
+({{auth-frame-sealing}}). A server reaches the Established state only after it has
+verified CLIENT_AUTH; the master secret is derived at the client-authentication
+boundary.
+
+## Transcript
+
+The handshake transcript is a running byte buffer; a transcript hash is H over all
+bytes absorbed so far. Unlike TLS 1.3 {{RFC8446}} Section 4.4.1, which hashes whole
+handshake messages, N-PAMP absorbs at per-TLV granularity and absorbs only the
+2-octet big-endian frame type of each frame: the remaining 34 header octets and the
+AEAD tag are NOT absorbed. For each frame, the 2-octet frame type is absorbed,
+followed by each of that frame's TLVs in canonical Type(2) || Length(2) || Value
+form, in order. Five transcript hashes are named:
+
+| Symbol | Absorbed through | Used by |
+|---|---|---|
+| TH_kem | CLIENT_HELLO and SERVER_HELLO TLVs | handshake-secret labels |
+| TH_sId | ... server IdentityKey | server CertVerify signs this |
+| TH_sCV | ... server CertVerify (excludes server Finished) | server Finished MACs this |
+| TH_cId | ... server Finished, CLIENT_AUTH, client IdentityKey | client CertVerify signs this |
+| TH_cCV | ... client CertVerify (excludes client Finished) | client Finished MACs this; master derived from this |
+{: title="Handshake transcript hashes"}
+
+Because both peers absorb the identical decoded on-wire TLV bytes, their transcripts
+are byte-identical.
+
+## Key Schedule {#key-schedule}
+
+The key schedule is a single HKDF-Extract {{RFC5869}} followed by sibling
+HKDF-Expand-Label derivations (simpler than TLS 1.3 {{RFC8446}} Section 7.1's
+three-stage chain; N-PAMP defines no PSK or 0-RTT in this binding).
+HKDF-Expand-Label is as in TLS 1.3 Section 7.1 with the N-PAMP label prefix
+"n-pamp " (with the trailing space) in place of "tls13 ":
+
+~~~
+HKDF-Expand-Label(Secret, Label, Context, Length) =
+    HKDF-Expand(Secret, HkdfLabel, Length)
+HkdfLabel = uint16(Length) || opaque("n-pamp " || Label)
+                           || opaque(Context)
+~~~
+
+The KEM output ({{cryptographic-suites}}) is the 64-octet value
+(ML-KEM shared secret || X25519 shared secret), fed directly as input keying
+material:
+
+~~~
+handshake_secret = HKDF-Extract(salt = HashLen zero octets,
+                                IKM  = ML-KEM_SS || X25519_SS)
+c_hs_secret = HKDF-Expand-Label(handshake_secret,
+                                "c hs", TH_kem, HashLen)
+s_hs_secret = HKDF-Expand-Label(handshake_secret,
+                                "s hs", TH_kem, HashLen)
+master      = HKDF-Expand-Label(handshake_secret,
+                                "master", TH_cCV, HashLen)
+~~~
+
+The Extract salt is HashLen zero octets (the {{RFC5869}} default). The master secret
+is derived only at the client-authentication boundary, from TH_cCV. Handshake-phase
+traffic keys descend from c_hs_secret and s_hs_secret; application-phase traffic
+keys descend from master, using the traffic-secret construction of
+{{cryptographic-suites}}. Because the parents differ, an identical
+(direction, epoch, suite, channel) tuple yields different (key, iv) across the
+handshake and application phases, so no (key, nonce) pair is shared across phases.
+
+## Authentication
+
+### CertVerify
+
+The CertVerify TLV (0x0A) carries a signature over the transcript, structured as in
+TLS 1.3 {{RFC8446}} Section 4.4.3 with N-PAMP context strings:
+
+~~~
+signing_input = (0x20 x 64) || context || 0x00 || transcript_hash
+context (server) = "N-PAMP/2, server CertificateVerify"
+context (client) = "N-PAMP/2, client CertificateVerify"
+~~~
+
+The context strings are fixed protocol constants (they are the values bound into
+the reference implementations and the interoperability test vectors) and do not
+change with the Internet-Draft revision number. The signed transcript_hash is TH_sId
+(server) or TH_cId (client): the transcript through the signer's own IdentityKey,
+before its own CertVerify. The TLV value is the 2-octet SignatureScheme (Ed25519 =
+0x0807) followed by the signature, whose length is delimited by the TLV Length. A
+verifier MUST reject a signature scheme it did not negotiate and MUST check the
+role: the differing context string makes a server CertVerify unusable as a client
+CertVerify.
+
+### Finished
+
+The Finished TLV (0x0B) carries an HMAC per TLS 1.3 {{RFC8446}} Section 4.4.4, keyed
+by the sender's handshake traffic secret:
+
+~~~
+finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)
+verify_data  = HMAC(finished_key, transcript_hash)
+~~~
+
+BaseKey is c_hs_secret or s_hs_secret per direction; the HMAC hash is H. The MAC'd
+transcript_hash is TH_sCV (server) or TH_cCV (client): the transcript through the
+signer's own CertVerify, excluding its own Finished. The verify_data length is
+HashLen. Verification MUST be constant-time and MUST abort on mismatch.
+
+### AUTH-Frame Sealing {#auth-frame-sealing}
+
+SERVER_AUTH and CLIENT_AUTH are sealed with the negotiated AEAD under the
+per-direction handshake key and IV ({{key-schedule}}): FlagENC is set, Channel is
+0x0000, and Seq is 0. The AAD is the 21-octet frame header prefix and the nonce is
+the IV exclusive-ORed with the sequence number, as in {{cryptographic-suites}}. On
+open, exactly three TLVs -- IdentityKey, CertVerify, Finished, in that order -- MUST
+be present.
+
+### Downgrade Protection {#handshake-downgrade}
+
+The negotiated profile and algorithm selections are carried in the cleartext
+CLIENT_HELLO and SERVER_HELLO and are absorbed into the transcript that both the
+Finished MAC and CertVerify cover. Stripping a profile from an offer, or forcing a
+lower selection, therefore invalidates the Finished MAC and aborts the handshake.
+N-PAMP uses this transcript binding for downgrade protection rather than a
+TLS-style ServerHello.Random sentinel.
+
+# Extension Points {#extension-points}
+
+N-PAMP reserves code-point ranges for extensions defined in companion
+specifications. The core protocol in this document neither defines nor requires
+any extension; it only reserves the ranges below so that extensions can be
+specified without colliding with the core wire format. The algorithms and
+semantics that occupy these ranges are out of scope for this document and are
+defined in companion specifications.
+
+## Reserved Frame-Type Ranges
+
+The following per-channel frame-type code points are reserved for extensions
+defined in companion specifications:
+
+| Range | Reserved for |
+|---|---|
+| 0x0035 - 0x0036 | Memory-channel eviction and revive extension frames |
+| 0x0060 - 0x0063 | Capability-channel token extension frames |
+| 0x0080 - 0x0080 | Control-channel flow-extension frames |
+| 0x0090 - 0x0090 | Audit-channel per-frame integrity-extension frames |
+| 0x00A0 - 0x00A3 | Settlement/Audit batch-commitment extension frames |
+| 0x00B0 - 0x00B4 | Governance-channel quorum extension frames |
+| 0x00C0 - 0x00C4 | Immune-channel propagation extension frames |
+{: title="Reserved frame-type ranges (companion specifications)"}
+
+## Reserved TLV Tags
+
+The TLV types 0x0010, 0x0013, and 0x0014 are reserved for extension TLVs defined
+in companion specifications. TLV types in the range 0x8000-0xFFFF remain reserved
+as forward-incompatible extension points per {{wire-format}}.
+
+## Reserved Channel-ID Range
+
+Channel IDs in the range 0x0014-0xFFFF are reserved. Channels 0x0014-0x001F are
+reserved for future core additions by this specification; 0x0020-0xEFFF are
+reserved for extension channels defined in companion specifications; 0xF000-0xFFFE
+are GREASE values that receivers MUST ignore; and 0xFFFF MUST NOT appear on the
+wire. The specific extension assignments are out of scope for this document.
+
+No algorithms, parameters, or semantics for any reserved range are defined in
+this document.
+
+# IANA Considerations {#iana-considerations}
+
+## ALPN Protocol Identifier
+
+IANA has registered the following value in the "TLS Application-Layer Protocol
+Negotiation (ALPN) Protocol IDs" registry established by {{RFC7301}}. The
+registration was made under an earlier version of this document; IANA is requested
+to update its reference to the current version:
+
+| Protocol | Identification Sequence | Reference |
+|---|---|---|
+| N-PAMP, wire major version 2 | 0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32 ("n-pamp/2") | (this document) |
+{: title="ALPN registration (n-pamp/2)"}
+
+The identification sequence is the 8-octet UTF-8 string "n-pamp/2". The trailing
+digit "2" equals the N-PAMP wire major version (the value 0x02 carried in the Ver
+field of the frame header, {{wire-format}}). The registration policy for the ALPN
+registry is Expert Review {{RFC8126}}.
+
+The earlier identifier "n-pamp/1" is deprecated. Implementations SHOULD NOT
+negotiate "n-pamp/1" for new associations. Future wire major versions will use
+distinct ALPN identifiers (for example, "n-pamp/3").
+
+## URI Scheme Registration
+
+The "npamp" URI scheme has been provisionally registered in the "Uniform Resource
+Identifier (URI) Schemes" registry, following the template and the
+provisional-registration procedure (First Come First Served) of {{RFC7595}}, under
+an earlier version of this document; IANA is requested to update its reference to
+the current version. The registration template follows:
+
+**Scheme name:** npamp
+
+**Status:** Provisional
+
+**Applications/protocols that use this scheme:** The protocol defined in this
+document (N-PAMP). An "npamp" URI names an N-PAMP endpoint and an optional
+resource path within that endpoint.
+
+**URI scheme syntax:** The "npamp" scheme uses the generic URI syntax of
+{{RFC3986}}:
+
+~~~ abnf
+npamp-URI = "npamp://" authority path-abempty [ "?" query ]
+~~~
+
+where "authority", "path-abempty", and "query" are as defined in {{RFC3986}}. The
+"authority" component identifies the N-PAMP endpoint (host and optional port).
+N-PAMP does not reserve a fixed default port; the underlying transport is
+negotiated as described in {{protocol-overview}}.
+
+**Encoding considerations:** "npamp" URIs are processed as defined in
+{{RFC3986}}; non-ASCII characters in the path or query components are
+percent-encoded UTF-8 octets.
+
+**Interoperability considerations:** None beyond those of {{RFC3986}}. The scheme
+carries no protocol semantics of its own; all behavior is defined by N-PAMP.
+
+**Security considerations:** See {{security-considerations}}. An "npamp" URI is
+only an identifier. Connecting to an "npamp" endpoint invokes the N-PAMP
+handshake and its authentication, confidentiality, and downgrade protections;
+dereferencing an "npamp" URI MUST NOT bypass the security profile negotiated by
+N-PAMP.
+
+**Contact:** Shawn Sammartano, BubbleFish Technologies, Inc.
+
+**Change controller:** Shawn Sammartano, BubbleFish Technologies, Inc.
+
+**Reference:** This document.
+
+## Registries Maintained by This Specification
+
+The N-PAMP channel registry ({{channel-registry}}), the frame-type registry
+({{frame-types}}), and the TLV type registry ({{tlv-registry}}) are defined and
+maintained within this specification. Because this document is published through
+the Independent Submission stream, it does not request the creation of new
+IANA-hosted registries for these code points; the registries are normative within
+this document and are extended by companion specifications and by future
+revisions of this document, not by IANA registration actions.
+
+## TLV Type Registry {#tlv-registry}
+
+The following TLV tags are defined by this specification. Tags marked "reserved"
+are described in {{extension-points}}.
+
+| Tag | Name | Length | Description |
+|---|---|---|---|
+| 0x01 | ProfileOffer | var | Profiles offered by the client, one octet per profile (handshake only). |
+| 0x02 | ProfileSelect | 1 | Profile selected by the server (handshake only). |
+| 0x03 | KEMOffer | var | KEMs offered by the client. |
+| 0x04 | KEMSelect | 2 | KEM selected by the server. |
+| 0x05 | SigOffer | var | Signature algorithms offered. |
+| 0x06 | SigSelect | 2 | Signature algorithm selected. |
+| 0x07 | KEMShare | var | Public KEM share. |
+| 0x08 | KEMCiphertext | var | KEM encapsulation ciphertext. |
+| 0x09 | IdentityKey | var | Sender's identity public key (handshake AUTH; see {{handshake}}). |
+| 0x0A | CertVerify | var | Signature over the transcript (handshake AUTH; see {{handshake}}). |
+| 0x0B | Finished | var | HashLen-octet Finished MAC (handshake AUTH; see {{handshake}}). |
+| 0x0C | AEADOffer | var | AEAD suites offered by the client (handshake only). |
+| 0x0D | AEADSelect | 2 | AEAD suite selected by the server (handshake only). |
+| 0x10 | (reserved) | var | Reserved for a companion specification. |
+| 0x12 | AnomalyCharge | 32 | Per-frame integrity charge. |
+| 0x13 | (reserved) | var | Reserved for a companion specification. |
+| 0x14 | (reserved) | 32 | Reserved for a companion specification (handshake only). |
+| 0x15 | PathChallenge | 32 | Path-migration challenge nonce. |
+| 0x16 | PathResponse | 64 | Path-migration response. |
+| 0x17 | KeyUpdateMarker | 8 | Key-update epoch marker. |
+| 0x18 | ProtectionMode | 1 | Protection-mode selector. |
+| 0x8000-0xFFFF | (reserved) | -- | Forward-incompatible extension points (Type high bit set). |
+{: title="TLV type registry"}
+
+# Security Considerations {#security-considerations}
+
+This section follows the spirit of {{RFC3552}}. N-PAMP inherits the security
+properties of its underlying transports, TLS 1.3 {{RFC8446}} and QUIC
+{{RFC9001}}, and adds the considerations below.
+
+## Hybrid Key Establishment
+
+Every profile uses a hybrid KEM that concatenates an ML-KEM shared secret with an
+X25519 shared secret {{FIPS203}} (ML-KEM first) before key derivation. The confidentiality of an
+association is preserved as long as at least one of the two components remains
+unbroken; an adversary must defeat both the classical and the post-quantum
+component to recover traffic keys. N-PAMP makes no claim of unconditional or
+"quantum-proof" security; it provides post-quantum hybrid security against the
+adversaries addressed by its component primitives.
+
+## Downgrade, Unknown-Key-Share, and Identity Substitution
+
+The negotiated profile, KEM, signature algorithm, AEAD suite(s), and both peer
+identities are bound into the handshake transcript and confirmed by the Finished
+MAC ({{protocol-overview}}, {{profile-negotiation}}). Altering any negotiated
+parameter, stripping a profile from the offer, or substituting a peer identity
+invalidates the Finished MAC and aborts the handshake. The High and Sovereign
+profiles additionally refuse to complete at a profile below their configured
+minimum.
+
+## Authenticated Encryption and Nonce Management
+
+All payloads are protected by AEAD {{RFC5116}}. Traffic keys are partitioned per
+(direction, epoch, suite, channel), which structurally prevents nonce reuse
+across directions, AEAD suites, and channels. AEAD tag verification MUST be
+performed before any payload is processed, and equality comparisons of
+authentication values MUST be constant-time to avoid timing side channels.
+
+## Replay
+
+Each (channel, direction) pair maintains a sliding replay window over sequence
+numbers. Frames outside the window or already recorded within it MUST be
+rejected. Where 0-RTT data is permitted, it MUST be limited to idempotent
+operations and protected against replay by an anti-replay mechanism scoped to the
+current epoch; the Sovereign profile disables 0-RTT entirely.
+
+## Forward Secrecy and Key Update
+
+Endpoints MUST perform key updates within profile-specific bounds on elapsed
+time, frames sent, and bytes protected, with the tightest bounds at the Sovereign
+profile. On key update, the prior epoch's traffic secrets MUST be zeroized so
+that compromise of the current epoch does not expose previously protected
+traffic. Rotation of the master secret requires a fresh handshake.
+
+## Connection Migration
+
+When carried over QUIC, an endpoint MUST validate a peer's new path with a
+challenge-response exchange (PATH_CHALLENGE / PATH_RESPONSE) before accepting an
+address change, to prevent off-path migration spoofing.
+
+## Authenticated Close
+
+CLOSE frames are AEAD-protected and MUST be verified before being honored, so
+that an off-path attacker cannot tear down an association with a forged CLOSE.
+
+## Extension Points {#sec-extension-points}
+
+The reserved code-point ranges in {{extension-points}} carry no algorithms or
+semantics in this document. Any security properties of extensions occupying those
+ranges are the responsibility of the companion specifications that define them and
+are out of scope here.
+
+## Implementation Considerations
+
+Where the wire format requires deterministic encoding (for example, deterministic
+CBOR {{RFC8949}} or canonical integer encodings), implementations MUST produce
+byte-identical output for identical inputs, because non-deterministic encodings
+can invalidate transcript and integrity computations across peers.
+
+--- back
+
+# Acknowledgments
+{:numbered="false"}
+
+The author thanks the reviewers of earlier N-PAMP drafts for their feedback.
+
+# Changes Since draft-bubblefish-npamp-00
+{:numbered="false"}
+
+This revision makes the following changes relative to draft-bubblefish-npamp-00:
+
+- Hybrid KEM combiner order (wire-breaking). The hybrid shared-secret concatenation
+  for both X25519MLKEM768 and X25519MLKEM1024 is now ML-KEM_SS || X25519_SS (ML-KEM
+  first), replacing the X25519-first order of draft-00, so that the FIPS-approved key-establishment output leads the HKDF
+  input per NIST SP 800-56C Rev. 2 ({{SP800-56C}}) and matches the construction of
+  {{I-D.ietf-tls-ecdhe-mlkem}}. This changes the derived keys and is NOT interoperable
+  with draft-00.
+- Handshake binding. Adds the normative 1.5-RTT mutually-authenticated handshake
+  ({{handshake}}): the four-frame flow, the per-TLV transcript, the single
+  HKDF-Extract key schedule with the "n-pamp " label prefix, CertVerify, Finished,
+  AUTH-frame sealing, and downgrade protection.
+- Handshake code points. Assigns the Control-channel handshake frame types
+  0x0100-0x0103 and the handshake TLV tags 0x09-0x0D (IdentityKey, CertVerify,
+  Finished, AEADOffer, AEADSelect).
+- ProfileOffer length. Corrects the ProfileOffer (TLV 0x01) length from a fixed 4 to a
+  variable list of one-octet profile identifiers, matching the other negotiation
+  offers and the reference implementations.
+- IANA Considerations. Updated to reflect that the ALPN identifier "n-pamp/2" and the
+  "npamp" URI scheme are already registered, requesting a reference update to this
+  revision rather than a new assignment.
+
+
+# File: spec/01_alpn.md
+
+# N-PAMP-01 — ALPN Protocol Identifier (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json),
+> §9.1 "ALPN Protocol Identifier". This file is a structured restatement of that
+> section; if any value here disagrees with the draft, **the draft governs.**
+
+## Registration request (RFC 7301 registry, Expert Review)
+
+| Protocol | Identification Sequence | Reference |
+|---|---|---|
+| N-PAMP, wire major version 2 | `0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x32` ("n-pamp/2") | draft-bubblefish-npamp-00 |
+
+- The identification sequence is the 8-octet UTF-8 string **`n-pamp/2`**.
+- The trailing digit `2` equals the N-PAMP wire major version (the value `0x02`
+  carried in the `Ver` field of the frame header).
+- Registration policy for the ALPN registry is **Expert Review** (RFC 8126).
+
+## Deprecation
+
+- **`n-pamp/1` is deprecated.** Implementations **SHOULD NOT** negotiate `n-pamp/1`
+  for new associations.
+- Future wire major versions use distinct ALPN identifiers (for example, `n-pamp/3`).
+
+## Transport binding
+
+N-PAMP runs over **QUIC** (TLS 1.3) as primary transport and **TCP + TLS 1.3** as
+fallback. In both cases the application protocol is negotiated with the ALPN
+extension (RFC 7301) using `n-pamp/2`.
+
+## Conformance note for implementers
+
+A conforming -00 endpoint offers **only** `n-pamp/2` and rejects any other
+negotiated protocol. TLS **1.3 minimum** is required.
+
+
+# File: spec/02_frame_format.md
+
+# N-PAMP-01 — Wire Format (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §4 "Wire Format". The draft governs on any disagreement.
+
+## Frame structure
+
+```
++--------+-------------+-------------------+-----------+
+| Header | Extension   | Payload           | AEAD Tag  |
+| 36 B   | TLVs (var)  | (var, encrypted)  | (16 B)    |
++--------+-------------+-------------------+-----------+
+```
+
+- The 36-octet header is fixed-size.
+- Zero or more extension TLVs MAY accompany a frame.
+- The payload is AEAD-sealed.
+- **The 16-octet AEAD Tag is the mandatory final component of every frame.**
+- Associated data (AD) covers the **21-octet header prefix (octets 0–20)** — the
+  same octets protected by the header CRC32C.
+
+## Fixed 36-octet header
+
+Multi-octet integers are **big-endian**.
+
+| Offset | Size | Field | Description |
+|---|---|---|---|
+| 0–3 | 4 | Magic | ASCII `"NPAM"` (`0x4E 0x50 0x41 0x4D`). |
+| 4 | 4 bits | Ver | Protocol major version (high nibble of octet 4). `0x2` designates this wire format. |
+| 4 | 4 bits | Flags | Low nibble of octet 4 (see Flags). |
+| 5–6 | 2 | Frame Type | Frame type within the channel. |
+| 7–8 | 2 | Channel ID | The semantic channel. |
+| 9–16 | 8 | Sequence Number | Per-(channel, direction) monotonic, starts at 0. |
+| 17–20 | 4 | Payload Length | Byte count of the payload following the header. |
+| 21–24 | 4 | CRC32C | CRC32C (Castagnoli polynomial `0x1EDC6F41`) over octets 0–20. Receivers MUST validate it **before processing any other header field**. |
+| 25–35 | 11 | Reserved | MUST be zero; receivers MUST reject frames whose reserved octets are non-zero. |
+
+The `Ver` field carries the wire major version; the value `0x02` corresponds to
+the ALPN identifier `n-pamp/2`.
+
+## Flags (low nibble of octet 4)
+
+| Bit | Name | Meaning |
+|---|---|---|
+| 0 (`0x01`) | URG | Urgent-priority scheduling. |
+| 1 (`0x02`) | ENC | Payload is AEAD-encrypted. |
+| 2 (`0x04`) | COMP | Payload is compressed. |
+| 3 (`0x08`) | FRAG | Frame is a fragment of a larger logical message. |
+
+## Extension TLV encoding
+
+```
++---------+---------+-----------+
+| Type    | Length  | Value     |
+| 16 bits | 16 bits | Length B  |
++---------+---------+-----------+
+```
+
+- Type and Length are 16-bit unsigned, network byte order; Length is the byte
+  count of Value (0–65535).
+- Unknown TLV, Type high bit (`0x8000`) **clear** → MUST ignore that TLV.
+- Unknown TLV, Type high bit (`0x8000`) **set** → MUST treat as forward-incompatible
+  and **reject the frame**.
+
+## Payload encoding
+
+Frame-type-specific body; MAY be a binary serialization, deterministic CBOR
+(RFC 8949), or raw octets. The selected encoding is signaled by the channel-local
+interpretation of the Frame Type field.
+
+## CLOSE frame
+
+A CLOSE frame is authenticated like any other frame. A receiver MUST verify the
+AEAD tag before honoring a close. An unauthenticated or forged CLOSE MUST be
+dropped and SHOULD be counted as a security event.
+
+
+# File: spec/03_channels.md
+
+# N-PAMP-01 — Channel Architecture (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §5 "Channel Architecture". The draft governs.
+> Machine-readable form: `../registries/channels.csv`.
+
+N-PAMP multiplexes traffic over channels identified by a **16-bit Channel ID**.
+Each channel carries one class of agent traffic and has an independent
+per-direction sequence space and independent traffic keys. A peer that has not
+advertised a channel during the handshake MUST NOT receive frames on it; frames
+on an unadvertised channel MUST be dropped.
+
+## Core channel registry
+
+| ID | Name | Purpose | Min Profile | Direction |
+|---|---|---|---|---|
+| 0x0000 | Control | Connection control, handshake completion, capability epoch | Standard | Bidirectional |
+| 0x0001 | Memory | Persistent-state create/read/update/delete and retrieval | Standard | Multi-stream |
+| 0x0002 | Capability | Capability issuance, delegation, revocation, lookup | Standard | Bidirectional |
+| 0x0003 | Identity | Identity resolution, attestation, presence | Standard | Bidirectional |
+| 0x0004 | Governance | Policy proposals, votes, quorum closure | High | Bidirectional |
+| 0x0005 | Immune | Anomaly reports and defensive gossip | Standard | Bidirectional |
+| 0x0006 | Federation | Cross-instance synchronization and gossip | High | Multi-stream |
+| 0x0007 | Settlement | Agent-to-agent settlement and receipts | Standard | Bidirectional |
+| 0x0008 | Compliance | Attestation and regulatory export | High | Bidirectional |
+| 0x0009 | Sensory | Bulk telemetry and low-priority observations | High | Multi-stream |
+| 0x000A | Telemetry | Operational metrics and health reporting | Standard | Bidirectional |
+| 0x000B | Audit | Audit-epoch commitments and transparency-log entries | Sovereign | Bidirectional |
+| 0x000C | Stream | Multiplexed full-duplex streaming (tokens, audio, video, file transfer) | Standard | Multi-stream |
+| 0x000D | Bridge | Encapsulation of external agent protocols within N-PAMP frames | Standard | Bidirectional |
+| 0x000E | Commerce | Multi-party agentic commerce and payment mandates | Standard | Bidirectional |
+| 0x000F | Interaction | Agent-to-human user-interface events | Standard | Bidirectional |
+| 0x0010 | Discovery | Agent, tool, and service discovery and capability advertisement | Standard | Bidirectional |
+| 0x0011 | Workflow | Multi-agent orchestration and task delegation | Standard | Bidirectional |
+| 0x0012 | Knowledge | Retrieval queries with ranked results and provenance | Standard | Multi-stream |
+| 0x0013 | Spatial | Physical-world state for robotics and IoT (high-frequency) | High | Multi-stream |
+
+- **Min Profile** = lowest profile at which a channel may be enabled; available at
+  that profile and every higher one (a "High" channel is available at High and
+  Sovereign).
+- The **Audit** channel (0x000B) is enabled by default only at **Sovereign**; other
+  profiles MAY enable it.
+- **Control** and **Immune** SHOULD be scheduled at higher priority than bulk
+  channels (Memory, Sensory, Telemetry) during congestion.
+
+## Directionality
+
+| Direction | Meaning |
+|---|---|
+| Bidirectional | Both peers send and receive frames on a single stream. |
+| Multi-stream | Bidirectional, and the channel MAY open multiple concurrent transport streams within its stream family. |
+
+The Stream channel (0x000C) provides general-purpose multiplexed full-duplex
+streaming (token, audio, video, file-transfer sub-streams), each with independent
+flow control.
+
+## Reserved channel-ID ranges
+
+`0x0014–0xFFFF` are reserved: `0x0014–0x001F` future core additions;
+`0x0020–0xEFFF` extension channels (companion specs); `0xF000–0xFFFE` GREASE
+(receivers MUST ignore); `0xFFFF` MUST NOT appear on the wire.
+
+
+# File: spec/04_frame_types.md
+
+# N-PAMP-01 — Frame Types (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §4.6 "Reserved Frame Types" and §8.1 "Reserved
+> Frame-Type Ranges". The draft governs. Machine-readable:
+> `../registries/frame_types_reserved.csv`.
+
+## Reserved frame types (all channels)
+
+Each channel defines its own frame types in the `0x0000–0xFFFF` space. The
+following are reserved across **all** channels with the same meaning everywhere:
+
+| Type | Name | Description |
+|---|---|---|
+| 0x0000 | (reserved) | Reserved; **MUST NOT** be used as a frame type. |
+| 0x0001 | PING | Liveness probe. |
+| 0x0002 | PONG | Reply to PING. |
+| 0x0003 | CLOSE | Authenticated close; AEAD-protected. |
+| 0x0004 | CLOSE_ACK | Reply to CLOSE. |
+| 0x0005 | ERROR | Error report; AEAD-protected. |
+| 0x0006 | KEY_UPDATE | Initiate key update for this (channel, direction). |
+| 0x0007 | KEY_UPDATE_ACK | Acknowledge key update. |
+| 0x0008 | PATH_CHALLENGE | Path-migration challenge. |
+| 0x0009 | PATH_RESPONSE | Path-migration response. |
+| 0x000A | FLOW_UPDATE | Connection-level flow-control credit update. |
+
+Channel-specific frame types begin at **`0x0100`** within each channel's frame
+namespace. On the Control channel this range carries the four core handshake frame
+types `0x0100`–`0x0103` (CLIENT_HELLO / SERVER_HELLO / SERVER_AUTH / CLIENT_AUTH),
+enumerated in `../registries/frame_types_reserved.csv` and `../channels/0000_control.md`.
+
+## Reserved frame-type ranges (companion specifications)
+
+The core protocol does not define these; it reserves the ranges so companion
+specs can use them without colliding with the core wire format:
+
+| Range | Reserved for |
+|---|---|
+| 0x0035 – 0x0036 | Memory-channel eviction and revive extension frames |
+| 0x0060 – 0x0063 | Capability-channel token extension frames |
+| 0x0080 – 0x0080 | Control-channel flow-extension frames |
+| 0x0090 – 0x0090 | Audit-channel per-frame integrity-extension frames |
+| 0x00A0 – 0x00A3 | Settlement/Audit batch-commitment extension frames |
+| 0x00B0 – 0x00B4 | Governance-channel quorum extension frames |
+| 0x00C0 – 0x00C4 | Immune-channel propagation extension frames |
+
+> **Known editorial inconsistency in -00 (carried, not corrected here):** §4.6 states
+> channel-specific frame types begin at `0x0100`, while the same section also says
+> code points "at or above `0x0030`" not reserved are for extensions, and the
+> companion ranges above sit below `0x0100` (`0x0035…0x00C4`). This inconsistency
+> is **in the submitted draft** and is recorded for a future revision; the reference
+> does not silently rewrite the authoritative text.
+
+
+# File: spec/05_profiles.md
+
+# N-PAMP-01 — Profile Negotiation (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §6 "Profile Negotiation". The draft governs.
+> Machine-readable: `../registries/profiles.csv`.
+
+N-PAMP defines **three** security profiles. They share one wire format and differ
+only in cryptographic primitives and operational requirements. Each is an
+escalation of the previous.
+
+| Profile | Code | Summary |
+|---|---|---|
+| Standard | 0x01 | Baseline hybrid post-quantum security. |
+| High | 0x02 | Stronger KEM parameters and stronger hash; downgrade refusal to Standard. |
+| Sovereign | 0x03 | Highest standard-crypto strength; downgrade refusal below Sovereign. |
+
+**Profile code points `0x00` and `0x04`–`0xFF` are reserved by this specification.**
+
+## Profile invariants
+
+| Property | Standard | High | Sovereign |
+|---|---|---|---|
+| Minimum KEM | X25519MLKEM768 | X25519MLKEM1024 | X25519MLKEM1024 |
+| Allowed signatures | Ed25519 | Ed25519, ML-DSA-87 | ML-DSA-87 |
+| KDF hash | SHA-256 | SHA-384 | SHA-384 |
+| Per-frame AEAD diversification | Off | On | On |
+| Downgrade refusal | Off | Refuses Standard | Refuses below Sovereign |
+| Mandatory key update | Yes | Yes (tighter bounds) | Yes (tightest bounds) |
+
+## Negotiation rules
+
+- The profile is **offered by the client and selected by the server** during the
+  handshake, and is carried in the handshake transcript. Because the profile is
+  part of the transcript the Finished MAC covers, stripping a profile from the
+  offer or forcing a lower selection invalidates the MAC and aborts the handshake.
+- The server **MUST select a profile from the client's offered set**. The selected
+  profile MUST be **no lower than the server's configured minimum acceptable peer
+  profile**.
+- A Sovereign server whose minimum acceptable peer profile is Sovereign completes a
+  handshake only when the client offers Sovereign and Sovereign is selected.
+- A High or Sovereign endpoint MAY interoperate with a lower-profile peer for
+  read-only or capability-discovery operations when local policy permits, by
+  accepting a lower selected profile; otherwise it refuses the downgrade.
+
+
+# File: spec/06_cryptographic_suites.md
+
+# N-PAMP-01 — Cryptographic Suites (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §7 "Cryptographic Suites". The draft governs.
+> Machine-readable: `../registries/{kem,aead,signatures}.csv`.
+>
+> All primitives are published standards.
+
+## Key Encapsulation Mechanisms (KEM)
+
+| Code point | Name | Profiles |
+|---|---|---|
+| 0x11ec | X25519MLKEM768 | Standard, High |
+| 0x11ed | X25519MLKEM1024 | High, Sovereign |
+
+Both are hybrid KEMs combining X25519 ECDH with ML-KEM (FIPS 203): ML-KEM-768 and
+ML-KEM-1024 respectively. The two shared secrets are concatenated as
+`(ML-KEM shared secret || X25519 shared secret)` — ML-KEM first, so the
+FIPS-approved key-establishment output leads the HKDF input (NIST SP 800-56C
+Rev. 2) — and supplied as input keying material to HKDF-Extract (RFC 5869). This
+matches the X25519MLKEM768 construction of draft-ietf-tls-ecdhe-mlkem §4.3: the
+suite name lists X25519 first, but the shared-secret concatenation and the on-wire
+KEMShare / KEMCiphertext layout are deliberately ML-KEM-first (see ADR-0005).
+**The Sovereign profile MUST NOT accept X25519MLKEM768.**
+
+## Authenticated Encryption (AEAD)
+
+| Code point | Name | Key | Nonce | Tag |
+|---|---|---|---|---|
+| 0x0001 | AES-256-GCM | 32 | 12 | 16 |
+| 0x0002 | ChaCha20-Poly1305 | 32 | 12 | 16 |
+
+AES-256-GCM per RFC 5116; ChaCha20-Poly1305 per RFC 8439. High and Sovereign
+endpoints **MUST support both** (per-frame AEAD diversification selects between
+them). Standard endpoints MUST support at least one.
+
+## Signatures
+
+| Code point | Name | Usage | Profiles |
+|---|---|---|---|
+| 0x0807 | Ed25519 | Identity, capability tokens | All |
+| 0x0905 | ML-DSA-87 | Identity, audit epoch | High, Sovereign |
+
+Ed25519 per RFC 8032; ML-DSA-87 per FIPS 204. The Sovereign profile uses
+**ML-DSA-87** for identity and audit signatures.
+
+## Key Derivation and Hashing
+
+All key derivation uses HKDF (RFC 5869). KDF hash is **SHA-256 at Standard** and
+**SHA-384 at High and Sovereign**. HKDF-Expand-Label follows TLS 1.3 (RFC 8446)
+but **with a protocol-specific label prefix** that provides domain separation from
+TLS 1.3, from QUIC, and from earlier N-PAMP versions. (A literal `"tls13 "` prefix
+does NOT satisfy this and is non-conformant.)
+
+## Key Schedule and Nonces
+
+Traffic secrets are derived **per (direction, epoch, AEAD suite, channel) tuple**,
+so no two distinct contexts share a key. Each traffic secret yields an AEAD key, an
+AEAD IV, and a header-protection key via HKDF-Expand-Label.
+
+**The per-frame nonce is the AEAD IV exclusive-ORed with the left-zero-padded
+sequence number, identical in form to TLS 1.3 (RFC 8446) and QUIC (RFC 9001).**
+(The Channel ID is NOT part of the nonce; a Channel-ID-in-nonce construction is
+non-conformant.) This namespace partitioning prevents cross-direction, cross-suite,
+and cross-channel nonce reuse and supports forward secrecy: on key update, new-epoch
+secrets are derived afresh and the prior epoch's secrets are **zeroized**.
+
+## Random Number Generation
+
+All security-participating randomness MUST come from a cryptographically secure RNG.
+Implementations MUST NOT use a non-cryptographic source for any security field.
+
+
+# File: spec/07_tlv_registry.md
+
+# N-PAMP-01 — TLV Type Registry (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §9.4 "TLV Type Registry". The draft governs.
+> Machine-readable: `../registries/tlv_tags.csv`.
+
+Tags marked "(reserved)" are described in the Extension Points section.
+
+| Tag | Name | Length | Description |
+|---|---|---|---|
+| 0x01 | ProfileOffer | Var | Profiles offered by the client, one octet per profile (handshake only). |
+| 0x02 | ProfileSelect | 1 | Profile selected by the server (handshake only). |
+| 0x03 | KEMOffer | Var | KEMs offered by the client. |
+| 0x04 | KEMSelect | 2 | KEM selected by the server. |
+| 0x05 | SigOffer | Var | Signature algorithms offered. |
+| 0x06 | SigSelect | 2 | Signature algorithm selected. |
+| 0x07 | KEMShare | Var | Public KEM share. |
+| 0x08 | KEMCiphertext | Var | KEM encapsulation ciphertext. |
+| 0x09 | IdentityKey | Var | Sender's identity public key (handshake AUTH). |
+| 0x0A | CertVerify | Var | SignatureScheme (u16) + signature over the transcript (handshake AUTH). |
+| 0x0B | Finished | Var | Finished MAC, length = negotiated KDF-hash output (handshake AUTH). |
+| 0x0C | AEADOffer | Var | AEAD suites offered by the client (handshake only). |
+| 0x0D | AEADSelect | 2 | AEAD suite selected by the server (handshake only). |
+| 0x10 | (reserved) | Var | Reserved for a companion specification. |
+| 0x12 | AnomalyCharge | 32 | Per-frame integrity charge. |
+| 0x13 | (reserved) | Var | Reserved for a companion specification. |
+| 0x14 | (reserved) | 32 | Reserved for a companion specification (handshake only). |
+| 0x15 | PathChallenge | 32 | Path-migration challenge nonce. |
+| 0x16 | PathResponse | 64 | Path-migration response. |
+| 0x17 | KeyUpdateMarker | 8 | Key-update epoch marker. |
+| 0x18 | ProtectionMode | 1 | Protection-mode selector. |
+| 0x8000-0xFFFF | (reserved) | -- | Forward-incompatible extension points (Type high bit set). |
+
+> **Note.** Tag `0x12` is AnomalyCharge (length 32); tag `0x14` is reserved
+> (length 32); the handshake tags `0x01`–`0x0D` are required by the handshake
+> binding. All values above are normative in the draft's TLV Type Registry.
+
+
+# File: spec/08_uri_scheme.md
+
+# N-PAMP-01 — URI Scheme `npamp://` (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §9.2 "URI Scheme Registration". The draft governs.
+
+Provisional registration of the **`npamp`** URI scheme in the "Uniform Resource
+Identifier (URI) Schemes" registry, following RFC 7595 (First Come First Served).
+
+- **Scheme name:** `npamp`
+- **Status:** Provisional
+- **Applications/protocols:** N-PAMP. An `npamp` URI names an N-PAMP endpoint and an
+  optional resource path within that endpoint.
+- **Syntax (generic RFC 3986 syntax):**
+
+  ```abnf
+  npamp-URI = "npamp://" authority path-abempty [ "?" query ]
+  ```
+
+  `authority` identifies the N-PAMP endpoint (host and optional port). N-PAMP does
+  **not** reserve a fixed default port; the underlying transport is negotiated.
+- **Encoding:** processed per RFC 3986; non-ASCII path/query octets are
+  percent-encoded UTF-8.
+- **Interoperability:** none beyond RFC 3986; the scheme carries no protocol
+  semantics of its own.
+- **Security:** an `npamp` URI is only an identifier. Connecting invokes the N-PAMP
+  handshake and its authentication, confidentiality, and downgrade protections;
+  dereferencing MUST NOT bypass the negotiated security profile.
+- **Contact / Change controller:** Shawn Sammartano, BubbleFish Technologies, Inc.
+
+
+# File: spec/09_extension_points.md
+
+# N-PAMP-01 — Extension Points & IANA Posture (reference)
+
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §8 "Extension Points" and §9.3/§9.5. The draft governs.
+
+The core protocol neither defines nor requires any extension; it only **reserves
+ranges** so companion specifications can be defined without colliding with the
+core wire format.
+
+## Reserved frame-type ranges (companion specs)
+
+| Range | Reserved for |
+|---|---|
+| 0x0035 – 0x0036 | Memory-channel eviction and revive extension frames |
+| 0x0060 – 0x0063 | Capability-channel token extension frames |
+| 0x0080 – 0x0080 | Control-channel flow-extension frames |
+| 0x0090 – 0x0090 | Audit-channel per-frame integrity-extension frames |
+| 0x00A0 – 0x00A3 | Settlement/Audit batch-commitment extension frames |
+| 0x00B0 – 0x00B4 | Governance-channel quorum extension frames |
+| 0x00C0 – 0x00C4 | Immune-channel propagation extension frames |
+
+## Reserved TLV tags (companion specs)
+
+TLV types **`0x0010`, `0x0013`, and `0x0014`** are reserved for extension TLVs
+defined in companion specifications. TLV types `0x8000`–`0xFFFF` remain reserved
+as forward-incompatible extension points (Type high bit set).
+
+## Reserved channel-ID range
+
+`0x0014`–`0xFFFF` reserved: `0x0014`–`0x001F` future core; `0x0020`–`0xEFFF`
+extension channels; `0xF000`–`0xFFFE` GREASE (receivers MUST ignore); `0xFFFF`
+MUST NOT appear on the wire.
+
+## IANA posture (Independent Submission stream)
+
+The channel registry, the frame-type registry, and the TLV type registry are
+**defined and maintained within the specification itself**. Because -00 is
+published through the Independent Submission stream, it does **not** request the
+creation of new IANA-hosted registries for these code points; they are normative
+within the document and extended by companion specs and future revisions, **not**
+by IANA registration actions. The only IANA-registry actions -00 requests are the
+**ALPN identifier** (`n-pamp/2`, Expert Review) and the **`npamp://` URI scheme**
+(provisional, FCFS).
+
+> **Companion specifications.** The semantics that occupy the reserved ranges above
+> — including external-protocol bridge encapsulation on channel `0x000D` and any
+> profile-specific extensions — are defined in separate companion specifications.
+> draft-00 reserves the code points; it defines none of those semantics.
+
+
+# File: spec/10_handshake_binding.md
+
+# N-PAMP-01 — Handshake Binding (normative)
+
+> **Authoritative for the N-PAMP 1.5-RTT handshake binding.** The published
+> `draft-bubblefish-npamp-latest.md` specifies the handshake *requirements* and the negotiation
+> *vocabulary* (TLV tags, KEM/AEAD/Sig/profile code points, frame envelope, AAD/nonce, the
+> HKDF-Expand-Label primitive) but does not fix the handshake *wire bytes*. This document
+> fixes them. It is grounded in TLS 1.3 {{RFC8446}} where it reuses a construction and marks
+> every N-PAMP-original choice. Targeted for ratification into draft-01.
+>
+> **Provenance legend** — **[STD]** reused from a cited standard (RFC 8446 / draft-ietf-tls-
+> ecdhe-mlkem / FIPS 203 / RFC 7748 / RFC 5869), the standard governs · **[D→RFC]** N-PAMP
+> applies an RFC pattern with N-PAMP parameters · **[D→N-PAMP]** N-PAMP-original, this document
+> is the authority. Reference implementations live under `impl/`. Profiles are
+> parameterized, not duplicated (ADR-0003): one wire format, one construction, a parameter row.
+
+## 1. Message flow (1.5-RTT, mutual authentication)
+
+The handshake is **four frames** over the Control channel (`0x0000`), a 1.5-RTT exchange in
+which both peers authenticate. There is no separate Finished frame — the Finished MAC is a
+TLV inside each AUTH frame. **[D→N-PAMP]** (modeled on RFC 8446 §4 but with N-PAMP framing).
+
+```
+client ── CLIENT_HELLO (0x0100), cleartext ─────────────▶ server
+client ◀── SERVER_HELLO (0x0101), cleartext ──────────── server
+       ◀── SERVER_AUTH  (0x0102), ENCRYPTED ──────────── server   (server flight)
+client ── CLIENT_AUTH  (0x0103), ENCRYPTED ─────────────▶ server
+```
+
+Each frame is the 36-octet N-PAMP frame (§2 of `02_frame_format.md`) on channel `0x0000`,
+seq `0`, frame type as below; AUTH frames set `FlagENC` and are AEAD-sealed (§6.4).
+
+| Frame | Type | Phase | TLVs (in order) | Encryption |
+|-------|------|-------|-----------------|------------|
+| CLIENT_HELLO | `0x0100` | Cleartext | ProfileOffer `0x01`, KEMOffer `0x03`, SigOffer `0x05`, AEADOffer `0x0C`, KEMShare `0x07` | None |
+| SERVER_HELLO | `0x0101` | Cleartext | ProfileSelect `0x02`, KEMSelect `0x04`, SigSelect `0x06`, AEADSelect `0x0D`, KEMCiphertext `0x08` | None |
+| SERVER_AUTH | `0x0102` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | negotiated AEAD (handshake key, §6.4) |
+| CLIENT_AUTH | `0x0103` | Encrypted | IdentityKey `0x09`, CertVerify `0x0A`, Finished `0x0B` | negotiated AEAD (handshake key, §6.4) |
+
+A server reaches the keyed/Established state only after CLIENT_AUTH (the master secret is
+derived at the client-auth boundary, §5). **[D→N-PAMP]**
+
+### 1.1 Frame-type and TLV code points
+
+Handshake frame types occupy the Control channel-specific space (`>= 0x0100`): `0x0100`
+CLIENT_HELLO, `0x0101` SERVER_HELLO, `0x0102` SERVER_AUTH, `0x0103` CLIENT_AUTH. **[D→N-PAMP]**
+(unassigned in published draft-00; frozen for draft-01).
+
+Handshake TLV tags: `0x09` IdentityKey, `0x0A` CertVerify, `0x0B` Finished, `0x0C` AEADOffer,
+`0x0D` AEADSelect. **[D→N-PAMP]**. Negotiation TLV tags `0x01`–`0x08` and the profile / KEM /
+Sig / AEAD code points are reused unchanged from the published registries. **[STD/P]**
+
+`0x0B` (Finished) carries a variable `HashLen`-octet MAC (32 @ SHA-256, 48 @ SHA-384), which is
+why it is distinct from any fixed-32 reserved tag. **[D→N-PAMP]**
+
+## 2. Cryptographic agility and profiles
+
+One construction serves all three profiles (ADR-0003); a profile selects a parameter row:
+
+| Parameter | Standard | High | Sovereign |
+|-----------|----------|------|-----------|
+| KEM (min) | X25519MLKEM768 | X25519MLKEM1024 | X25519MLKEM1024 |
+| Signature | Ed25519 | Ed25519, ML-DSA-87 | ML-DSA-87 |
+| KDF hash `H` | SHA-256 | SHA-384 | SHA-384 |
+| `HashLen` | 32 | 48 | 48 |
+| Per-frame AEAD diversification | Off | On | On |
+
+`H` and `HashLen` are read from the negotiated profile throughout this document. **[STD/P]**
+(`05_profiles.md`). The reference build implements the Standard row and the High/Sovereign
+SHA-384 key-schedule branch; the High/Sovereign PQ-primitive implementations (ML-KEM-1024,
+ML-DSA-87) are public code points, published as reference implementations become available (ADR-0004).
+
+## 3. Transcript construction
+
+The transcript is a running byte buffer; a transcript-hash point is `H` over all bytes
+absorbed so far. The transcript absorbs, in handshake order: **[D→N-PAMP]** (deliberately
+diverges from RFC 8446 §4.4.1, which hashes whole handshake messages including their
+type+length headers).
+
+- **AddFrameType(ft):** the **2-octet big-endian frame type only**. The remaining 34 octets of
+  the N-PAMP frame header (magic, flags, channel, seq, payload-length, CRC, reserved) and the
+  AEAD tag are **NOT** absorbed.
+- **AddTLV(t):** one TLV in canonical `Type(2) ‖ Length(2) ‖ Value` form.
+- A frame contributes `AddFrameType(ft)` then `AddTLV` for each of its TLVs in order.
+
+Granularity is **per-TLV** (finer than RFC 8446's per-message), so the bundled AUTH frame can
+be hashed up to sub-frame boundaries. The five transcript points:
+
+| Symbol | Absorbed through | Used by |
+|--------|------------------|---------|
+| `TH_kem` | `0x0100 ‖ CH-TLVs ‖ 0x0101 ‖ SH-TLVs` | handshake-secret labels (§5) |
+| `TH_sId` | `… ‖ 0x0102 ‖ ServerIdentityKey` | Server CertVerify signs this (§6.1) |
+| `TH_sCV` | `… ‖ ServerCertVerify` (excludes ServerFinished) | Server Finished MACs this (§6.2) |
+| `TH_cId` | `… ‖ ServerFinished ‖ 0x0103 ‖ ClientIdentityKey` | Client CertVerify signs this |
+| `TH_cCV` | `… ‖ ClientCertVerify` (excludes ClientFinished) | Client Finished MACs; master derived from this |
+
+Both peers absorb the identical decoded on-wire TLV bytes, so transcripts are byte-identical.
+
+## 4. Hybrid key encapsulation — X25519MLKEM768
+
+KEM `0x11ec` (Standard/High). **ML-KEM-first** in both the shared secret and the wire layout,
+per {{I-D.ietf-tls-ecdhe-mlkem}} + NIST SP 800-56C Rev. 2 (the FIPS-approved secret leads the
+HKDF input). **The suite name lists X25519 first; the bytes are ML-KEM-first** (ADR-0005). **[STD]**
+
+- **KEMShare (TLV `0x07`):** `ML-KEM-768 encapsulation key (1184) ‖ X25519 public key (32)` =
+  **1216** octets. **[STD]** sizes per FIPS 203 / RFC 7748.
+- **KEMCiphertext (TLV `0x08`):** `ML-KEM-768 ciphertext (1088) ‖ server X25519 public key (32)`
+  = **1120** octets. **[STD]**
+- **Shared secret (KEM output, IKM to §5):** `ML-KEM SS (32) ‖ X25519 SS (32)` = **64** octets,
+  fed raw to HKDF-Extract (no hybrid-layer KDF — the key schedule's Extract is the combiner,
+  a dual-PRF). **[STD]**
+- Component KEMs: ML-KEM-768 `Encaps/Decaps` per FIPS 203 (implicit rejection: a corrupt
+  ciphertext yields a pseudorandom secret that fails the Finished MAC, not an error). X25519
+  per RFC 7748; an all-zero (low-order) X25519 output is rejected. **[STD]**
+
+Sovereign MUST NOT accept X25519MLKEM768 (it requires X25519MLKEM1024, `0x11ed`). **[STD/P]**
+
+## 5. Key schedule (§6 secrets)
+
+A **single** HKDF-Extract followed by sibling HKDF-Expand-Label derivations. **[D→N-PAMP]**
+(deliberately simpler than RFC 8446 §7.1's three-stage Early/Handshake/Master Extract chain;
+N-PAMP has no PSK/0-RTT in this binding).
+
+HKDF-Expand-Label is RFC 8446 §7.1 with the N-PAMP label prefix `"n-pamp "` (note the trailing
+space) replacing `"tls13 "`: **[D→RFC]**
+
+```
+HKDF-Expand-Label(Secret, Label, Context, Length) =
+    HKDF-Expand(Secret, HkdfLabel, Length)
+HkdfLabel = uint16(Length) ‖ opaque label<7..255> = ("n-pamp " ‖ Label) ‖ opaque context<0..255> = Context
+```
+
+Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM order **[STD]**, ADR-0005)
+
+```
+handshake_secret = HKDF-Extract(salt = HashLen·0x00, IKM = ML-KEM_SS ‖ X25519_SS)
+c_hs_secret      = HKDF-Expand-Label(handshake_secret, "c hs",   TH_kem, HashLen)
+s_hs_secret      = HKDF-Expand-Label(handshake_secret, "s hs",   TH_kem, HashLen)
+master           = HKDF-Expand-Label(handshake_secret, "master", TH_cCV, HashLen)
+```
+
+- The Extract salt is `HashLen` zero octets (RFC 5869 §2.2 default). **[D→RFC]**
+- Full labels on the wire: `"n-pamp c hs"`, `"n-pamp s hs"`, `"n-pamp master"`,
+  `"n-pamp finished"` (§6.2). `master` is derived only at the client-auth boundary, from
+  `TH_cCV`. **[D→N-PAMP]**
+
+Traffic keys (both handshake and application phases): **[D→N-PAMP]**
+
+```
+traffic_secret = DeriveTrafficSecret(parent, dir, epoch, suite, channel, H)
+               // context = dir(1) ‖ epoch(8 BE) ‖ suite(2 BE) ‖ channel(2 BE), label "traffic"
+(key[32], iv[12]) = ( HKDF-Expand-Label(traffic_secret, "key", "", 32),
+                      HKDF-Expand-Label(traffic_secret, "iv",  "", 12) )
+```
+
+Handshake-phase keys descend from `c_hs_secret`/`s_hs_secret` (epoch 0, Control channel);
+application-phase keys descend from `master`. Because the parents differ, an identical
+`(dir, epoch, suite, channel)` tuple yields different (key, iv) across phases — no (key,nonce)
+is shared across phases. **[D→N-PAMP]**
+
+## 6. Authentication
+
+### 6.1 CertVerify (TLV `0x0A`)
+
+A signature over the transcript, structured per RFC 8446 §4.4.3 with N-PAMP context strings: **[D→RFC]**
+
+```
+signing_input = 0x20 × 64  ‖  context  ‖  0x00  ‖  transcript_hash
+context (server) = "N-PAMP/2, server CertificateVerify"   // [D→N-PAMP]
+context (client) = "N-PAMP/2, client CertificateVerify"
+```
+
+The signed `transcript_hash` is `TH_sId` (server) / `TH_cId` (client) — the transcript through
+the signer's own IdentityKey, before its own CertVerify. The TLV value is
+`SignatureScheme uint16 (Ed25519 = 0x0807) ‖ signature` (the inner signature has no length
+prefix; the TLV Length delimits it). A verifier MUST reject a scheme it did not negotiate and
+MUST check the role (server vs client) — the differing context string makes a server CertVerify
+unusable as a client one. **[D→N-PAMP]** (carriage), **[STD]** Ed25519 = RFC 8032.
+
+### 6.2 Finished (TLV `0x0B`)
+
+Per RFC 8446 §4.4.4, keyed by the sender's handshake traffic secret: **[D→RFC]**
+
+```
+finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)   // BaseKey = c_hs/s_hs per direction
+verify_data  = HMAC(finished_key, transcript_hash)                   // HMAC per RFC 2104, hash = H
+```
+
+The MAC'd `transcript_hash` is `TH_sCV` (server) / `TH_cCV` (client) — the transcript through
+the signer's own CertVerify, excluding its own Finished. `verify_data` length = `HashLen`.
+Verification MUST be constant-time and abort on mismatch. **[D→N-PAMP]** (which transcript point
+each covers).
+
+### 6.3 Downgrade protection
+
+The negotiated profile and algorithm selections are carried in the cleartext CH/SH and are
+absorbed into the transcript that the Finished MAC and CertVerify cover. Stripping a profile
+from the offer or forcing a lower selection therefore invalidates the MAC and aborts the
+handshake. **[D→N-PAMP]** (N-PAMP uses transcript binding rather than a TLS-style
+ServerHello.Random `DOWNGRD` sentinel).
+
+### 6.4 AUTH-frame sealing
+
+SERVER_AUTH/CLIENT_AUTH are sealed with the negotiated AEAD (the primary suite = `AEADSelect[0]`,
+the server's selected handshake suite) under the per-direction handshake key/iv
+(§5): `Flags = FlagENC`, `Channel = 0x0000`, `Seq = 0`; AAD = the 21-octet frame header prefix;
+nonce = `iv XOR seq` (§4 of `06_cryptographic_suites.md`). On open, exactly three TLVs in order
+(IdentityKey, CertVerify, Finished) are required. **[negotiated per AEADSelect `0x0D`]** AEAD; **[D→N-PAMP]** the 3-TLV AUTH layout.
+
+## 7. Security considerations (summary of divergences from TLS 1.3)
+
+This binding deliberately diverges from RFC 8446 in three documented ways; each is an
+N-PAMP design decision, not a TLS conformance claim, and is in scope for the formal-methods
+re-targeting (`formal/`):
+
+1. **Transcript** absorbs only the 2-octet frame type plus per-TLV bytes — not the full frame
+   header. The frame header's integrity for encrypted frames is covered by the AEAD AAD (§6.4);
+   for cleartext CH/SH the header carries no security-relevant field the transcript needs (the
+   channel and frame type are fixed for the handshake and the frame type **is** absorbed).
+   Analysis MUST confirm no security-relevant header field is left unbound.
+2. **Single-Extract key schedule** (§5) rather than TLS's three-stage derive-secret chain.
+   Sound because there is no PSK/0-RTT stage to separate; the master/handshake separation is by
+   label and by the transcript context bound into each Expand-Label.
+3. **Hybrid KEM ordering** is ML-KEM-first (§4, ADR-0005), satisfying SP 800-56C Rev. 2 and
+   matching {{I-D.ietf-tls-ecdhe-mlkem}}.
+
+Confidentiality holds as long as at least one KEM component (X25519 or ML-KEM-768) is unbroken
+(the concatenation-into-HKDF-Extract dual-PRF combiner). **[STD]**
+
+## 8. Conformance notes
+
+The published draft-00 conformance corpus grades only primitives (header/CRC/AEAD/HKDF/TLV/
+profile) and carries **no handshake-layer vectors**. To make this binding independently
+conformance-testable (not merely self-interop-testable), the following standards-derived,
+non-circular vectors are required and are tracked as corpus growth:
+
+- **KEM-wire KAT** — **DELIVERED** (`test-vectors/v1/kem-wire-kat.json`, ADR-0007). ML-KEM-768
+  keygen from a NIST seed `d‖z` (NIST ACVP, FIPS 203) and X25519 from RFC 7748 §6.1, asserting
+  the ML-KEM-first wire order of KEMShare (`ek ‖ x25519_pub`), the client KEMCiphertext parse
+  (X25519 half anchored to RFC 7748's shared secret), and the HKDF-Extract IKM order
+  (`ML-KEM_SS ‖ X25519_SS`). This closes the wire-byte-order gap that symmetric self-interop +
+  code review could not catch (the original X25519-first defect; ADR-0005). **Documented
+  limitation:** the ML-KEM *decapsulation* leg's shared-secret VALUE is not anchored to NIST via
+  Go's public `crypto/mlkem`, because that API imports only the 64-byte seed and NIST ACVP
+  encapDecap supplies the key as an expanded decapsulation key; the NIST decaps vector (`c`, `K`)
+  is carried in the KAT file for implementations that can import an expanded dk, and is the
+  remaining growth item for a fully-NIST-anchored ML-KEM shared secret.
+- **Key-schedule KAT** — **DELIVERED** (`test-vectors/v1/key-schedule-kat.json`, ADR-0008). Fixed
+  KEM secrets + fixed transcript points → the `handshake_secret` ladder (`c hs`/`s hs`/`master`),
+  the handshake/application traffic (key, iv), and `finished_key`. Non-circular by EXTERNAL ANCHOR:
+  N-PAMP's HKDF-Expand-Label is RFC 8446 §7.1 with the `"n-pamp "` prefix, so the KAT proves an
+  independent Expand-Label oracle against **RFC 8448** (TLS 1.3, `"tls13 "` prefix) and **RFC 5869**
+  (raw HKDF), then applies that proven oracle with `"n-pamp "` to check the schedule. The file
+  carries the RFC anchors + fixed inputs (not implementation-produced output bytes). Now mirrored
+  non-circularly across all reference impls — Go as the reference implementation; TypeScript / Python / Java /
+  Kotlin / Ruby / PHP / Rust / C# under `impl/` — gated by `impl/_conformance-harness/kat-handshake-all-langs.sh`.
+  Each `impl/` language carries the full trunk (HKDF-Extract → `handshake_secret` → `c_hs`/`s_hs`/`master`
+  → `finished_key` + the handshake-phase traffic key/iv); the §7.5 traffic context binds the AEAD code
+  point the reference vector fixes as its test input — AES-256-GCM `0x0001` (`registries/aead.csv`; `0x0002`
+  is ChaCha20-Poly1305) — the KAT fixture, NOT the AUTH-sealing rule (AUTH uses the negotiated AEAD, §6.4). Mutation-proven per
+  language (an X25519-first IKM order — violating ML-KEM-first / ADR-0005 — fails the impl leg only).
+- **Transcript KAT** — **DELIVERED** (`test-vectors/v1/transcript-kat.json`, ADR-0009). Fixed
+  frame/TLV inputs → each `TH_*` point (`TH_kem`/`TH_sId`/`TH_sCV`/`TH_cId`/`TH_cCV`). Non-circular by
+  construction: the expected points are produced by an INDEPENDENT per-TLV byte-constructor
+  (frame-type as 2-octet BE; each TLV as `Type(2)‖Length(2)‖Value`) + SHA-256, with the SHA-256
+  primitive itself anchored to **FIPS 180-4** (`SHA-256("abc")`); the consuming test re-derives every
+  point via its own manual oracle AND via the implementation's `Transcript`, which must agree. This
+  pins the §3/§7.1 divergence from RFC 8446 §4.4.1 (only the 2-octet frame type is absorbed, at
+  per-TLV granularity): a header-creep or per-message regression fails the impl leg only.
+  Delivered + mutation-proven, and now mirrored non-circularly across all reference impls — Go as the
+  reference implementation; TypeScript / Python / Java / Kotlin / Ruby / PHP / Rust / C# under `impl/` — gated by
+  `impl/_conformance-harness/kat-handshake-all-langs.sh`.
+- **Finished KAT** — **DELIVERED** (`test-vectors/v1/finished-kat.json`, ADR-0010). `verify_data` =
+  HMAC-SHA256(`finished_key`, `transcript_hash`) (§6.2 / RFC 8446 §4.4.4). Non-circular: the expected
+  `verify_data` are produced with an independent `crypto/hmac`, with the HMAC-SHA-256 primitive
+  anchored to **RFC 4231** TC1/TC2; the `finished_key` is a fixture (its derivation is anchored by the
+  key-schedule KAT) and the `transcript_hash` inputs are the Transcript KAT's `TH_sCV`/`TH_cCV` (the
+  points §6.2 covers). The consuming test runs anchor/oracle/impl legs + a `VerifyFinished`
+  accept/reject check; mutation-proven (a key-independent hash fails the impl leg only). Mirrored
+  non-circularly across all reference impls (gated by `kat-handshake-all-langs.sh`).
+- **CertVerify KAT** — **DELIVERED** (`test-vectors/v1/certverify-kat.json`, ADR-0011). CertVerify
+  value = `u16(0x0807) ‖ Ed25519(priv, signing_input)`, `signing_input = 0x20×64 ‖ context ‖ 0x00 ‖
+  transcript_hash` (§6.1 / RFC 8446 §4.4.3). Non-circular: the expected signatures are produced with
+  an independent `crypto/ed25519`, with the Ed25519 primitive anchored to **RFC 8032** §7.1 TEST 1/2
+  (published public keys + signatures); the `transcript_hash` inputs are the Transcript KAT's
+  `TH_sId`/`TH_cId` (the points each role signs); Ed25519 is deterministic so any conforming signer
+  reproduces them. The consuming test runs anchor/oracle/impl legs and checks `VerifyCertVerify`
+  accepts the correct value but REJECTS a role/context mismatch (domain separation) and a wrong
+  transcript (binding); mutation-proven (a corrupted signing-input separator fails the impl leg
+  only). Mirrored non-circularly across all reference impls (gated by `kat-handshake-all-langs.sh`).
+
+**All five handshake-layer KATs (KEM-wire, key-schedule, transcript, Finished, CertVerify) now have
+standards-derived, non-circular KATs** — the original draft-00 binding is graded against the
+standards (NIST FIPS 203 / RFC 7748 / 8446 / 8448 / 5869 / 4231 / 8032 / FIPS 180-4), not merely
+self-interop-tested. The key-schedule / transcript / Finished / CertVerify KATs are now mirrored
+non-circularly across all reference impls (gated by `impl/_conformance-harness/kat-handshake-all-langs.sh`;
+Go is covered by its own KATs) — each `impl/` language carries the full handshake key
+schedule (HKDF-Extract → `handshake_secret` → `c_hs`/`s_hs`/`master` ladder → `finished_key` +
+handshake-phase traffic key/iv, binding the AEAD code point the vector fixes as its test input — AES-256-GCM `0x0001`, the KAT fixture, not the AUTH-sealing rule; AUTH uses the negotiated AEAD per §6.4). Only the KEM-wire KAT
+remains on the Go reference — broadening it across the `impl/` languages is follow-on work: the ML-KEM
+KEM-wire layout needs a per-language ML-KEM dependency that is not generally available.

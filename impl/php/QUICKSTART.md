@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — PHP quickstart
+# N-PAMP draft-01 — PHP quickstart
 
 `impl/php` is the PHP port of the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM). Pure PHP with no Composer dependencies — crypto
 comes from `ext-openssl` (AES-256-GCM) and `ext-sodium` (Ed25519); CRC32C is hand-rolled (PHP's
 built-in `crc32()` computes the IEEE polynomial and MUST NOT be used).

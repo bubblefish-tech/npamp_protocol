@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — Ruby quickstart
+# N-PAMP draft-01 — Ruby quickstart
 
 `impl/ruby` is the Ruby port of the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM). Pure Ruby on the standard library — crypto comes
 from stdlib `openssl` (CRC32C — Castagnoli, poly `0x82F63B78` — is hand-rolled). No gems to
 install.
