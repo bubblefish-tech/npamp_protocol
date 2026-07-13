@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — Go SDK quickstart
+# N-PAMP draft-01 — Go SDK quickstart
 
 `github.com/bubblefish-tech/npamp_protocol/impl/go` is the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM).
 
 ## What this module provides
@@ -15,7 +15,7 @@
   `DeriveHandshakeTrafficSecrets`, `DeriveMasterSecret`, `DeriveFinishedKey`).
 - **TLV codec + registries** — `TLV`, `DecodeTLVs`, and the channel / frame-type / TLV / profile /
   KEM / AEAD / signature code-point constants.
-- **draft-00 1.5-RTT handshake binding** (`spec/10_handshake_binding.md`, Standard profile) —
+- **draft-01 1.5-RTT handshake binding** (`spec/10_handshake_binding.md`, Standard profile) —
   X25519MLKEM768 hybrid KEM (`KEMClient`, `Encapsulate`; `crypto/mlkem` + `crypto/ecdh`), the
   four handshake flights (`ClientHello`, `ServerHello`, `AuthMessage` encode/decode), the per-TLV
   `Transcript`, and Ed25519 `SignCertVerify`/`VerifyCertVerify` + `ComputeFinished`/`VerifyFinished`.
@@ -48,7 +48,7 @@ It derives a traffic key, seals an application payload into an AEAD-protected fr
 the wire, then unmarshals + opens it — printing the recovered plaintext. The master secret is a fixed
 demo value; in a live session it is the handshake output.
 
-## Run a full draft-00 client against a live endpoint
+## Run a full draft-01 client against a live endpoint
 
 For an end-to-end client — full handshake, TLS transport, a real memory write/search over `npamp://`
 — use a consuming product's CLI against a running daemon's `npamp://` listener:

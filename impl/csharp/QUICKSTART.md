@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — C# quickstart
+# N-PAMP draft-01 — C# quickstart
 
 `impl/csharp` is the C# port of the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM). The core (`Npamp.cs`) is BCL-only
 (`System.Security.Cryptography`); the handshake layer (`Handshake.cs`) additionally needs
 **BouncyCastle.Cryptography 2.6.2** for Ed25519, which the .NET BCL does not provide.

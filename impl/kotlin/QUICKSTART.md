@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — Kotlin quickstart
+# N-PAMP draft-01 — Kotlin quickstart
 
 `impl/kotlin` is the Kotlin/JVM port of the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM). Dependency-free beyond the Kotlin standard library
 — crypto comes from the JDK (`javax.crypto`, `java.security`); there is no Gradle/Maven build, just
 `kotlinc`.

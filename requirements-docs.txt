@@ -1,0 +1,18 @@
+# Documentation site build dependencies for the N-PAMP reference repo.
+#
+# Renders the pure-Markdown spec surface (Internet-Draft, core spec, channel and
+# companion specifications, registries, conformance material, implementations, and
+# design decisions) into a static site with MkDocs + the Material theme, published
+# to GitHub Pages by .github/workflows/docs.yml.
+#
+# Versions pinned to exact releases verified present on PyPI on 2026-07-12 via
+# `pip index versions`. Bump deliberately, not with a floating range, so a CI
+# `mkdocs build --strict` is reproducible.
+mkdocs==1.6.1
+mkdocs-material==9.7.6
+# same-dir lets docs_dir be '.' (the repo root, co-located with this mkdocs.yml),
+# which MkDocs otherwise forbids. Required because the canonical spec Markdown is
+# scattered across the repo root, not gathered under a docs/ subtree. (It pulls in a
+# `properdocs` runtime dependency; the build still runs on the pinned mkdocs above via
+# `mkdocs build`.)
+mkdocs-same-dir==0.1.5

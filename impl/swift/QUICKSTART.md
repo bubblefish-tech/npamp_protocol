@@ -1,7 +1,7 @@
-# N-PAMP draft-00 — Swift quickstart
+# N-PAMP draft-01 — Swift quickstart
 
 `impl/swift` is the Swift port of the **OPEN-protocol reference library** for N-PAMP
-`draft-bubblefish-npamp-00`: the wire-format and cryptographic *primitives*. Standard profile only
+`draft-bubblefish-npamp-01`: the wire-format and cryptographic *primitives*. Standard profile only
 (SHA-256, X25519MLKEM768, Ed25519, AES-256-GCM). Pure Swift on
 [swift-crypto](https://github.com/apple/swift-crypto) (portable AES-256-GCM / HKDF / Ed25519 on
 Linux and Apple platforms), managed by SwiftPM (`Package.swift`).
@@ -68,7 +68,7 @@ runnable only where those corpora are provided:
 
 ## Run the example
 
-`Sources/npamp-example/main.swift` composes the key schedule + record layer + frame codec into one
+`examples/secure_record_layer.swift` composes the key schedule + record layer + frame codec into one
 send → receive round-trip (a Swift mirror of the Go `Example_secureRecordLayer`):
 
 ```
