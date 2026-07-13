@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/frame_types_reserved.schema.json",
+  "title": "N-PAMP Frame-Type Registry (assignments + reserved ranges)",
+  "description": "Schema for the JSON representation of registries/frame_types_reserved.csv: an array of row objects. The frame_type column is EITHER a single 4-hex code point (0x0001) OR an inclusive range low-high of two 4-hex code points (0x0035-0x0036). Both forms are accepted via the oneOf on frame_type. Wrong-format code point, missing column, and empty name/description are caught here; DUPLICATE / OVERLAPPING frame_type values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["frame_type", "name", "description"],
+    "properties": {
+      "frame_type": {
+        "type": "string",
+        "oneOf": [
+          { "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "Single 16-bit frame type, 4 hex digits (e.g. 0x0001)." },
+          { "pattern": "^0x[0-9A-Fa-f]{4}-0x[0-9A-Fa-f]{4}$", "description": "Inclusive range low-high of two 4-hex code points (e.g. 0x0035-0x0036)." }
+        ],
+        "description": "A single 4-hex frame type OR an inclusive low-high range of two 4-hex frame types."
+      },
+      "name": { "type": "string", "minLength": 1, "description": "Frame-type name or marker such as (reserved) / (channel-specific); MUST be non-empty." },
+      "description": { "type": "string", "minLength": 1, "description": "Human-readable description; MUST be non-empty." }
+    }
+  }
+}

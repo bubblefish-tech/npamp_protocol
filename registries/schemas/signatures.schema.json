@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/signatures.schema.json",
+  "title": "N-PAMP Signature Registry",
+  "description": "Schema for the JSON representation of registries/signatures.csv: an array of row objects, one per registered signature algorithm. code_point is a 16-bit value (4 hex digits). profiles is either the literal 'All' or a comma-separated list drawn from {Standard, High, Sovereign}. Wrong-format code_point, missing column, empty usage/reference, and out-of-set profile tokens are caught here; DUPLICATE code_point values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["code_point", "name", "usage", "profiles", "reference"],
+    "properties": {
+      "code_point": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "16-bit signature code point, hex-prefixed, exactly 4 hex digits (e.g. 0x0807)." },
+      "name": { "type": "string", "minLength": 1, "description": "Signature algorithm name; MUST be non-empty." },
+      "usage": { "type": "string", "minLength": 1, "description": "Where the algorithm is used (e.g. Identity, capability tokens); MUST be non-empty." },
+      "profiles": { "type": "string", "pattern": "^(All|(Standard|High|Sovereign)(, ?(Standard|High|Sovereign))*)$", "description": "Profiles that permit this algorithm: the literal 'All', or a comma-separated list of {Standard, High, Sovereign}." },
+      "reference": { "type": "string", "minLength": 1, "description": "Normative reference (e.g. RFC 8032, FIPS 204); MUST be non-empty." }
+    }
+  }
+}

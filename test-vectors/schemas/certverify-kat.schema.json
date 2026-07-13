@@ -61,8 +61,8 @@
         "certverify_value_server": { "type": "string", "description": "u16(0x0807) || Ed25519 signature (66 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 132, "maxLength": 132 },
         "signature_client": { "type": "string", "description": "Raw Ed25519 signature over signing_input_client (64 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 128, "maxLength": 128 },
         "signature_server": { "type": "string", "description": "Raw Ed25519 signature over signing_input_server (64 bytes).", "pattern": "^[0-9a-fA-F]+$", "minLength": 128, "maxLength": 128 },
-        "signing_input_client": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_cId (138 bytes for the draft-00 client context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 276, "maxLength": 276 },
-        "signing_input_server": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_sId (138 bytes for the draft-00 server context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 276, "maxLength": 276 }
+        "signing_input_client": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_cId (131 bytes for the N-PAMP/2 client context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 262, "maxLength": 262 },
+        "signing_input_server": { "type": "string", "description": "64*0x20 || context || 0x00 || TH_sId (131 bytes for the N-PAMP/2 server context).", "pattern": "^[0-9a-fA-F]+$", "minLength": 262, "maxLength": 262 }
       }
     },
     "rfc8032_ed25519": {

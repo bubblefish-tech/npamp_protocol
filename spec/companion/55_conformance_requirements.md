@@ -70,7 +70,7 @@ Oracle:
 
 | Class | Name | Normative source | Machine-gradable today |
 |---|---|---|---|
-| **W** | Wire-primitives conformance | Core specification §4 (wire format), §7 (cryptographic suites), §6 (profile invariants) | Yes — the 253-vector corpus (§6.1, §7) |
+| **W** | Wire-primitives conformance | Core specification §4 (wire format), §7 (cryptographic suites), §6 (profile invariants) | Yes — the 255-vector corpus (§6.1, §7) |
 | **H** | Handshake conformance (Standard profile) | Handshake binding `../10_handshake_binding.md`; core specification §3, §7 | Yes — the five handshake KATs (§6.3) |
 | **B** | Bridge and companion conformance | NPAMP-BRIDGE §9 and the numbered §Conformance clause of each claimed companion document | **No** — no bridge vectors exist in the corpus (§5.2, §8.2) |
 
@@ -249,8 +249,8 @@ growth (§8.2).
 
 The canonical corpus is `../../test-vectors/v1/conformance-corpus.json` —
 `algorithm` "npamp_00", `schemaVersion` "1.0.0", `specRevision`
-"draft-bubblefish-npamp-01", 253 test cases in 8 test groups. Its SHA-256
-(`d64b943797499d79b8b3aa538c6862a65649bd8315c8bb556f31b786a3dd472b`) is pinned
+"draft-bubblefish-npamp-01", 255 test cases in 8 test groups. Its SHA-256
+(`803eadf5ea5033115be620b49adccbc459f1bb60cbcf7444bcc3539dc8f41a24`) is pinned
 in `../../PIN.json` and `../../MANIFEST.sha256`; `../../scripts/verify-pins.ps1`
 recomputes and compares every pinned hash and exits non-zero on drift. The
 grading runner embeds a byte-identical copy
@@ -306,7 +306,7 @@ The composition below is stated from the corpus file itself (all groups carry
 
 | Operation | Cases | Valid | Invalid | The MUST-reject cases assert |
 |---|---|---|---|---|
-| `header.decode` | 3 | 1 | 2 | Reserved octet non-zero; CRC32C mismatch |
+| `header.decode` | 5 | 1 | 4 | Reserved octet non-zero; CRC32C mismatch; bad frame magic; unsupported wire version |
 | `header.encode` | 1 | 1 | 0 | — |
 | `crc32c` | 1 | 1 | 0 | — |
 | `tlv.decode` | 2 | 1 | 1 | Unknown TLV type with high bit 0x8000 set |
@@ -314,12 +314,12 @@ The composition below is stated from the corpus file itself (all groups carry
 | `aead.open` | 40 | 39 | 1 | Tampered GCM authentication tag |
 | `hkdf.expand` | 163 | 163 | 0 | — (83 SHA-256, 80 SHA-384, Wycheproof-derived) |
 | `profile.check` | 4 | 3 | 1 | Sovereign MUST NOT accept X25519MLKEM768 |
-| **Total** | **253** | **248** | **5** | |
+| **Total** | **255** | **248** | **7** | |
 
-Five of the 253 cases are negative (MUST-reject) cases. They cover four
+Seven of the 255 cases are negative (MUST-reject) cases. They cover six
 distinct rejection rules of the core specification: reserved-octet-non-zero,
-CRC mismatch, forward-incompatible TLV, AEAD tag mismatch — plus the Sovereign
-KEM-refusal invariant.
+CRC mismatch, bad frame magic, unsupported wire version, forward-incompatible
+TLV, AEAD tag mismatch — plus the Sovereign KEM-refusal invariant.
 
 ## 8. Coverage gaps — what the current corpus does NOT cover
 

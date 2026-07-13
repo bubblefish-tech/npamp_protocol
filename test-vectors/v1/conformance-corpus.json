@@ -53,6 +53,32 @@
             "MustReject",
             "BadCRC"
           ]
+        },
+        {
+          "tcId": 4,
+          "requirement": "R10/header/magic-MUST-reject",
+          "comment": "magic octet 0 'N' (0x4E) set to 'X' (0x58); CRC32C recomputed over the corrupted 21-octet prefix so the frame passes CRC and fails specifically on magic. Reference-generated and reference-verified to return ErrBadMagic (impl/go frame.go).",
+          "in": {
+            "frame": "5850414d2000010000000000000000000000000000f312de9b0000000000000000000000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "BadMagic"
+          ]
+        },
+        {
+          "tcId": 5,
+          "requirement": "R10/header/version-MUST-reject",
+          "comment": "octet-4 version nibble 0x2 set to 0x3 (unsupported wire version); CRC32C recomputed so the frame passes CRC and magic and fails specifically on version. Reference-generated and reference-verified to return ErrBadVersion (impl/go frame.go).",
+          "in": {
+            "frame": "4e50414d3000010000000000000000000000000000e19864e00000000000000000000000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "BadVersion"
+          ]
         }
       ]
     },

@@ -2,6 +2,14 @@
 #
 #   schemas     - scripts/validate-schemas.py: every vector in test-vectors/v1
 #                 validates against its JSON Schema (draft 2020-12).
+#   registries  - scripts/validate-registries.py: every registries/*.csv code-point
+#                 table validates against its registries/schemas/*.schema.json (draft
+#                 2020-12) AND passes a duplicate/partial-overlap code-point pass that
+#                 JSON Schema cannot express (single-field cross-row uniqueness).
+#   cddl        - schema/npamp-wire.cddl (the N-PAMP/2 binary-wire data model, RFC
+#                 8610) parses well-formed under the reference tool — Carsten Bormann's
+#                 `cddl` gem (`cddl <file> generate` exits non-zero on any parse error;
+#                 the anweiss/cddl Rust port mis-lexes hex uints and is not used here).
 #   conformance - the Go conformance runner (harness/runner, `npamp-conform`) drives
 #                 the in-tree Go reference adapter (harness/adapters/go) over the
 #                 embedded corpus; any MUST failure exits non-zero. Invocation per
@@ -19,9 +27,20 @@
 # actions/upload-artifact@v7.
 name: conformance
 
+# Trigger scoping avoids the push-event + pull_request-event double-run: a push to a
+# branch that has an open PR previously fired TWO identical runs. `push` now runs only
+# for `main` (post-merge verification); PR branches are covered by `pull_request`.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# One in-flight run per ref. A newer PR sync cancels the older in-progress run of the
+# same group (saves CI on rapid re-pushes); main-branch runs are never cancelled, so
+# every merged commit is fully verified.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -42,6 +61,38 @@ jobs:
       - name: Validate vectors against schemas
         run: python scripts/validate-schemas.py
 
+  registries:
+    name: registry CSV schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      # validate-registries.py exits 2 (SKIP) when jsonschema is absent, mirroring
+      # validate-schemas.py; install it so the gate validates instead of skipping.
+      - name: Install jsonschema
+        run: python -m pip install jsonschema
+      - name: Validate registry CSVs against schemas (+ duplicate/overlap pass)
+        run: python scripts/validate-registries.py
+
+  cddl:
+    name: wire-format CDDL well-formedness (RFC 8610)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Carsten Bormann's cddl gem is the RFC 8610 reference implementation. `cddl
+      # <file> generate` runs a full parse of the whole grammar (then instantiates the
+      # root rule) and exits non-zero on any parse error; the anweiss/cddl Rust port
+      # mis-lexes RFC-8610-legal hex uints (0x0000) and cannot parse this file.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - name: Install cddl reference tool
+        run: gem install cddl --no-document
+      - name: Check schema/npamp-wire.cddl is well-formed
+        run: cddl schema/npamp-wire.cddl generate > /dev/null
+
   conformance:
     name: conformance runner (Go reference adapter)
     runs-on: ubuntu-latest
@@ -60,7 +111,7 @@ jobs:
       - name: Embedded corpus equals the pinned corpus
         run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
       - name: Build runner (npamp-conform)
-        run: go build -C harness/runner -o npamp-conform .
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
       - name: Build Go reference adapter
         run: go build -C harness/adapters/go -o npamp-adapter-go .
       - name: Run conformance suite
@@ -87,6 +138,9 @@ jobs:
   rust:
     name: rust reference build + KAT/conformance tests
     runs-on: ubuntu-latest
+    env:
+      # Build the Go runner standalone even if an ambient Go workspace is present.
+      GOWORK: "off"
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -96,11 +150,33 @@ jobs:
         run: cargo build --manifest-path harness/adapters/rust/Cargo.toml
       - name: Run rust tests (conformance + handshake KAT)
         run: cargo test --manifest-path impl/rust/Cargo.toml
+      # Drive the SAME embedded corpus (incl. tc4 wrong-magic + tc5 wrong-version)
+      # through the Rust adapter via the Go runner, so those MUST-reject frames gate
+      # the Rust reference impl too. Ops the Rust adapter does not provide
+      # (tlv.decode, profile.check) grade Unimplemented (not Fail).
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: harness/runner/go.mod
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
+      - name: Run conformance suite against the Rust adapter
+        run: ./harness/runner/npamp-conform run --testee "./harness/adapters/rust/target/debug/npamp-adapter" --junit conformance-report-rust.xml
+      - name: Upload Rust conformance JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit-rust
+          path: conformance-report-rust.xml
 
   swift:
     name: swift reference build + tests
     runs-on: ubuntu-latest
     container: swift:6.0
+    env:
+      # Build the Go runner standalone even if an ambient Go workspace is present.
+      GOWORK: "off"
     steps:
       - uses: actions/checkout@v7
       - name: Build swift reference implementation
@@ -109,6 +185,29 @@ jobs:
         run: swift build --package-path harness/adapters/swift-adapter
       - name: Run swift handshake KAT (npamp-handshake-kat validates the in-repo vectors)
         run: swift run --package-path impl/swift npamp-handshake-kat test-vectors/v1
+      # Drive the SAME embedded corpus (incl. tc4 wrong-magic + tc5 wrong-version)
+      # through the Swift adapter via the Go runner, inside this swift:6.0 container so
+      # the corpus gates the Swift reference impl on the exact toolchain that just built
+      # the adapter. actions/setup-go@v6 provisions Go inside the container. Ops the
+      # Swift adapter does not provide (tlv.decode, hkdf.expand, profile.check) grade
+      # Unimplemented (not Fail).
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: harness/runner/go.mod
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
+      - name: Locate the built Swift adapter binary
+        run: echo "SWIFT_ADAPTER_BIN=$(swift build --package-path harness/adapters/swift-adapter --show-bin-path)/npamp-adapter" >> "$GITHUB_ENV"
+      - name: Run conformance suite against the Swift adapter
+        run: ./harness/runner/npamp-conform run --testee "$SWIFT_ADAPTER_BIN" --junit conformance-report-swift.xml
+      - name: Upload Swift conformance JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit-swift
+          path: conformance-report-swift.xml
 
   impl-go:
     name: go reference build + handshake/KAT + sdk tests

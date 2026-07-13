@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/bridge_protocol_ids.schema.json",
+  "title": "N-PAMP Bridge Protocol-ID Registry",
+  "description": "Schema for the JSON representation of registries/bridge_protocol_ids.csv: an array of row objects. protocol_id is EITHER a single 8-bit value (0x01) OR an inclusive range low-high of two 8-bit values (0x05-0x0F); accepted via oneOf. carriage_class and mapping_reference may be '--' for reserved/range rows. assignment_policy is constrained to the observed RFC 8126 policy tokens. Wrong-format protocol_id, missing column, out-of-enum assignment_policy, and empty name/description are caught here; DUPLICATE / OVERLAPPING protocol_id values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["protocol_id", "name", "carriage_class", "mapping_reference", "assignment_policy", "description"],
+    "properties": {
+      "protocol_id": {
+        "type": "string",
+        "oneOf": [
+          { "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Single 8-bit bridge protocol id, 2 hex digits (e.g. 0x01)." },
+          { "pattern": "^0x[0-9A-Fa-f]{2}-0x[0-9A-Fa-f]{2}$", "description": "Inclusive range low-high of two 8-bit ids (e.g. 0x05-0x0F)." }
+        ],
+        "description": "A single 2-hex protocol id OR an inclusive low-high range of two 2-hex ids."
+      },
+      "name": { "type": "string", "minLength": 1, "description": "Protocol name or marker such as (reserved) / (unassigned) / (experimental) / (private use); MUST be non-empty." },
+      "carriage_class": { "type": "string", "minLength": 1, "description": "Carriage class (JSONRPC, HTTP, STREAM, ...) or '--' for reserved/range rows; MUST be non-empty." },
+      "mapping_reference": { "type": "string", "minLength": 1, "description": "Mapping-document reference (e.g. NPAMP-MAP-MCP) or '--'; MUST be non-empty." },
+      "assignment_policy": { "type": "string", "enum": ["Not assignable", "Specification Required", "No registration"], "description": "RFC 8126 assignment policy governing this id or range." },
+      "description": { "type": "string", "minLength": 1, "description": "Human-readable description; MUST be non-empty." }
+    }
+  }
+}

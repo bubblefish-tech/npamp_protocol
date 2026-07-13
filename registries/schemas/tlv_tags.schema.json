@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/tlv_tags.schema.json",
+  "title": "N-PAMP TLV-Tag Registry",
+  "description": "Schema for the JSON representation of registries/tlv_tags.csv: an array of row objects. The tag column is EITHER a single 8-bit tag (0x01), a single 16-bit tag, OR an inclusive range of two 16-bit tags (0x8000-0xFFFF); accepted via oneOf. The length column is 'var', a non-negative integer as a decimal string, or '--' (for the reserved extension range). Wrong-format tag, bad length token, missing column, and empty name/description are caught here; DUPLICATE / OVERLAPPING tag values are caught by the companion validate-registries.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["tag", "name", "length", "description"],
+    "properties": {
+      "tag": {
+        "type": "string",
+        "oneOf": [
+          { "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Single 8-bit TLV tag, 2 hex digits (e.g. 0x01)." },
+          { "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "Single 16-bit TLV tag, 4 hex digits." },
+          { "pattern": "^0x[0-9A-Fa-f]{4}-0x[0-9A-Fa-f]{4}$", "description": "Inclusive range low-high of two 16-bit tags (e.g. 0x8000-0xFFFF)." }
+        ],
+        "description": "A single 8-bit or 16-bit TLV tag, or an inclusive low-high range of two 16-bit tags."
+      },
+      "name": { "type": "string", "minLength": 1, "description": "TLV name or (reserved) marker; MUST be non-empty." },
+      "length": { "type": "string", "pattern": "^(var|--|[0-9]+)$", "description": "Value length in octets: 'var' (variable), a non-negative decimal integer, or '--' (not applicable, reserved range)." },
+      "description": { "type": "string", "minLength": 1, "description": "Human-readable description; MUST be non-empty." }
+    }
+  }
+}

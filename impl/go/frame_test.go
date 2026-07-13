@@ -3,6 +3,8 @@ package npamp
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"hash/crc32"
 	"testing"
 )
@@ -46,6 +48,44 @@ func TestBadMagicAfterValidCRC(t *testing.T) {
 	var f Frame
 	if err := f.UnmarshalBinary(buf); err != ErrBadMagic {
 		t.Fatalf("want ErrBadMagic, got %v", err)
+	}
+}
+
+func TestBadVersionAfterValidCRC(t *testing.T) {
+	buf, _ := ping().MarshalBinary()
+	buf[4] = (buf[4] & 0x0F) | (0x3 << 4)                                         // set version nibble to 3, preserve flags
+	binary.BigEndian.PutUint32(buf[21:25], crc32.Checksum(buf[0:21], castagnoli)) // re-validate CRC over mutated prefix
+	var f Frame
+	if err := f.UnmarshalBinary(buf); !errors.Is(err, ErrBadVersion) {
+		t.Fatalf("want ErrBadVersion, got %v", err)
+	}
+}
+
+func TestWireVectorRejectsBadMagic(t *testing.T) {
+	// Exact conformance-corpus header.decode tc4 frame: valid CRC over its own
+	// prefix, wrong magic (5850414d). Pins the corpus bytes to the reference
+	// decoder — dropping the magic check makes this fail.
+	buf, err := hex.DecodeString("5850414d2000010000000000000000000000000000f312de9b0000000000000000000000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f Frame
+	if err := f.UnmarshalBinary(buf); !errors.Is(err, ErrBadMagic) {
+		t.Fatalf("want ErrBadMagic, got %v", err)
+	}
+}
+
+func TestWireVectorRejectsBadVersion(t *testing.T) {
+	// Exact conformance-corpus header.decode tc5 frame: valid magic and CRC over
+	// its own prefix, wrong version nibble (0x3). Pins the corpus bytes to the
+	// reference decoder — dropping the version check makes this fail.
+	buf, err := hex.DecodeString("4e50414d3000010000000000000000000000000000e19864e00000000000000000000000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f Frame
+	if err := f.UnmarshalBinary(buf); !errors.Is(err, ErrBadVersion) {
+		t.Fatalf("want ErrBadVersion, got %v", err)
 	}
 }
 
