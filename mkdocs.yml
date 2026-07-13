@@ -228,6 +228,10 @@ nav:
           - "Mapping: MS Agent Framework": spec/companion/6e_map_msagentfw.md
           - "Mapping: AGNTCY": spec/companion/6f_map_agntcy.md
           - "Mapping: NLIP": spec/companion/70_map_nlip.md
+          - "Channel ops: Stream": spec/companion/80_stream_channel.md
+          - "Channel ops: Memory": spec/companion/81_memory_channel.md
+          - "Channel ops: Sensory": spec/companion/82_sensory_channel.md
+          - "Channel ops: Spatial": spec/companion/83_spatial_channel.md
   - Registries: spec/07_tlv_registry.md
   - Conformance:
       - Requirements: spec/companion/55_conformance_requirements.md

@@ -69,6 +69,21 @@ define required behavior and make no statement about any implementation.
 |---|---|---|---|
 | `56_worked_example_handshake.md` | NPAMP-EX-HANDSHAKE | Developer walk-through of one complete Standard-profile association: the four handshake flights (CLIENT_HELLO → SERVER_HELLO + SERVER_AUTH → CLIENT_AUTH), the five transcript points, every key-schedule stage, both CertVerify/Finished authentications, and one application frame exchange — every byte grounded in the pinned `test-vectors/v1` KATs, the conformance corpus, and the 2026-06-23 live interop capture, with per-value provenance tags. Informative; defines no wire behavior, consumes no code points. | **DRAFT** |
 
+### Native channel operations
+
+Operational companions for the substrate's own semantic channels. Each defines one
+channel's native `0x0100`+ application frame types, their deterministic-CBOR bodies,
+and a conformance clause — distinct from Bridge carriage, which encapsulates *foreign*
+protocols. Frame bodies use deterministic CBOR (RFC 8949), the same native-channel
+encoding as NPAMP-DISC.
+
+| File | Short name | Defines | Status |
+|---|---|---|---|
+| `80_stream_channel.md` | NPAMP-STREAM | Multiplexed full-duplex sub-streams over the Stream channel `0x000C`: OPEN/DATA/CLOSE/RESET/WINDOW_UPDATE (`0x0100`–`0x0104`), QUIC-absolute-offset two-level flow control, per-sub-stream lifecycle. Distinct from NPAMP-CC-STREAM (Bridge-channel foreign-reply streaming). | **DRAFT** |
+| `81_memory_channel.md` | NPAMP-MEMORY | Native memory operations over the Memory channel `0x0001`: per-operation request/result frame pairs (`0x0100`–`0x010D`), a structured `MEMORY_ERROR` (`0x010E`) that preserves a governance-hold outcome as a distinct result, evict/revive (`0x0035`–`0x0036`), and in-body correlation (consumes no TLV tag). | **DRAFT** |
+| `82_sensory_channel.md` | NPAMP-SENSORY | Bulk telemetry over the Sensory channel `0x0009`: batched typed observations, subscribe/ack/unsubscribe, and consumer-driven credit backpressure (`0x0100`–`0x0105`); low-priority posture. Min profile High. | **DRAFT** |
+| `83_spatial_channel.md` | NPAMP-SPATIAL | High-frequency physical-world state for robotics and IoT over the Spatial channel `0x0013`: coordinate-frame definition, transforms, pose/state/occupancy updates, and snapshot queries (`0x0100`–`0x0107`), grounded in ROS REP-103/REP-105 frame conventions. Min profile High. | **DRAFT** |
+
 ### Thin per-protocol mappings (one short document each, organized by class)
 
 Each is a brief registration: a `protocol_id`, the carriage class it uses, the foreign
