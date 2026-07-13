@@ -118,6 +118,10 @@ func TestCBORDecodeRejectsNonDeterministic(t *testing.T) {
 		{"truncated_uint8", []byte{0x18}, errCBORTruncated},
 		{"truncated_bytestring", []byte{0x42, 0x00}, errCBORTruncated},
 		{"empty", []byte{}, errCBORTruncated},
+		// Huge array/map counts must be rejected before allocation (no panic / DoS).
+		{"huge_array_count_2p63", []byte{0x9b, 0x80, 0, 0, 0, 0, 0, 0, 0}, errCBORTruncated},
+		{"huge_array_count_max", []byte{0x9b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, errCBORTruncated},
+		{"huge_map_count_2p63", []byte{0xbb, 0x80, 0, 0, 0, 0, 0, 0, 0}, errCBORTruncated},
 	}
 	for _, c := range cases {
 		_, err := cborDecodeTop(c.in)

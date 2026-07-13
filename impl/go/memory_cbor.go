@@ -241,6 +241,12 @@ func cborDecode(b []byte) (any, int, error) {
 		}
 		return string(payload), end, nil
 	case 4: // array
+		// Each element is at least one byte, so a declared count larger than the
+		// remaining input cannot be satisfied. Reject before allocating on the
+		// attacker-controlled count (guards against a huge-count DoS).
+		if arg > uint64(len(b)-n) {
+			return nil, 0, errCBORTruncated
+		}
 		out := make([]any, 0, arg)
 		off := n
 		for i := uint64(0); i < arg; i++ {
@@ -253,6 +259,12 @@ func cborDecode(b []byte) (any, int, error) {
 		}
 		return out, off, nil
 	case 5: // map
+		// Each entry is a key plus a value — at least two bytes — so a declared
+		// count larger than the remaining input cannot be satisfied. Reject before
+		// allocating on the attacker-controlled count (huge-count DoS guard).
+		if arg > uint64(len(b)-n) {
+			return nil, 0, errCBORTruncated
+		}
 		cm := &cborMap{entries: make([]cborEntry, 0, arg)}
 		off := n
 		var prevKeyEnc []byte
