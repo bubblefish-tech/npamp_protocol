@@ -1,6 +1,6 @@
 {
   "canonical_draft": "ietf/draft-bubblefish-npamp-latest.md",
-  "canonical_draft_sha256": "72f79732e930c45dc018c538404fbf8496fed4a25b23064d135587f34030e913",
+  "canonical_draft_sha256": "700c41c5a28e660e7f3cb5b3a134e23d3ba74d7c8e0b9b381a4efaa29fb5313c",
   "conformance_corpus": "test-vectors/v1/conformance-corpus.json",
   "conformance_corpus_sha256": "807a2d8cd8064734f4d53cb5d2c01d0b3635d354440b697b30c3bd300f1a073e",
   "manifest": "MANIFEST.sha256",

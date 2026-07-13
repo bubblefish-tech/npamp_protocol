@@ -95,34 +95,32 @@ the Stream channel; an implementation MUST NOT reuse them to carry stream payloa
 | `0x0009` | PATH_RESPONSE | Path-migration response. |
 | `0x000A` | FLOW_UPDATE | Connection-level flow-control credit update. |
 
-**Channel-specific frame types.** The core specification states that channel-specific
-frame types begin at **`0x0100`** within each channel's frame namespace (core
-specification §4.6; `../04_frame_types.md`), and that per-channel code points at or
-above `0x0100` are the conventional home for a channel's own frame types.
+**Channel-specific frame types.** The core specification partitions each channel's
+frame-type namespace into four bands (core specification §4.6;
+`../04_frame_types.md`): all-channel reserved types `0x0000`–`0x000A`; a
+future-core-additions gap `0x000B`–`0x002F`; the companion-extension band
+`0x0030`–`0x00FF`; and channel-specific application frame types `0x0100`–`0xFFFF`.
 
-At draft-01, the core specification **defines no channel-specific frame type for the
-Stream channel**: the registry line, the all-channel reserved types above, and the
+At draft-02, the core specification **reserves the frame-type range
+`0x0030`–`0x0034` for the Stream channel** in the companion-extension band (core
+specification Extension Points, "Reserved Frame-Type Ranges"). This range was added
+in -02 to give a forthcoming Stream companion a reserved home for sub-stream
+lifecycle and flow-control extension frames. The core
+specification itself still **defines no concrete Stream frame**: the registry line,
+the all-channel reserved types above, the reserved `0x0030`–`0x0034` range, and the
 general channel machinery are the whole of what the core specification says about
-`0x000C`. In particular, the reserved per-channel companion frame-type ranges the
-draft enumerates (`0x0035`–`0x0036`, `0x0060`–`0x0063`, `0x0080`, `0x0090`,
-`0x00A0`–`0x00A3`, `0x00B0`–`0x00B4`, `0x00C0`–`0x00C4`; core specification
-Extension Points, "Reserved Frame-Type Ranges") are reserved for **other** channels
-(Memory, Capability, Control, Audit, Settlement/Audit, Governance, and Immune
-respectively). **No reserved frame-type range is assigned to the Stream channel by
-the core specification.** Concrete per-sub-stream frame types (for example a
-sub-stream open, data, or close) are therefore not defined by the core specification
-and would be introduced by a future core revision or by a companion specification;
-this page MUST NOT invent them. A companion or future-core frame type for this
-channel SHALL be placed in the channel-specific `0x0100+` namespace (core
-specification §4.6).
+`0x000C`. Concrete per-sub-stream frame types (for example a sub-stream open, data,
+close, reset, or window update) are defined by a **companion specification**, which
+places its operational frames in the channel-specific `0x0100`+ application band and
+MAY use the reserved `0x0030`–`0x0034` range for sub-stream lifecycle and
+flow-control extensions; this interface page MUST NOT invent them.
 
-> **Recorded editorial inconsistency in -00 (carried, not corrected here).** The
-> core specification's §4.6 says channel-specific frame types begin at `0x0100`,
-> while the same section also says code points "at or above `0x0030`" that are not
-> otherwise reserved are for extensions, and the companion reserved ranges sit below
-> `0x0100` (`0x0035`…`0x00C4`). This inconsistency is present in the submitted draft
-> and is noted here for a future revision (see `../04_frame_types.md`); this page
-> does not silently rewrite the authoritative text.
+> **Frame-type namespace resolved in -02.** Earlier drafts stated both that
+> channel-specific frame types "begin at `0x0100`" and that companion code points
+> "at or above `0x0030`" are reserved, with the companion ranges (`0x0035`…`0x00C4`)
+> sitting below `0x0100`. draft-02 restates core §4.6 as the explicit four-band
+> partition above and reserves `0x0030`–`0x0034` for this channel; no code point
+> moved (see `../04_frame_types.md`).
 
 ## 4. Interface and operations (public level)
 
@@ -152,7 +150,8 @@ implementation obtains by enabling channel `0x000C` is the following:
    connection-level flow-control credit update (core specification §4.6;
    `../04_frame_types.md`); the concrete per-sub-stream flow-control encoding is a
    property the draft asserts for this channel but does not further enumerate at
-   draft-01, and this page does not supply one.
+   the core level, and this interface page does not supply one (a Stream companion
+   specification does).
 
 5. **Confidentiality and integrity.** Every frame on the channel is AEAD-protected
    and keyed by the channel's own per-direction traffic keys (core specification §5,
@@ -160,8 +159,9 @@ implementation obtains by enabling channel `0x000C` is the following:
    `KEY_UPDATE_ACK` frames (§3); connection liveness, close, path migration, and
    error signalling use the all-channel reserved frames (§3) with their core meaning.
 
-What the core specification does **not** define for this channel at draft-01, and
-what this page therefore does not specify, includes: the octet layout of a sub-stream
+What the core specification does **not** define for this channel at the core level,
+and what this interface page therefore does not specify (a Stream companion
+specification does), includes: the octet layout of a sub-stream
 open/data/close operation, a sub-stream identifier field, media codecs or container
 formats, a file-transfer manifest, and any resumption or cancellation mechanism for a
 native stream. Streamed *foreign-protocol* replies do have a resumption/cancellation
@@ -253,10 +253,11 @@ if, for channel `0x000C`, it also conforms to the core specification and:
    MUST NOT use `0x0000` as a frame type (§3; core specification §4.6);
 
 4. Places any channel-specific frame type it defines for this channel in the
-   `0x0100+` namespace, and does not treat the core specification as defining any
-   Stream-specific frame type at draft-01 (the core specification defines none) nor
-   assume any reserved frame-type range for this channel (the core specification
-   reserves none) (§3; core specification §4.6, Extension Points);
+   `0x0100+` application namespace, uses the reserved `0x0030`–`0x0034` range only
+   for a companion's sub-stream lifecycle and flow-control extension frames, and
+   does not treat the core specification as defining any concrete Stream frame (the
+   core specification defines none; -02 reserves `0x0030`–`0x0034` for a companion)
+   (§3; core specification §4.6, Extension Points);
 
 5. Does not use channel `0x000C` for foreign-agentic-protocol encapsulation — that is
    the Bridge channel `0x000D` and NPAMP-BRIDGE — and does not apply NPAMP-CC-STREAM's

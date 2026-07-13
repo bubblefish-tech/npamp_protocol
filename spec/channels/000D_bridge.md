@@ -105,11 +105,13 @@ The core specification's Reserved Frame-Type Ranges table (core specification §
 Extension Points) reserves several sub-`0x0100` code-point ranges for companion
 extensions — but **none of those ranges is assigned to the Bridge channel**; the
 reserved ranges there belong to the Memory, Capability, Control, Audit,
-Settlement/Audit, Governance, and Immune channels. The core specification records a
-known editorial inconsistency in -00 between the "`0x0100`" channel-specific
-boundary and the sub-`0x0100` reserved ranges; that inconsistency is carried, not
-corrected, by the core references (`../04_frame_types.md`) and does not affect this
-channel, whose operational frames sit at `0x0100`+.
+Settlement/Audit, Governance, and Immune channels. draft-02 restates core §4.6 as
+an explicit four-band frame-type partition (all-channel `0x0000`–`0x000A`;
+future-core `0x000B`–`0x002F`; companion-extension band `0x0030`–`0x00FF`;
+application `0x0100`–`0xFFFF`), resolving the earlier inconsistency between the
+"`0x0100`" boundary and the sub-`0x0100` reserved ranges without moving any code
+point (`../04_frame_types.md`). This channel is unaffected; its operational frames
+sit at `0x0100`+.
 
 ### 3.3 Operational frame types (defined by NPAMP-BRIDGE, not the core)
 

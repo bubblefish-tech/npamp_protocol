@@ -64,8 +64,8 @@ genuine wire-major bump (to `/3`). This is NOT a draft version — the document 
   the new vectors; verify-pins PINS OK.
 * Descriptive prose that names the draft revision ("the draft-00 binding", KAT `spec`/`description`
   fields) is a separate concern and is intentionally left as-is by this decision.
-* Live consumers (a pinned Nexus SDK, the BubbleClaw TS fork) carry the old signature until they adopt
-  the SDK version that includes this change; because it is wire-breaking, they must adopt it together
-  to remain interoperable with each other.
+* Any already-deployed consumer pinned to the old signature carries it until it adopts an SDK
+  version that includes this change; because the change is wire-breaking, such consumers must
+  adopt it together to remain interoperable with each other.
 
 Commit: a94bfd5 (npamp_protocol).

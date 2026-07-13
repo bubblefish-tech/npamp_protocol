@@ -308,6 +308,7 @@ handshake-frame-types = (
 ; Channel-specific frame types begin at 0x0100 (impl/go/frametypes.go:22,
 ; ChannelSpecificBase). Companion-reserved ranges (spec/04:37-45, spec/09:11-20,
 ; frame_types_reserved.csv:13-19) — modeled as-registered, NOT "fixed":
+frame-type-stream-lifecycle  = 0x0030 .. 0x0034   ; Stream sub-stream lifecycle/flow
 frame-type-mem-evict-revive  = 0x0035 .. 0x0036   ; Memory eviction/revive
 frame-type-cap-token         = 0x0060 .. 0x0063   ; Capability token
 frame-type-ctrl-flow-ext     = 0x0080           ; Control flow-extension

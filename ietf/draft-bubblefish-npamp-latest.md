@@ -1,7 +1,7 @@
 ---
 title: "N-PAMP: Native Post-Quantum Agent Messaging Protocol"
 abbrev: N-PAMP
-docname: draft-bubblefish-npamp-01
+docname: draft-bubblefish-npamp-02
 category: info
 ipr: trust200902
 submissionType: independent
@@ -327,10 +327,24 @@ on every channel:
 | 0x000A | FLOW_UPDATE | Connection-level flow-control credit update. |
 {: title="Reserved frame types (all channels)"}
 
-Channel-specific frame types begin at 0x0100 within each channel's frame
-namespace. Frame-type code points at or above 0x0030 that are not reserved here,
-and in particular the ranges enumerated in {{extension-points}}, are reserved
-for extensions defined in companion specifications.
+Frame types are interpreted within the channel on which they appear, as
+identified by the Channel ID field of the frame header ({{wire-format}}). A given
+frame-type value MAY have a different meaning on different channels, except for
+the all-channel reserved types above, which have the same meaning on every
+channel. Each channel's frame-type namespace is partitioned as follows:
+
+- 0x0000-0x000A: reserved all-channel frame types (the table above); the same
+  meaning on every channel.
+- 0x000B-0x002F: unassigned; reserved to this specification for future
+  all-channel or core additions. A frame whose type is in this range and is not
+  defined by this specification MUST be treated as an unknown frame type.
+- 0x0030-0x00FF: companion-extension band. Frame types in this range are reserved
+  for extensions defined in companion specifications and are scoped to a specific
+  channel; the individual reservations are enumerated in {{extension-points}}.
+- 0x0100-0xFFFF: channel-specific application frame types. Each channel defines
+  its own frame types in this range; the same value on two different channels
+  denotes two unrelated frames. The Control channel's handshake frame types
+  (below) occupy 0x0100-0x0103.
 
 The Control channel (0x0000) assigns the following channel-specific frame types for
 the N-PAMP handshake ({{handshake}}):
@@ -688,18 +702,21 @@ defined in companion specifications.
 
 ## Reserved Frame-Type Ranges
 
-The following per-channel frame-type code points are reserved for extensions
-defined in companion specifications:
+All companion frame-type reservations lie within the companion-extension band
+0x0030-0x00FF defined in {{frame-types}}, and each is scoped to a specific
+channel. The following per-channel frame-type code points are reserved for
+extensions defined in companion specifications:
 
-| Range | Reserved for |
-|---|---|
-| 0x0035 - 0x0036 | Memory-channel eviction and revive extension frames |
-| 0x0060 - 0x0063 | Capability-channel token extension frames |
-| 0x0080 - 0x0080 | Control-channel flow-extension frames |
-| 0x0090 - 0x0090 | Audit-channel per-frame integrity-extension frames |
-| 0x00A0 - 0x00A3 | Settlement/Audit batch-commitment extension frames |
-| 0x00B0 - 0x00B4 | Governance-channel quorum extension frames |
-| 0x00C0 - 0x00C4 | Immune-channel propagation extension frames |
+| Range | Channel | Reserved for |
+|---|---|---|
+| 0x0030 - 0x0034 | Stream (0x000C) | Stream-channel sub-stream lifecycle and flow-control extension frames |
+| 0x0035 - 0x0036 | Memory (0x0001) | Memory-channel eviction and revive extension frames |
+| 0x0060 - 0x0063 | Capability (0x0002) | Capability-channel token extension frames |
+| 0x0080 - 0x0080 | Control (0x0000) | Control-channel flow-extension frames |
+| 0x0090 - 0x0090 | Audit (0x000B) | Audit-channel per-frame integrity-extension frames |
+| 0x00A0 - 0x00A3 | Settlement/Audit (0x0007/0x000B) | Settlement/Audit batch-commitment extension frames |
+| 0x00B0 - 0x00B4 | Governance (0x0004) | Governance-channel quorum extension frames |
+| 0x00C0 - 0x00C4 | Immune (0x0005) | Immune-channel propagation extension frames |
 {: title="Reserved frame-type ranges (companion specifications)"}
 
 ## Reserved TLV Tags
@@ -911,6 +928,30 @@ can invalidate transcript and integrity computations across peers.
 {:numbered="false"}
 
 The author thanks the reviewers of earlier N-PAMP drafts for their feedback.
+
+# Changes Since draft-bubblefish-npamp-01
+{:numbered="false"}
+
+This revision is editorial and makes no change to the wire format; no code point
+is added, removed, or renumbered, and every draft-01 implementation remains
+conformant.
+
+- Frame-type namespace. Restates the frame-type namespace description in
+  {{frame-types}} as an explicit four-band partition (0x0000-0x000A all-channel
+  reserved; 0x000B-0x002F reserved for future core additions; 0x0030-0x00FF the
+  companion-extension band; 0x0100-0xFFFF channel-specific application frame
+  types), resolving an inconsistency in draft-01 between the "begin at 0x0100"
+  statement and the companion reserved ranges that sit below 0x0100. A frame type
+  has always been interpreted within its channel, scoped by the Channel ID field
+  of the frame header; this revision states that partition explicitly. No code
+  point moves.
+- Stream reserved range. Reserves frame-type range 0x0030-0x0034 for the Stream
+  channel (0x000C) in the companion-extension band ({{extension-points}}); this
+  gives a forthcoming Stream companion a reserved home for sub-stream lifecycle and
+  flow-control extension frames. The range is reserved for a companion
+  specification, and this document defines no frame within it.
+- Reserved-range table. Adds a Channel column to the Reserved Frame-Type Ranges
+  table ({{extension-points}}), making each range's owning channel explicit.
 
 # Changes Since draft-bubblefish-npamp-00
 {:numbered="false"}

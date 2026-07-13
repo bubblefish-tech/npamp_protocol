@@ -10,6 +10,7 @@ frame_type,name,description
 0x0008,PATH_CHALLENGE,"Path-migration challenge."
 0x0009,PATH_RESPONSE,"Path-migration response."
 0x000A,FLOW_UPDATE,"Connection-level flow-control credit update."
+0x0030-0x0034,(reserved),"Reserved for companion specifications: Stream-channel sub-stream lifecycle and flow-control extension frames."
 0x0035-0x0036,(reserved),"Reserved for companion specifications: Memory-channel eviction and revive extension frames."
 0x0060-0x0063,(reserved),"Reserved for companion specifications: Capability-channel token extension frames."
 0x0080-0x0080,(reserved),"Reserved for companion specifications: Control-channel flow-extension frames."
