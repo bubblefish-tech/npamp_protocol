@@ -113,10 +113,10 @@ cross-channel reserved ranges.
 
 A Discovery frame's payload (the octets after the 36-octet core frame header and any
 extension TLVs, and before the AEAD tag) is a single **deterministically encoded CBOR**
-object as defined by core specification §4.5 and §11.10 (deterministic CBOR, RFC 8949).
+object as defined by core specification §4.5 and §11.9 (deterministic CBOR, RFC 8949).
 The payload MUST be a CBOR map whose keys are the unsigned integers defined in §4.2,
 §5, §6, and §7 for the relevant frame type. A sender MUST produce the deterministic
-encoding (core specification §11.10): byte-identical output for identical inputs, with
+encoding (core specification §11.9): byte-identical output for identical inputs, with
 the canonical key ordering and shortest-form integer encoding RFC 8949 §4.2 requires.
 A receiver MUST reject (DISCO_ERROR, code `MalformedPayload`) any Discovery frame whose
 payload is not a valid deterministic-CBOR map, or whose payload contains a required key
