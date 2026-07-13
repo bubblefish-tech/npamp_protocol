@@ -1,7 +1,7 @@
-# npamp_00 Conformance Tool (`npamp-conform`)
+# N-PAMP Conformance Tool (`npamp-conform`)
 
 A single-binary, language-agnostic conformance tester for **N-PAMP**
-(`draft-bubblefish-npamp-00`). Point it at your implementation and get a graded,
+(`draft-bubblefish-npamp-01`). Point it at your implementation and get a graded,
 spec-cited PASS/FAIL report.
 
 It checks an implementation against a versioned **vector corpus** covering the wire
@@ -38,7 +38,7 @@ A run prints a per-operation summary, a spec-clause citation for every failure, 
 
 The runner owns all vectors and all grading logic. Your only integration is a small
 **adapter** (a "testee") that reads length-prefixed JSON requests on stdin and writes
-length-prefixed JSON responses on stdout, performing the npamp_00 primitive for each
+length-prefixed JSON responses on stdout, performing the N-PAMP primitive for each
 request. The reference adapter in `adapters/go/` is ~250 lines and doubles as the
 template. Because the contract is a byte pipe, an adapter can be written in any language.
 

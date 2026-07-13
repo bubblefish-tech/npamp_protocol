@@ -1,4 +1,4 @@
-# NPAMP-CH-000C — Stream Channel (`0x000C`) Interface Reference (companion to draft-bubblefish-npamp-00)
+# NPAMP-CH-000C — Stream Channel (`0x000C`) Interface Reference (companion to draft-bubblefish-npamp-01)
 
 > Status: **DRAFT companion specification.** The key words "MUST", "MUST NOT",
 > "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
@@ -9,7 +9,7 @@
 > §5 Channel Architecture and the core channel registry (`../03_channels.md`,
 > `../../registries/channels.csv`); it restates that channel's public interface and
 > introduces no behavior not present in the core specification. It builds on the
-> N-PAMP core specification (draft-bubblefish-npamp-00, the "core specification"),
+> N-PAMP core specification (draft-bubblefish-npamp-01, the "core specification"),
 > **which governs**: where this page and the core specification disagree, the core
 > specification is authoritative. This page defines no new wire format, no new frame
 > type, and no new code point.
@@ -100,7 +100,7 @@ frame types begin at **`0x0100`** within each channel's frame namespace (core
 specification §4.6; `../04_frame_types.md`), and that per-channel code points at or
 above `0x0100` are the conventional home for a channel's own frame types.
 
-At draft-00, the core specification **defines no channel-specific frame type for the
+At draft-01, the core specification **defines no channel-specific frame type for the
 Stream channel**: the registry line, the all-channel reserved types above, and the
 general channel machinery are the whole of what the core specification says about
 `0x000C`. In particular, the reserved per-channel companion frame-type ranges the
@@ -152,7 +152,7 @@ implementation obtains by enabling channel `0x000C` is the following:
    connection-level flow-control credit update (core specification §4.6;
    `../04_frame_types.md`); the concrete per-sub-stream flow-control encoding is a
    property the draft asserts for this channel but does not further enumerate at
-   draft-00, and this page does not supply one.
+   draft-01, and this page does not supply one.
 
 5. **Confidentiality and integrity.** Every frame on the channel is AEAD-protected
    and keyed by the channel's own per-direction traffic keys (core specification §5,
@@ -160,7 +160,7 @@ implementation obtains by enabling channel `0x000C` is the following:
    `KEY_UPDATE_ACK` frames (§3); connection liveness, close, path migration, and
    error signalling use the all-channel reserved frames (§3) with their core meaning.
 
-What the core specification does **not** define for this channel at draft-00, and
+What the core specification does **not** define for this channel at draft-01, and
 what this page therefore does not specify, includes: the octet layout of a sub-stream
 open/data/close operation, a sub-stream identifier field, media codecs or container
 formats, a file-transfer manifest, and any resumption or cancellation mechanism for a
@@ -254,7 +254,7 @@ if, for channel `0x000C`, it also conforms to the core specification and:
 
 4. Places any channel-specific frame type it defines for this channel in the
    `0x0100+` namespace, and does not treat the core specification as defining any
-   Stream-specific frame type at draft-00 (the core specification defines none) nor
+   Stream-specific frame type at draft-01 (the core specification defines none) nor
    assume any reserved frame-type range for this channel (the core specification
    reserves none) (§3; core specification §4.6, Extension Points);
 
