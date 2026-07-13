@@ -946,10 +946,10 @@ conformant.
   of the frame header; this revision states that partition explicitly. No code
   point moves.
 - Stream reserved range. Reserves frame-type range 0x0030-0x0034 for the Stream
-  channel (0x000C) in the companion-extension band ({{extension-points}}); the
-  Stream channel was previously the only Multi-stream channel with no reserved
-  frame-type range. The range is reserved for a companion specification, and this
-  document defines no frame within it.
+  channel (0x000C) in the companion-extension band ({{extension-points}}); this
+  gives a forthcoming Stream companion a reserved home for sub-stream lifecycle and
+  flow-control extension frames. The range is reserved for a companion
+  specification, and this document defines no frame within it.
 - Reserved-range table. Adds a Channel column to the Reserved Frame-Type Ranges
   table ({{extension-points}}), making each range's owning channel explicit.
 

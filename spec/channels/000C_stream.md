@@ -104,8 +104,8 @@ future-core-additions gap `0x000B`–`0x002F`; the companion-extension band
 At draft-02, the core specification **reserves the frame-type range
 `0x0030`–`0x0034` for the Stream channel** in the companion-extension band (core
 specification Extension Points, "Reserved Frame-Type Ranges"). This range was added
-in -02 so that the Stream channel — previously the only Multi-stream channel with
-no reserved range — has a legal home for a companion's extension frames. The core
+in -02 to give a forthcoming Stream companion a reserved home for sub-stream
+lifecycle and flow-control extension frames. The core
 specification itself still **defines no concrete Stream frame**: the registry line,
 the all-channel reserved types above, the reserved `0x0030`–`0x0034` range, and the
 general channel machinery are the whole of what the core specification says about
