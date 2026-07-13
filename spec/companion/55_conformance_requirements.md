@@ -250,7 +250,7 @@ growth (§8.2).
 The canonical corpus is `../../test-vectors/v1/conformance-corpus.json` —
 `algorithm` "npamp_00", `schemaVersion` "1.0.0", `specRevision`
 "draft-bubblefish-npamp-01", 255 test cases in 8 test groups. Its SHA-256
-(`803eadf5ea5033115be620b49adccbc459f1bb60cbcf7444bcc3539dc8f41a24`) is pinned
+(`807a2d8cd8064734f4d53cb5d2c01d0b3635d354440b697b30c3bd300f1a073e`) is pinned
 in `../../PIN.json` and `../../MANIFEST.sha256`; `../../scripts/verify-pins.ps1`
 recomputes and compares every pinned hash and exits non-zero on drift. The
 grading runner embeds a byte-identical copy

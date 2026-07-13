@@ -6,7 +6,7 @@ labels: ["editorial"]
 ---
 
 **Draft revision**
-Which revision does this concern? (e.g., `draft-bubblefish-npamp-00`)
+Which revision does this concern? (e.g., `draft-bubblefish-npamp-01`)
 
 **Location**
 Section, paragraph, or line.

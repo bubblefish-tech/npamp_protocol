@@ -6,7 +6,7 @@ labels: ["specification"]
 ---
 
 **Draft revision**
-Which revision does this concern? (e.g., `draft-bubblefish-npamp-00`)
+Which revision does this concern? (e.g., `draft-bubblefish-npamp-01`)
 
 **Section / table**
 Point to the section, table, or code-point involved.
