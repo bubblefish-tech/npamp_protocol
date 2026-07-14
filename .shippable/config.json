@@ -1,0 +1,44 @@
+{
+  "_doc": "ESB project contract for npamp_protocol, extended with Section F spec-parity gates. gates[] are the executable acceptance gates run by esb-gate.ps1 and in CI; a required failure fails the gate and writes honest evidence to .shippable/evidence/latest.json. The spec-parity gates make Class-B-without-impl a VISIBLE tracked gap, not a silent pass: they do not fail merely because a gap exists (gaps are legitimate and owned), they fail when the ledger is DISHONEST (a spec declares un-graded but has no entry; an entry claims graded/wired but its anchors do not resolve; a Class-B doc that gained an impl was never promoted).",
+  "max_evidence_age_hours": 24,
+  "source_globs": ["impl/**/*.go", "impl/**/*.py", "impl/**/*.rs", "impl/**/*.ts", "scripts/**/*.ps1"],
+  "spec_parity_ledger": ".shippable/spec-parity.json",
+  "gates": [
+    {
+      "name": "pins",
+      "command": "pwsh -NoProfile -File scripts/verify-pins.ps1",
+      "required": true,
+      "purpose": "Vector/KAT bytes are provably the bytes shipped (NEP-0000 §6.2 pinning)."
+    },
+    {
+      "name": "schemas",
+      "command": "python scripts/validate-schemas.py",
+      "required": true,
+      "purpose": "Every vector validates against its draft-2020-12 JSON Schema."
+    },
+    {
+      "name": "go-reference-impl",
+      "command": "cd impl/go && go test ./...",
+      "required": true,
+      "purpose": "The primary reference implementation and its KAT tests pass (NEP-0000 §6a)."
+    },
+    {
+      "name": "conformance-corpus",
+      "command": "impl/_conformance-harness/all-gates.sh",
+      "required": true,
+      "purpose": "Class W + Class H machine-graded against the non-circular corpus/KATs (§55)."
+    },
+    {
+      "name": "spec-parity-coverage",
+      "command": "pwsh -NoProfile -File .shippable/spec-parity-audit.ps1 -Coverage",
+      "required": true,
+      "purpose": "EVERY companion under spec/companion/ that declares an un-graded (Class B / specification-audited) posture has a matching, honest ledger entry (spec_anchor resolves, owner present, gate present). A companion doc with an un-graded self-label and NO ledger entry FAILS this gate -- that is the spec-without-implementation gap made visible. A tracked gap (impl_status planned, conformance_status spec-audited, owner+gate present) PASSES: the gate enforces tracking, not completion."
+    },
+    {
+      "name": "spec-parity-honesty",
+      "command": "pwsh -NoProfile -File .shippable/spec-parity-audit.ps1 -VerifyClaims",
+      "required": true,
+      "purpose": "Every ledger entry claiming impl_status=wired has resolving impl_anchors, and every entry claiming conformance_status=graded has resolving vector_anchors that are pinned. A false-green (wired/graded claim whose anchors do not resolve) FAILS -- honesty over green (esb-wiring-gate semantics applied to spec parity)."
+    }
+  ]
+}

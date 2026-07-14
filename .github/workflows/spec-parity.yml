@@ -1,0 +1,39 @@
+# Section F -- spec-implementation parity gate (repo-level enforcement, survives outside a
+# developer's local tooling). Every companion under spec/companion/ MUST be tracked in
+# .shippable/spec-parity.json with an honest impl/conformance status, a named owner, and a gate;
+# no entry may claim wired/graded whose anchors do not resolve; a planned entry whose impl
+# evidence now resolves is flagged for promotion (forward-drift). This makes a spec-only companion
+# a VISIBLE, tracked gap rather than a silent terminal state -- the mechanism behind
+# process/NEP-0000-nep-process.md §6 (never Final without a reference implementation AND
+# machine-gradable, non-circular conformance vectors).
+name: spec-parity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "spec/companion/**"
+      - ".shippable/**"
+      - ".github/workflows/spec-parity.yml"
+  pull_request:
+    paths:
+      - "spec/companion/**"
+      - ".shippable/**"
+      - ".github/workflows/spec-parity.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-parity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spec-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # pwsh ships on ubuntu-latest (run via `shell: pwsh`), as in conformance.yml.
+      - name: Spec-implementation parity audit (coverage + honesty + forward-drift)
+        shell: pwsh
+        run: ./.shippable/spec-parity-audit.ps1 -RepoRoot $PWD

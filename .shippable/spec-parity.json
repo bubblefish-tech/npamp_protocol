@@ -1,0 +1,363 @@
+{
+  "_doc": "Spec-implementation parity ledger (Section F). One entry per companion/native-channel/mapping specification. It records, honestly, whether each normative document has (a) a reference implementation demonstrated in isolation and (b) machine-gradable non-circular conformance vectors -- OR is a TRACKED Class-B gap with a named owner and a gate. status vocabulary: impl_status = wired | planned ; conformance_status = graded | spec-audited | planned-vectors. A 'spec-audited' or 'planned-vectors' entry is an OPEN, OWNED gap, not a terminal state (NEP-0000 §6: never Final without impl + non-circular vectors). The spec-parity-gate write hook and esb-gate.ps1 read this file; the spec-parity-completion-gate blocks a Final-claiming spec-only commit. Anchors are {file, must_contain}; a 'wired' impl or 'graded' conformance entry whose anchors do not resolve is a broken claim (esb-wiring-gate semantics).",
+  "spec_revision": "draft-bubblefish-npamp-01",
+  "conformance_model": "spec/companion/55_conformance_requirements.md",
+  "final_gate": "process/NEP-0000-nep-process.md §6",
+  "capabilities": [
+    {
+      "name": "WIRE-CORE (Class W)",
+      "spec_anchor": "ietf/draft-bubblefish-npamp-latest.md",
+      "conformance_class": "W",
+      "impl_status": "wired",
+      "impl_anchors": [
+        { "file": "impl/go/frame.go", "must_contain": "func" },
+        { "file": "impl/go/aead.go", "must_contain": "func" },
+        { "file": "impl/go/tlv.go", "must_contain": "func" }
+      ],
+      "conformance_status": "graded",
+      "vector_anchors": [
+        { "file": "test-vectors/v1/conformance-corpus.json", "must_contain": "npamp_00" }
+      ],
+      "owner": "Shawn Sammartano",
+      "gate": "pwsh scripts/verify-pins.ps1 && (cd impl/go && go test ./...)",
+      "note": "255-vector standards-anchored corpus, non-circular (Wycheproof/FIPS-derived). §55 Class W."
+    },
+    {
+      "name": "HANDSHAKE (Class H)",
+      "spec_anchor": "spec/companion/10_handshake_binding.md",
+      "conformance_class": "H",
+      "impl_status": "wired",
+      "impl_anchors": [
+        { "file": "impl/go/handshake.go", "must_contain": "func" },
+        { "file": "impl/go/keyschedule.go", "must_contain": "func" }
+      ],
+      "conformance_status": "graded",
+      "vector_anchors": [
+        { "file": "test-vectors/v1/transcript-kat.json", "must_contain": "provenance" },
+        { "file": "test-vectors/v1/key-schedule-kat.json", "must_contain": "provenance" },
+        { "file": "test-vectors/v1/finished-kat.json", "must_contain": "provenance" },
+        { "file": "test-vectors/v1/certverify-kat.json", "must_contain": "provenance" },
+        { "file": "test-vectors/v1/kem-wire-kat.json", "must_contain": "provenance" }
+      ],
+      "owner": "Shawn Sammartano",
+      "gate": "impl/_conformance-harness/kat-handshake-all-langs.sh",
+      "note": "Five standards-derived KATs, Standard profile. §55 Class H."
+    },
+    {
+      "name": "NPAMP-MEMORY",
+      "spec_anchor": "spec/companion/81_memory_channel.md",
+      "conformance_class": "B",
+      "impl_status": "planned",
+      "impl_anchors": [
+        { "file": "impl/go/memory.go", "must_contain": "MEMORY_CREATE" },
+        { "file": "impl/go/memory_cbor.go", "must_contain": "deterministic" },
+        { "file": "impl/go/memory_bodies.go", "must_contain": "corr" }
+      ],
+      "conformance_status": "planned-vectors",
+      "vector_anchors": [],
+      "owner": "Shawn Sammartano",
+      "gate": "cd impl/go && go test -run TestMemory ./...",
+      "note": "Reference implementation EXISTS on branch feat/npamp-memory-go (real, not stub: frame constants 0x0100-0x010E/0x0035-0x0036, deterministic-CBOR codec, body validation) but is NOT YET MERGED to main; per NEP-0000 §6a the impl counts only once merged, so impl_status stays planned until then (promote to wired on merge -- the -VerifyClaims/forward-drift gate will flag the promotion). conformance_status is planned-vectors: NO machine-gradable Memory vector group exists yet (an OPEN, owned gap, NOT graded). First companion to break ground in any language."
+    },
+    {
+      "name": "NPAMP-STREAM",
+      "spec_anchor": "spec/companion/80_stream_channel.md",
+      "conformance_class": "B",
+      "impl_status": "planned",
+      "impl_anchors": [],
+      "conformance_status": "spec-audited",
+      "vector_anchors": [],
+      "owner": "Shawn Sammartano",
+      "gate": "test -f impl/go/stream.go",
+      "note": "Native Stream channel 0x000C ops. Spec-only in all 10 languages. Tracked gap."
+    },
+    {
+      "name": "NPAMP-SENSORY",
+      "spec_anchor": "spec/companion/82_sensory_channel.md",
+      "conformance_class": "B",
+      "impl_status": "planned",
+      "impl_anchors": [],
+      "conformance_status": "spec-audited",
+      "vector_anchors": [],
+      "owner": "Shawn Sammartano",
+      "gate": "test -f impl/go/sensory.go",
+      "note": "Native Sensory channel 0x0009 ops (min profile High). Spec-only in all 10 languages. Tracked gap."
+    },
+    {
+      "name": "NPAMP-SPATIAL",
+      "spec_anchor": "spec/companion/83_spatial_channel.md",
+      "conformance_class": "B",
+      "impl_status": "planned",
+      "impl_anchors": [],
+      "conformance_status": "spec-audited",
+      "vector_anchors": [],
+      "owner": "Shawn Sammartano",
+      "gate": "test -f impl/go/spatial.go",
+      "note": "Native Spatial channel 0x0013 ops (min profile High). Spec-only in all 10 languages. Tracked gap."
+    },
+    {
+      "name": "NPAMP-BRIDGE",
+      "spec_anchor": "spec/companion/10_bridge_framework.md",
+      "conformance_class": "B",
+      "impl_status": "planned",
+      "impl_anchors": [],
+      "conformance_status": "spec-audited",
+      "vector_anchors": [],
+      "owner": "Shawn Sammartano",
+      "gate": "test -f impl/go/bridge.go",
+      "note": "Protocol-agnostic Bridge framework, channel 0x000D. Spec §5.2: reserved corpus ops bridge.envelope.encode/decode/correlate carry ZERO vectors. Spec-only in all 10 languages. Tracked gap; oracle is the reserved-but-unpopulated corpus operations."
+    },
+    {
+      "name": "NPAMP-CC-JSONRPC",
+      "spec_anchor": "spec/companion/20_carriage_jsonrpc.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_jsonrpc.go",
+      "note": "Carriage class. Tracked gap. Inherits NPAMP-BRIDGE §9 contract."
+    },
+    {
+      "name": "NPAMP-CC-HTTP",
+      "spec_anchor": "spec/companion/21_carriage_http.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_http.go",
+      "note": "Carriage class. Tracked gap."
+    },
+    {
+      "name": "NPAMP-CC-MSG",
+      "spec_anchor": "spec/companion/22_carriage_messaging.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_messaging.go",
+      "note": "Carriage class. Tracked gap."
+    },
+    {
+      "name": "NPAMP-CC-STREAM",
+      "spec_anchor": "spec/companion/23_carriage_streaming.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_streaming.go",
+      "note": "Carriage class (Bridge-channel foreign-reply streaming; distinct from NPAMP-STREAM). Tracked gap."
+    },
+    {
+      "name": "NPAMP-CC-DOC",
+      "spec_anchor": "spec/companion/24_carriage_documents.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_documents.go",
+      "note": "Carriage class. Tracked gap."
+    },
+    {
+      "name": "NPAMP-CC-OPAQUE",
+      "spec_anchor": "spec/companion/25_carriage_opaque.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/carriage_opaque.go",
+      "note": "Universal escape-hatch carriage class. Tracked gap."
+    },
+    {
+      "name": "NPAMP-REG",
+      "spec_anchor": "spec/companion/30_protocol_registry.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/registry.go",
+      "note": "Bridge Protocol Identifier registry. The registry CSV exists; a runtime registry impl is a tracked gap."
+    },
+    {
+      "name": "NPAMP-DISC",
+      "spec_anchor": "spec/companion/40_discovery.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/discovery.go",
+      "note": "Discovery channel 0x0010. Tracked gap."
+    },
+    {
+      "name": "NPAMP-DISC-SIGNED",
+      "spec_anchor": "spec/companion/41_discovery_signed.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/discovery_signed.go",
+      "note": "Signed Discovery Records. Tracked gap."
+    },
+    {
+      "name": "NPAMP-HELLO",
+      "spec_anchor": "spec/companion/45_hello_bootstrap.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/hello.go",
+      "note": "Post-handshake capability exchange, Control channel 0x0000. Tracked gap."
+    },
+    {
+      "name": "NPAMP-PEERHANDLE",
+      "spec_anchor": "spec/companion/50_peer_handle.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/peerhandle.go",
+      "note": "Self-certifying peer name. Tracked gap."
+    },
+    {
+      "name": "MAP-MCP",
+      "spec_anchor": "spec/companion/60_map_mcp.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_mcp.go",
+      "note": "Per-protocol mapping (JSONRPC). Verified against MCP published spec. Tracked impl gap."
+    },
+    {
+      "name": "MAP-A2A",
+      "spec_anchor": "spec/companion/61_map_a2a.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_a2a.go",
+      "note": "Per-protocol mapping (JSONRPC + DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-ACP",
+      "spec_anchor": "spec/companion/62_map_acp.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_acp.go",
+      "note": "Per-protocol mapping (HTTP). Tracked gap."
+    },
+    {
+      "name": "MAP-ANP",
+      "spec_anchor": "spec/companion/63_map_anp.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_anp.go",
+      "note": "Per-protocol mapping (HTTP/OPAQUE). Tracked gap."
+    },
+    {
+      "name": "MAP-AGUI",
+      "spec_anchor": "spec/companion/64_map_agui.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_agui.go",
+      "note": "Per-protocol mapping (STREAM). Tracked gap."
+    },
+    {
+      "name": "MAP-AP2",
+      "spec_anchor": "spec/companion/65_map_ap2.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_ap2.go",
+      "note": "Per-protocol mapping (JSONRPC/DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-UCP",
+      "spec_anchor": "spec/companion/66_map_ucp.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_ucp.go",
+      "note": "Per-protocol mapping (HTTP). Tracked gap."
+    },
+    {
+      "name": "MAP-AITP",
+      "spec_anchor": "spec/companion/67_map_aitp.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_aitp.go",
+      "note": "Per-protocol mapping (JSONRPC). Tracked gap."
+    },
+    {
+      "name": "MAP-LMOS",
+      "spec_anchor": "spec/companion/68_map_lmos.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_lmos.go",
+      "note": "Per-protocol mapping (STREAM). Tracked gap."
+    },
+    {
+      "name": "MAP-OASF",
+      "spec_anchor": "spec/companion/69_map_oasf.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_oasf.go",
+      "note": "Per-protocol mapping (DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-FIPA-ACL",
+      "spec_anchor": "spec/companion/6a_map_fipa_acl.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_fipa_acl.go",
+      "note": "Per-protocol mapping (MSG). Tracked gap."
+    },
+    {
+      "name": "MAP-AGENTS-JSON",
+      "spec_anchor": "spec/companion/6b_map_agents_json.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_agents_json.go",
+      "note": "Per-protocol mapping (DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-AGENTSPEC",
+      "spec_anchor": "spec/companion/6c_map_agentspec.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_agentspec.go",
+      "note": "Per-protocol mapping (DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-AGENTSCRIPT",
+      "spec_anchor": "spec/companion/6d_map_agentscript.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_agentscript.go",
+      "note": "Per-protocol mapping (DOC). Tracked gap."
+    },
+    {
+      "name": "MAP-MSAGENTFW",
+      "spec_anchor": "spec/companion/6e_map_msagentfw.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_msagentfw.go",
+      "note": "Per-protocol mapping (JSONRPC/HTTP/STREAM). Tracked gap."
+    },
+    {
+      "name": "MAP-AGNTCY",
+      "spec_anchor": "spec/companion/6f_map_agntcy.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_agntcy.go",
+      "note": "Per-protocol mapping (JSONRPC/STREAM). Tracked gap."
+    },
+    {
+      "name": "MAP-NLIP",
+      "spec_anchor": "spec/companion/70_map_nlip.md",
+      "conformance_class": "B",
+      "impl_status": "planned", "impl_anchors": [],
+      "conformance_status": "spec-audited", "vector_anchors": [],
+      "owner": "Shawn Sammartano", "gate": "test -f impl/go/map_nlip.go",
+      "note": "Per-protocol mapping (HTTP/STREAM). Tracked gap."
+    }
+  ]
+}
