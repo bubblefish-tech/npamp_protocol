@@ -294,44 +294,6 @@ func handle(req request) response {
 		}
 		return response{Out: map[string]interface{}{"frame_kind": int(fk), "corr": hex.EncodeToString(corr)}}
 
-	case "memory.body.encode":
-		// Canonically encode a Memory body from typed [type,key,value] entries and return the
-		// deterministic-CBOR hex; the corpus asserts it equals the independent oracle's bytes.
-		raw, ok := req.In["entries"].([]interface{})
-		if !ok {
-			return response{Error: "missing entries"}
-		}
-		fields := map[uint64]interface{}{}
-		for _, e := range raw {
-			arr, ok := e.([]interface{})
-			if !ok || len(arr) != 3 {
-				return response{Error: "bad entry shape"}
-			}
-			typ, _ := arr[0].(string)
-			var key uint64
-			if kf, ok := arr[1].(float64); ok {
-				key = uint64(kf)
-			}
-			switch typ {
-			case "uint":
-				if vf, ok := arr[2].(float64); ok {
-					fields[key] = uint64(vf)
-				}
-			case "bytes":
-				if vs, ok := arr[2].(string); ok {
-					b, _ := hex.DecodeString(vs)
-					fields[key] = b
-				}
-			case "text":
-				if vs, ok := arr[2].(string); ok {
-					fields[key] = vs
-				}
-			default:
-				return response{Error: "unknown entry type: " + typ}
-			}
-		}
-		return response{Out: map[string]interface{}{"body": hex.EncodeToString(npamp.EncodeMemoryBody(fields))}}
-
 	default:
 		return response{Skipped: "op not implemented: " + req.Op}
 	}

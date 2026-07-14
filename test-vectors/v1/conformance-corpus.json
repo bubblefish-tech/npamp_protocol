@@ -4301,68 +4301,6 @@
           ]
         }
       ]
-    },
-    {
-      "op": "memory.body.encode",
-      "profile": "Standard",
-      "tests": [
-        {
-          "tcId": 1,
-          "requirement": "81/4.1/canonical-key-order",
-          "comment": "keys supplied out of order MUST encode in canonical ascending order",
-          "in": {
-            "entries": [
-              [
-                "uint",
-                11,
-                2
-              ],
-              [
-                "text",
-                2,
-                "remember this"
-              ],
-              [
-                "bytes",
-                1,
-                "63"
-              ],
-              [
-                "uint",
-                0,
-                256
-              ]
-            ]
-          },
-          "expected": {
-            "body": "a400190100014163026d72656d656d62657220746869730b02"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 2,
-          "requirement": "81/4.1/shortest-form-uint",
-          "comment": "frame_kind 0x0100 MUST use shortest-form uint16 (0x19 0x01 0x00)",
-          "in": {
-            "entries": [
-              [
-                "uint",
-                0,
-                256
-              ],
-              [
-                "bytes",
-                1,
-                "63"
-              ]
-            ]
-          },
-          "expected": {
-            "body": "a200190100014163"
-          },
-          "result": "valid"
-        }
-      ]
     }
   ]
 }

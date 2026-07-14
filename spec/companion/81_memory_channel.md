@@ -641,12 +641,12 @@ missing REQUIRED field, and an unknown negative key), each yielding
 `malformed_request`.
 
 A machine-gradable Memory conformance-vector group now exists in the corpus — the
-`memory.body.decode` and `memory.body.encode` operation groups in
+`memory.body.decode` operation group in
 `test-vectors/v1/conformance-corpus.json`, whose expected values are produced by an
 independent RFC 8949 / CDDL byte constructor (`test-vectors/gen/memory_oracle.py`),
-not by the reference implementation they grade. An implementation is graded against
-this group by `npamp-conform`: it MUST pass the deterministic-encoding case and the
-MUST-reject cases of §4.1 / §4.2 / §4.3 (non-deterministic CBOR, missing REQUIRED key,
+not by the reference implementation it grades. An implementation is graded against
+this group by `npamp-conform`: it MUST accept the valid and forward-compatible bodies
+and reject the MUST-reject cases of §4.1 / §4.2 / §4.3 (non-deterministic CBOR, missing REQUIRED key,
 wrong CBOR major type, frame_kind/header mismatch, unknown negative key). A conformance
 claim for those graded clauses MAY therefore be corpus-verified, naming the corpus
 SHA-256 it was graded against; clauses not yet exercised by a vector remain clause-audited.

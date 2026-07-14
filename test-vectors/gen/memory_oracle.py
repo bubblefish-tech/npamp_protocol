@@ -118,9 +118,13 @@ encode_tests = [
         hx(c_map({0: c_uint(MEMORY_CREATE_REQ), 1: c_bytes(CORR)}))),
 ]
 
+# Only memory.body.decode is emitted: its `in` is flat (frameType + hex body), so adapters that
+# do not implement it skip gracefully (Unimplemented) rather than erroring on a nested-typed input.
+# It already grades the core wire contract (the §4 MUST-reject clauses + envelope decode); canonical
+# ENCODING is covered by the reference impl's own round-trip test (memory_cbor_test.go). A dedicated
+# memory.body.encode op with a minimal-adapter-safe representation can be added later.
 groups = [
     {"op": "memory.body.decode", "profile": "Standard", "tests": decode_tests},
-    {"op": "memory.body.encode", "profile": "Standard", "tests": encode_tests},
 ]
 json.dump(groups, sys.stdout, indent=2)
 sys.stdout.write("\n")
