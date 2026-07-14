@@ -226,6 +226,26 @@ re-targeting (`formal/`):
 Confidentiality holds as long as at least one KEM component (X25519 or ML-KEM-768) is unbroken
 (the concatenation-into-HKDF-Extract dual-PRF combiner). **[STD]**
 
+**Forward secrecy and key erasure.** Session confidentiality is forward-secure against
+compromise of the long-term *identity* keys: every session secret derives from the *ephemeral*
+hybrid KEM shares (§4), so an attacker who later obtains a peer's Ed25519 identity key cannot
+decrypt previously recorded sessions. To realize this in practice an implementation SHOULD
+zeroize each per-channel traffic secret and its derived `(key, iv)` as soon as an epoch is
+retired, and MUST zeroize the connection's key-schedule secrets — including `master` (§5) —
+when the connection closes. Erasure is best-effort, bounded by the runtime's memory model (a
+garbage-collected or paging runtime MAY leave residue in copied or swapped memory, a limitation
+an implementation SHOULD document rather than claim stronger guarantees than it can enforce).
+LIMITATION (no intra-session forward secrecy against `master` compromise): within a live
+connection `master` is retained so that `DeriveTrafficSecret(master, …)` (§5) can derive later
+epochs; consequently an attacker who extracts `master` can reproduce every channel's `(key, iv)`
+at every epoch of that connection. This is inherent to a single-retained-root schedule and is
+acceptable under the identity-key-compromise threat model above, but it means the schedule
+provides forward secrecy across *sessions*, not *within* one against `master` compromise.
+Bounding that intra-session exposure window requires a master-level ratchet — a one-way
+HKDF-Expand-Label chain over `master`, optionally re-seeded by a periodic re-KEM for
+post-compromise self-healing — which is an enhancement OUT OF SCOPE for this binding and tracked
+separately.
+
 ## 8. Conformance notes
 
 The published draft-00 conformance corpus grades only primitives (header/CRC/AEAD/HKDF/TLV/
