@@ -294,6 +294,22 @@ func handle(req request) response {
 		}
 		return response{Out: map[string]interface{}{"frame_kind": int(fk), "corr": hex.EncodeToString(corr)}}
 
+	case "stream.body.decode":
+		// Validate an NPAMP-STREAM body for the given frame type (spec 80 §4). A reference rejection
+		// (non-deterministic CBOR, missing REQUIRED key, wrong CBOR major type, frame_kind/header
+		// mismatch, sub_stream_id not an unsigned int, unknown negative key) is an "invalid" verdict;
+		// a valid body returns its envelope frame_kind (key 0) and sub_stream_id (key 1).
+		body, err := hx(req.In, "body")
+		if err != nil {
+			return response{Error: "bad hex"}
+		}
+		ft := npamp.FrameType(uint16(i(req.In, "frameType")))
+		fk, ssid, verr := npamp.DecodeStreamEnvelope(ft, body)
+		if verr != nil {
+			return response{Error: verr.Error()}
+		}
+		return response{Out: map[string]interface{}{"frame_kind": int(fk), "sub_stream_id": int(ssid)}}
+
 	default:
 		return response{Skipped: "op not implemented: " + req.Op}
 	}

@@ -65,14 +65,20 @@
     {
       "name": "NPAMP-STREAM",
       "spec_anchor": "spec/companion/80_stream_channel.md",
-      "conformance_class": "B",
-      "impl_status": "planned",
-      "impl_anchors": [],
-      "conformance_status": "spec-audited",
-      "vector_anchors": [],
+      "impl_status": "wired",
+      "impl_anchors": [
+        { "file": "impl/go/stream.go", "must_contain": "FrameStreamOpen" },
+        { "file": "impl/go/stream_bodies.go", "must_contain": "ValidateStreamPayload" },
+        { "file": "impl/go/stream_api.go", "must_contain": "DecodeStreamEnvelope" }
+      ],
+      "conformance_status": "graded",
+      "vector_anchors": [
+        { "file": "test-vectors/v1/conformance-corpus.json", "must_contain": "stream.body.decode" },
+        { "file": "test-vectors/gen/stream_oracle.py", "must_contain": "NON-CIRCULARITY" }
+      ],
       "owner": "Shawn Sammartano",
-      "gate": "test -f impl/go/stream.go",
-      "note": "Native Stream channel 0x000C ops. Spec-only in all 10 languages. Tracked gap."
+      "gate": "cd impl/go && go test -run 'Stream|CBOR|Oracle' ./...",
+      "note": "GRADED (body-decode/envelope surface): the stream.body.decode op group (10/10) is graded by npamp-conform against an independent RFC 8949 oracle (test-vectors/gen/stream_oracle.py, canonical CBOR built independently of impl/go), cross-validated by impl/go/zz_stream_oracle_xval_test.go. Covers §4.1/4.2/4.3 payload+envelope MUST-reject incl. the STREAM sub_stream_id-is-uint divergence from MEMORY's corr-bytes. Reference impl impl/go/stream*.go. Behavioural §5-§9 clauses (flow control, state machine, reset) remain spec-audited (need a live-exchange harness). Second public companion to reach graded."
     },
     {
       "name": "NPAMP-SENSORY",
