@@ -528,9 +528,16 @@ An implementation conforms to NPAMP-STREAM if and only if, on the Stream channel
 9. Scopes all sub-stream identifiers and offsets to the association and carries no
    sub-stream state across associations (§7.4, §9).
 
-No machine-gradable conformance vectors exist for the Stream channel yet: a claim of
-conformance to this document is therefore specification-audited and MUST NOT be
-represented as corpus-verified. A conformance test suite SHOULD assert each clause above with a recorded exchange on the
+Machine-gradable conformance vectors exist for the Stream channel's payload-decode surface:
+the `stream.body.decode` operation group in the npamp_00 conformance corpus, produced by an
+independent RFC 8949 byte constructor (`test-vectors/gen/stream_oracle.py`) and graded by
+`npamp-conform` against the reference implementation (`impl/go/stream*.go`), covers the
+§4.1/§4.2/§4.3 payload-encoding and common-envelope MUST-reject clauses — including the
+Stream-specific rule that `sub_stream_id` (1) is an Unsigned int, not a byte string — so a
+claim of conformance to those clauses is corpus-verified. Beyond that payload surface, the
+§5–§9 behavioural clauses (flow control, the sub-stream state machine, half-close, reset)
+are graded only by a live-exchange harness: a conformance test suite SHOULD assert each
+clause above with a recorded exchange on the
 Stream channel `0x000C`: a handshake that advertises the channel; a bidirectional
 STREAM_OPEN/STREAM_OPEN handshake at each parity; at least two concurrent sub-streams
 carrying STREAM_DATA in both directions; a STREAM_WINDOW_UPDATE that raises an absolute

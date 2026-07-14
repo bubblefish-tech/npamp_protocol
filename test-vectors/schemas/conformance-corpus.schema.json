@@ -19,7 +19,7 @@
             "aead.seal", "aead.open", "nonce.derive", "hkdf.expand", "hkdf.expand_label",
             "keys.derive_traffic", "frame.seal", "frame.open", "profile.check",
             "bridge.envelope.encode", "bridge.envelope.decode", "bridge.correlate",
-            "memory.body.decode"
+            "memory.body.decode", "stream.body.decode"
           ] },
           "profile": { "type": "string", "enum": ["Standard", "High", "Sovereign", "any"] },
           "tests": {
