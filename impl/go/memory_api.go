@@ -35,3 +35,48 @@ func DecodeMemoryEnvelope(ft FrameType, body []byte) (frameKind uint64, corr []b
 	}
 	return frameKind, corr, nil
 }
+
+// DecodeMemoryBody validates a Memory body for frame type ft (spec §4 — deterministic-CBOR map,
+// envelope + per-frame required keys, forward-compat key rules) and returns its fields as a
+// map[uint64]any: the inverse of EncodeMemoryBody. Values are the Go-native CBOR types the codec
+// produces — uint64, int64, []byte, string, []any, bool, nil, or map[uint64]any (nested maps are
+// flattened recursively, never leaked as an unexported type). A non-nil error wraps
+// ErrMemoryMalformed and means the body MUST be rejected (§4.1/§4.2/§4.3; §8 malformed_request);
+// on error the returned map is nil.
+func DecodeMemoryBody(ft FrameType, body []byte) (map[uint64]any, error) {
+	m, err := ValidateMemoryPayload(ft, body)
+	if err != nil {
+		return nil, err
+	}
+	out, ok := cborToGo(m).(map[uint64]any)
+	if !ok {
+		// Unreachable: ValidateMemoryPayload only returns on a top-level CBOR map.
+		return nil, ErrMemoryMalformed
+	}
+	return out, nil
+}
+
+// cborToGo converts a decoded CBOR value into portable Go types, recursively rewriting the
+// unexported *cborMap into map[uint64]any (every NPAMP-MEMORY map key is an unsigned integer after
+// validation) and descending into arrays. Scalars (uint64, int64, []byte, string, bool, nil) pass
+// through unchanged.
+func cborToGo(v any) any {
+	switch t := v.(type) {
+	case *cborMap:
+		out := make(map[uint64]any, len(t.entries))
+		for _, e := range t.entries {
+			if uk, ok := e.key.(uint64); ok {
+				out[uk] = cborToGo(e.val)
+			}
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, el := range t {
+			out[i] = cborToGo(el)
+		}
+		return out
+	default:
+		return v
+	}
+}
