@@ -278,6 +278,60 @@ func handle(req request) response {
 		}
 		return response{Out: map[string]interface{}{"accepted": true}}
 
+	case "memory.body.decode":
+		// Validate an NPAMP-MEMORY body for the given frame type (spec 81 §4). A reference
+		// rejection (non-deterministic CBOR, missing REQUIRED key, wrong CBOR major type,
+		// frame_kind/header mismatch, unknown negative key) is an "invalid" verdict; a valid body
+		// returns its envelope frame_kind (key 0) and corr (key 1).
+		body, err := hx(req.In, "body")
+		if err != nil {
+			return response{Error: "bad hex"}
+		}
+		ft := npamp.FrameType(uint16(i(req.In, "frameType")))
+		fk, corr, verr := npamp.DecodeMemoryEnvelope(ft, body)
+		if verr != nil {
+			return response{Error: verr.Error()}
+		}
+		return response{Out: map[string]interface{}{"frame_kind": int(fk), "corr": hex.EncodeToString(corr)}}
+
+	case "memory.body.encode":
+		// Canonically encode a Memory body from typed [type,key,value] entries and return the
+		// deterministic-CBOR hex; the corpus asserts it equals the independent oracle's bytes.
+		raw, ok := req.In["entries"].([]interface{})
+		if !ok {
+			return response{Error: "missing entries"}
+		}
+		fields := map[uint64]interface{}{}
+		for _, e := range raw {
+			arr, ok := e.([]interface{})
+			if !ok || len(arr) != 3 {
+				return response{Error: "bad entry shape"}
+			}
+			typ, _ := arr[0].(string)
+			var key uint64
+			if kf, ok := arr[1].(float64); ok {
+				key = uint64(kf)
+			}
+			switch typ {
+			case "uint":
+				if vf, ok := arr[2].(float64); ok {
+					fields[key] = uint64(vf)
+				}
+			case "bytes":
+				if vs, ok := arr[2].(string); ok {
+					b, _ := hex.DecodeString(vs)
+					fields[key] = b
+				}
+			case "text":
+				if vs, ok := arr[2].(string); ok {
+					fields[key] = vs
+				}
+			default:
+				return response{Error: "unknown entry type: " + typ}
+			}
+		}
+		return response{Out: map[string]interface{}{"body": hex.EncodeToString(npamp.EncodeMemoryBody(fields))}}
+
 	default:
 		return response{Skipped: "op not implemented: " + req.Op}
 	}

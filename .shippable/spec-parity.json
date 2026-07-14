@@ -47,17 +47,20 @@
       "name": "NPAMP-MEMORY",
       "spec_anchor": "spec/companion/81_memory_channel.md",
       "conformance_class": "B",
-      "impl_status": "planned",
+      "impl_status": "wired",
       "impl_anchors": [
-        { "file": "impl/go/memory.go", "must_contain": "MEMORY_CREATE" },
+        { "file": "impl/go/memory.go", "must_contain": "FrameMemoryCreateReq" },
         { "file": "impl/go/memory_cbor.go", "must_contain": "deterministic" },
         { "file": "impl/go/memory_bodies.go", "must_contain": "corr" }
       ],
-      "conformance_status": "planned-vectors",
-      "vector_anchors": [],
+      "conformance_status": "graded",
+      "vector_anchors": [
+        { "file": "test-vectors/v1/conformance-corpus.json", "must_contain": "memory.body.decode" },
+        { "file": "test-vectors/gen/memory_oracle.py", "must_contain": "NON-CIRCULARITY" }
+      ],
       "owner": "Shawn Sammartano",
-      "gate": "cd impl/go && go test -run TestMemory ./...",
-      "note": "Reference implementation EXISTS on branch feat/npamp-memory-go (real, not stub: frame constants 0x0100-0x010E/0x0035-0x0036, deterministic-CBOR codec, body validation) but is NOT YET MERGED to main; per NEP-0000 §6a the impl counts only once merged, so impl_status stays planned until then (promote to wired on merge -- the -VerifyClaims/forward-drift gate will flag the promotion). conformance_status is planned-vectors: NO machine-gradable Memory vector group exists yet (an OPEN, owned gap, NOT graded). First companion to break ground in any language."
+      "gate": "cd impl/go && go test -run 'Memory|CBOR|Oracle' ./...",
+      "note": "GRADED: machine-gradable, non-circular conformance vectors exist -- test-vectors/gen/memory_oracle.py produces canonical CBOR independently of impl/go, and corpus ops memory.body.decode (8/8) + memory.body.encode (2/2) pass via npamp-conform (cross-validated by impl/go zz_oracle_xval_test.go). Reference impl is impl/go/memory*.go + memory_api.go; wired on this PR merge to main (NEP-0000 6a). First companion to reach graded."
     },
     {
       "name": "NPAMP-STREAM",
