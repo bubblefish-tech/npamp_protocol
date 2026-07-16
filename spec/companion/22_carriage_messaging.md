@@ -442,7 +442,7 @@ NPAMP-BRIDGE has not already reserved.
 
 **OPEN QUESTION 1 — No `protocol_id` is assigned to any message-passing protocol.** The
 BridgeEnvelope `protocol_id` value space (NPAMP-BRIDGE §4: `0x01`–`0x04` assigned,
-`0x10`–`0x7F` experimental, `0x80`–`0xFF` reserved) assigns no value to a message-passing
+`0x10`–`0x7F` experimental, `0x80`–`0xFF` private use) assigns no value to a message-passing
 protocol, and the protocol-identifier registry (NPAMP-REG) is not yet published. This
 document therefore directs deployments to the experimental range with out-of-band
 agreement (§4.1). A maintainer decision is needed on whether to assign a stable

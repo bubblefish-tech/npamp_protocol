@@ -50,10 +50,10 @@ This document builds on, and does not modify, the following:
 | Carriage classes (JSONRPC, HTTP, MSG, STREAM, DOC, OPAQUE) | The carriage-class companion specifications | The interpretation each assigned `protocol_id` selects (§5). |
 
 NPAMP-BRIDGE fixes the `protocol_id` field to one octet and partitions its value
-space into an assigned region, an experimental region, and a reserved region. This
+space into an assigned region, an experimental region, and a private-use region. This
 document does not widen the field, does not change the partition boundaries, and
 does not reassign any value NPAMP-BRIDGE already names. It enumerates the assigned
-region, gives normative meaning to the experimental and reserved regions consistent
+region, gives normative meaning to the experimental and private-use regions consistent
 with NPAMP-BRIDGE, and specifies how the assigned region grows over time.
 
 ## 3. Terminology
