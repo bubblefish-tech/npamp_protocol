@@ -38,10 +38,11 @@ plus a reserved frame-type range for eviction and revive extension frames
 operation contract. Accordingly, this reference describes the Memory interface at
 the level the core specification actually fixes — the operation *classes* named by
 the registry purpose (§4) — and does not invent frame layouts, field structures,
-or semantics that the core specification does not state. A future companion
-specification MAY define a concrete Memory operation encoding within the code
-points the core specification reserves; until then, the public Memory interface is
-exactly what this reference restates.
+or semantics that the core specification does not state. The companion
+specification NPAMP-MEMORY (`../companion/81_memory_channel.md`) now defines a
+concrete Memory operation encoding within the code points the core specification
+reserves; the core specification itself still fixes only the registry entry and
+reserved range this reference restates.
 
 ## 2. Channel identity
 
@@ -113,10 +114,13 @@ the Memory channel (core specification §8, Reserved Frame-Type Ranges; referenc
 This range is **reserved, not defined**. The core specification neither defines
 nor requires eviction or revive frames; it only reserves the code points so a
 companion specification can define them without colliding with the core wire
-format (core specification §8). No companion specification in the current set
-(`../companion/00_companion_index.md`) defines these frames. An implementation
-therefore MUST NOT treat any eviction or revive behavior as specified by the core
-specification, and MUST NOT assign `0x0035`–`0x0036` to any other purpose.
+format (core specification §8). The companion specification NPAMP-MEMORY
+(`../companion/81_memory_channel.md`) now defines these code points as the OPTIONAL
+Memory eviction and revive extension frames; the core specification itself still
+neither defines nor requires them. An implementation therefore MUST NOT treat any
+eviction or revive behavior as specified by the core specification — those
+semantics are defined by NPAMP-MEMORY, not the core — and MUST NOT assign
+`0x0035`–`0x0036` to any other purpose.
 
 > **Known editorial inconsistency in -00 (carried, not corrected here).** The core
 > specification states that channel-specific frame types begin at `0x0100`
@@ -131,10 +135,13 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Memory-specific
 operation encoding — for example concrete create/read/update/delete/retrieval
 request and reply frames (§4) — would be assigned. The core specification defines
-**no** Memory-specific frame type in this range, and no companion specification in
-the current set defines one. Consequently there is, at present, no core- or
-companion-defined Memory operation frame; §4 describes the interface at the
-registry level the core specification actually fixes.
+**no** Memory-specific frame type in this range; the companion specification
+NPAMP-MEMORY (`../companion/81_memory_channel.md`) now defines the
+create/read/update/delete/retrieval and status request/result frames
+(`0x0100`–`0x010E`) in this range, while the core specification itself still
+defines none. §4 describes the interface at the registry level the core
+specification actually fixes; the concrete operation encoding is defined by
+NPAMP-MEMORY, not by the core specification.
 
 ## 4. Interface and operations (public level)
 
@@ -159,13 +166,18 @@ Notes and honest boundaries:
   ("create/read/update/delete **and retrieval**"). The core specification does not
   further distinguish a single-item read from a multi-item or query-style
   retrieval; this reference records that both terms appear and does not manufacture
-  a distinction the core specification does not state. A companion specification
-  MAY define the distinction precisely.
+  a distinction the core specification does not state. The companion specification
+  NPAMP-MEMORY (`../companion/81_memory_channel.md`) now defines the distinction
+  precisely — a point read of one identified record versus a ranked,
+  provenance-bearing multi-record retrieval; the core specification itself still
+  does not.
 - **Eviction and revive.** The only Memory-specific lifecycle operations the core
   specification names beyond CRUD and retrieval are **eviction** and **revive**,
   and it names them only by reserving frame code points for them
   (`0x0035`–`0x0036`, §3.2). Their semantics are undefined by the core
-  specification and out of scope for this reference until a companion defines them.
+  specification and out of scope for this reference; the companion NPAMP-MEMORY
+  (`../companion/81_memory_channel.md`) now defines them, not the core
+  specification.
 - **No operation encoding is defined here.** Because the core specification assigns
   no Memory-specific frame type (§3.3), the operation classes above have **no
   core-defined request frame, reply frame, addressing scheme, value encoding, or
@@ -175,8 +187,9 @@ Notes and honest boundaries:
   sequence space (core specification §5), which orders frames within a direction.
   The core specification does not define how a Memory reply is correlated to its
   request (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a
-  `correlation_id`); a Memory operation encoding, when specified by a companion,
-  is where such correlation would be defined. This reference does not define it.
+  `correlation_id`); the companion NPAMP-MEMORY
+  (`../companion/81_memory_channel.md`) defines this correlation (an in-body
+  correlation token). This reference does not define it.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
   deployment MAY carry concurrent Memory operations over multiple transport streams
   within the channel's stream family; the core specification permits this at the
@@ -214,10 +227,12 @@ The Memory channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
 carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Memory channel has **no
-dedicated companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage
-class and does not build on NPAMP-BRIDGE.
+NPAMP-DISC (`../companion/40_discovery.md`), the Memory channel is elaborated by
+its own dedicated companion specification, NPAMP-MEMORY
+(`../companion/81_memory_channel.md`), in the current companion set
+(`../companion/00_companion_index.md`). That companion is a native-operation
+framework, not a bridge carriage class: the Memory channel is therefore not a
+bridge carriage class and does not build on NPAMP-BRIDGE.
 
 The consequence for an implementer is that the Memory channel's public contract is
 exactly what §2–§5 restate:
@@ -229,16 +244,19 @@ exactly what §2–§5 restate:
   classes, described at the registry level, with **no core-defined wire encoding**
   (§4);
 - Its **reserved extension surface** — the `0x0035`–`0x0036` eviction/revive
-  frame-type range, reserved by the core specification and defined by neither the
-  core specification nor any current companion (§3.2).
+  frame-type range, reserved by the core specification and now defined by the
+  companion NPAMP-MEMORY (`../companion/81_memory_channel.md`), not by the core
+  specification (§3.2).
 
-Should richer, interoperable Memory operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines a Memory
-operation encoding within the reserved code points, verified against the core
-specification. Until such a companion exists, an implementation carries Memory
-traffic under the channel identity and reserved code points above, and there is no
-additional core- or companion-defined Memory behavior to conform to. This
-reference documents the interface at that public level and defines no new behavior.
+Richer, interoperable Memory operations follow the same path as any N-PAMP
+extension: a companion specification that defines a Memory operation encoding
+within the reserved code points, verified against the core specification. That
+companion now exists — NPAMP-MEMORY (`../companion/81_memory_channel.md`) defines
+the concrete Memory operation encoding — so an implementation that carries Memory
+traffic under the channel identity and reserved code points above conforms to the
+core-defined interface this reference restates, while the concrete operation
+behavior is defined by NPAMP-MEMORY. This reference documents the interface at that
+public level and defines no new behavior.
 
 ## 7. Conformance
 
@@ -272,8 +290,9 @@ if, for channel `0x0001`, it:
    channel's stream family, each peer maintaining independent per-direction
    sequence spaces and traffic keys (§2, §4); and
 8. Defers all Memory operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adding no Memory behavior of its own that
-   the core specification does not reserve (§6).
+   — including eviction, revive, and the create/read/update/delete and retrieval
+   operation encoding — to the companion specification NPAMP-MEMORY, adding no
+   Memory behavior of its own that the core specification does not reserve (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not advertise, emit, or

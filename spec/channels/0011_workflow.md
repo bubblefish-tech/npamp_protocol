@@ -46,10 +46,12 @@ The core specification defines the Workflow channel **only** as this registry
 entry. Unlike the Memory channel — for which the core specification additionally
 reserves a per-channel frame-type range (§3) — the core specification reserves
 **no** Workflow-specific frame-type range and defines no Workflow-specific wire
-encoding, message schema, or operation contract. A future companion specification
-MAY define a concrete Workflow operation encoding within the channel-specific code
-points the core specification leaves available; until then, the public Workflow
-interface is exactly what this reference restates.
+encoding, message schema, or operation contract. The companion specification
+NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`) now defines a concrete
+Workflow operation encoding within the channel-specific `0x0100`+ code points the
+core specification leaves available; the core specification itself still neither
+defines nor requires that encoding, and this reference restates only the core-level
+public interface.
 
 ## 2. Channel identity
 
@@ -149,11 +151,13 @@ the core specification reserves for another channel.
 Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Workflow-specific
 operation encoding — for example concrete task-delegation and orchestration request
-and reply frames (§4) — would be assigned. The core specification defines **no**
-Workflow-specific frame type in this range, and no companion specification in the
-current set (`../companion/00_companion_index.md`) defines one. Consequently there
-is, at present, no core- or companion-defined Workflow operation frame; §4
-describes the interface at the registry level the core specification actually fixes.
+and reply frames (§4) — is assigned. The core specification defines **no**
+Workflow-specific frame type in this range; the companion specification NPAMP-WORKFLOW
+(`../companion/8a_workflow_channel.md`) now defines the Workflow operation frames here
+(task submit/status/cancel plus asynchronous step and terminal completion events,
+`0x0100`–`0x0108`; §4, §6). The core specification itself still neither defines nor
+requires them, so §4 describes the interface at the registry level the core
+specification actually fixes and the companion supplies the concrete operation encoding.
 
 ## 4. Interface and operations (public level)
 
@@ -176,8 +180,9 @@ Notes and honest boundaries:
   not further distinguish a coordination/sequencing message from a task hand-off,
   and defines no schema for either; this reference records that both terms appear in
   the registry purpose and does not manufacture a distinction, encoding, or field
-  set the core specification does not state. A companion specification MAY define the
-  distinction and the encodings precisely.
+  set the core specification does not state. The companion specification NPAMP-WORKFLOW
+  (`../companion/8a_workflow_channel.md`) defines the distinction and the encodings
+  precisely (§6); the core specification does not.
 - **No operation encoding is defined here.** Because the core specification assigns
   no Workflow-specific frame type (§3.3) and reserves no Workflow frame-type range
   (§3.2), the coordination classes above have **no core-defined request frame, reply
@@ -198,8 +203,10 @@ Notes and honest boundaries:
   per-direction sequence space (core specification §5), which orders frames within a
   direction. The core specification does not define how a Workflow reply (if any) is
   correlated to a request (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a
-  `correlation_id`); a Workflow operation encoding, when specified by a companion, is
-  where such correlation would be defined. This reference does not define it.
+  `correlation_id`); the companion NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`)
+  defines that correlation in the operation body — an in-body correlation token that
+  matches a reply to its request plus a durable task identifier — while the core
+  specification and this reference do not.
 - **Liveness, teardown, and control.** Liveness, teardown, error signalling, key
   update, path migration, and flow control on the channel use the reserved
   all-channel frames (§3.1) with their core meaning; the core specification defines
@@ -245,13 +252,17 @@ The Workflow channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
 carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Workflow channel has **no
-dedicated companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage class
-and does not build on NPAMP-BRIDGE.
+NPAMP-DISC (`../companion/40_discovery.md`), the Workflow channel is elaborated by
+its own dedicated **native** companion, NPAMP-WORKFLOW
+(`../companion/8a_workflow_channel.md`), in the current companion set
+(`../companion/00_companion_index.md`). Like NPAMP-DISC, and unlike a bridge carriage
+class, that companion defines a native operation framing directly on the channel: the
+Workflow channel is therefore not a bridge carriage class and does not build on
+NPAMP-BRIDGE.
 
-The consequence for an implementer is that the Workflow channel's public contract
-is exactly what §2–§5 restate:
+The consequence for an implementer is that the Workflow channel's **core-level**
+public contract is exactly what §2–§5 restate, with the concrete operation encoding
+layered on top by the companion NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`):
 
 - Its **identity** — id `0x0011`, name Workflow, purpose "multi-agent orchestration
   and task delegation", minimum profile Standard, direction Bidirectional (§2);
@@ -259,8 +270,10 @@ is exactly what §2–§5 restate:
   coordination classes, described at the registry level, with **no core-defined wire
   encoding** (§4); and
 - Its **reserved extension surface** — **none** at the frame-type level: the core
-  specification reserves no Workflow-specific frame-type range, and no current
-  companion defines a Workflow frame in the `0x0100`+ namespace (§3.2, §3.3).
+  specification reserves no Workflow-specific frame-type range (§3.2). The concrete
+  Workflow operation frames in the `0x0100`+ application band are defined by the
+  companion NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`), not by the core
+  specification (§3.3).
 
 Orchestration or delegation traffic MAY also reach an N-PAMP peer as a **bridged
 foreign protocol** rather than as native Workflow-channel traffic. Consistent with
@@ -276,13 +289,14 @@ native channel. The companion index's "channel selection for carriage" guidance
 routes certain foreign traffic classes to more specific core channels; it does
 **not** list the Workflow channel, so no such routing is asserted here.
 
-Should richer, interoperable Workflow operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines a Workflow
-operation encoding within the channel-specific `0x0100`+ code points, verified
-against the core specification. Until such a companion exists, an implementation
-carries Workflow traffic under the channel identity above, and there is no
-additional core- or companion-defined Workflow behavior to conform to. This
-reference documents the interface at that public level and defines no new behavior.
+Richer, interoperable Workflow operations are defined by exactly such a companion:
+NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`) defines a Workflow operation
+encoding within the channel-specific `0x0100`+ code points, verified against the core
+specification. Where that companion is not in use, an implementation carries Workflow
+traffic under the channel identity above, with no additional core-defined Workflow
+behavior to conform to; where it is, the operational behavior to conform to is that
+defined by NPAMP-WORKFLOW, not by the core specification. This reference documents the
+interface at the core public level and defines no new behavior.
 
 ## 7. Conformance
 
@@ -315,8 +329,9 @@ if, for channel `0x0011`, it:
    spaces and traffic keys — and does not open multiple concurrent transport streams
    within the channel as though it were Multi-stream (§2); and
 8. Defers all Workflow operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adding no Workflow behavior of its own that
-   the core specification does not reserve (§6).
+   to the companion specification NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`),
+   adding no Workflow behavior of its own that the core specification does not
+   reserve (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not emit or honor any

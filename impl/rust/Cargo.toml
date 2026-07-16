@@ -22,3 +22,9 @@ ml-kem = { version = "0.2", features = ["deterministic"] }
 # crate (ml-kem re-uses RustCrypto's KEM trait); import it to call decapsulate.
 kem = "=0.3.0-pre.0"
 x25519-dalek = { version = "2", features = ["static_secrets"] }
+# OS entropy for the live interop examples (interop_client / interop_server): the
+# ephemeral X25519 + ML-KEM-768 key material and the Ed25519 identity seeds are
+# filled from the OS CSPRNG, then fed to the deterministic keygen constructors so
+# no rand_core trait plumbing (or C-based provider) is pulled in. Dev-only: the
+# OPEN wire-format library proper takes no RNG dependency.
+getrandom = "0.2"

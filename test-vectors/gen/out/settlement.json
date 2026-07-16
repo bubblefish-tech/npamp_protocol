@@ -1,0 +1,263 @@
+[
+  {
+    "op": "settlement.body.decode",
+    "profile": "Standard",
+    "tests": [
+      {
+        "tcId": 1,
+        "requirement": "86/4.1/deterministic-cbor-map",
+        "comment": "valid SETTLE_INTENT_REQ: envelope + obligation_ref + effect",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001440102030402756f626c69676174696f6e3a696e766f6963652d34320802"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 2,
+        "requirement": "86/6.1/settle-intent-result",
+        "comment": "valid SETTLE_INTENT_RESULT: envelope + settlement_ref + status",
+        "in": {
+          "frameType": 257,
+          "body": "a4001901010144010203040270736574746c656d656e743a732d3030310367736574746c6564"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 257,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 3,
+        "requirement": "86/6.2/receipt-req",
+        "comment": "valid RECEIPT_REQ: envelope + settlement_ref + effect=read_only",
+        "in": {
+          "frameType": 258,
+          "body": "a4001901020144010203040270736574746c656d656e743a732d3030310400"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 258,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 4,
+        "requirement": "86/6.2/receipt-result",
+        "comment": "valid RECEIPT_RESULT: envelope + settlement_receipt map",
+        "in": {
+          "frameType": 259,
+          "body": "a30019010301440102030402a3006d726563656970743a722d3030310170736574746c656d656e743a732d3030310567736574746c6564"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 259,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 5,
+        "requirement": "86/8.1/settle-error-approval-required",
+        "comment": "valid SETTLE_ERROR: approval_required(4) carrying approval_id",
+        "in": {
+          "frameType": 260,
+          "body": "a50019010401440102030402040371617070726f76616c207265717569726564056e617070726f76616c3a612d303031"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 260,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 6,
+        "requirement": "86/6.3/batch-commit-req",
+        "comment": "valid SETTLE_BATCH_COMMIT_REQ: envelope + batch_ref + commitment + effect",
+        "in": {
+          "frameType": 160,
+          "body": "a50018a0014401020304026f62617463683a622d323032362d30370344deadbeef0702"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 160,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 7,
+        "requirement": "86/6.3/batch-commit-result",
+        "comment": "valid SETTLE_BATCH_COMMIT_RESULT: envelope + batch_ref + status",
+        "in": {
+          "frameType": 161,
+          "body": "a40018a1014401020304026f62617463683a622d323032362d30370369636f6d6d6974746564"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 161,
+          "corr": "01020304"
+        }
+      },
+      {
+        "tcId": 8,
+        "requirement": "86/4.3/forward-compat-accept-nonneg",
+        "comment": "unknown NON-negative key (99) MUST be accepted",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001440102030402756f626c69676174696f6e3a696e766f6963652d3432080218636c6675747572652d6669656c64"
+        },
+        "result": "acceptable",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "01020304"
+        },
+        "flags": [
+          "ForwardCompat"
+        ]
+      },
+      {
+        "tcId": 9,
+        "requirement": "86/4.1/non-deterministic-cbor-MUST-reject",
+        "comment": "key 0 in non-shortest form (0x18 0x00)",
+        "in": {
+          "frameType": 256,
+          "body": "a1180000"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 10,
+        "requirement": "86/4.3/unknown-negative-key-MUST-reject",
+        "comment": "unknown NEGATIVE integer key (-1)",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001440102030402617808022009"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "UnknownNegativeKey"
+        ]
+      },
+      {
+        "tcId": 11,
+        "requirement": "86/6.1/missing-required-key-MUST-reject",
+        "comment": "SETTLE_INTENT_REQ missing REQUIRED obligation_ref(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a3001901000144010203040802"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 12,
+        "requirement": "86/4.1/wrong-major-type-MUST-reject",
+        "comment": "obligation_ref(2) is uint where text is required",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001440102030402090802"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 13,
+        "requirement": "86/5.3/missing-effect-MUST-reject",
+        "comment": "state-mutating SETTLE_INTENT_REQ missing REQUIRED effect(8)",
+        "in": {
+          "frameType": 256,
+          "body": "a300190100014401020304026178"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 14,
+        "requirement": "86/4.2/frame-kind-mismatch-MUST-reject",
+        "comment": "frame_kind says RECEIPT_REQ(0x0102) but frame is SETTLE_INTENT_REQ(0x0100)",
+        "in": {
+          "frameType": 256,
+          "body": "a4001901020144010203040261780802"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "FrameKindMismatch"
+        ]
+      },
+      {
+        "tcId": 15,
+        "requirement": "86/4.2/corr-not-bytes-MUST-reject",
+        "comment": "corr(1) is an Unsigned int, not the required byte string",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001040261780802"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 16,
+        "requirement": "86/4.2/corr-empty-MUST-reject",
+        "comment": "corr(1) is an empty byte string; a non-empty 1-64-byte corr is required",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001400261780802"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 17,
+        "requirement": "86/6.3/batch-missing-commitment-MUST-reject",
+        "comment": "SETTLE_BATCH_COMMIT_REQ missing REQUIRED commitment(3)",
+        "in": {
+          "frameType": 160,
+          "body": "a40018a0014401020304026962617463683a622d310702"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 18,
+        "requirement": "86/4.1/payload-not-a-map-MUST-reject",
+        "comment": "payload is a bare uint, not a CBOR map",
+        "in": {
+          "frameType": 256,
+          "body": "05"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NotAMap"
+        ]
+      }
+    ]
+  }
+]

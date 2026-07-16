@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Library / NuGet-package target for the N-PAMP (draft-bubblefish-npamp-01) OPEN reference,
+    C# port (F3-CSHARP). The sibling Npamp.csproj stays an EXE (the conformance-vector generator,
+    AssemblyName npamp-vectors); this project makes the SAME primitives consumable as a library and
+    publishable to NuGet as package id "Bubblefish.Npamp" (namespace Sh.Bubblefish.Npamp).
+
+    It compiles the OPEN-layer primitives (Npamp.cs) and the handshake-binding layer (Handshake.cs)
+    into a class library, excluding the generator's entry point (Vectors.cs, which carries Main), the
+    test/ KATs (their own entry points), and examples/. Handshake.cs depends on BouncyCastle for
+    Ed25519 (the .NET BCL has no Ed25519), pinned to 2.6.2 (MIT) — the same version the handshake KAT
+    build (test/build-handshake-kat.ps1) resolves.
+
+    `dotnet pack -c Release` produces the .nupkg; `dotnet nuget push` is credential-gated in
+    .github/workflows/publish.yml (blocked until the operator supplies the NuGet API key).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Sh.Bubblefish.Npamp</RootNamespace>
+    <AssemblyName>Bubblefish.Npamp</AssemblyName>
+    <Deterministic>true</Deterministic>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Bubblefish.Npamp</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>BubbleFish Technologies, Inc.</Authors>
+    <Company>BubbleFish Technologies, Inc.</Company>
+    <Description>Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format — C# port: frame codec, AES-256-GCM record layer, HKDF-Expand-Label key schedule, and handshake-binding primitives (Standard profile).</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/bubblefish-tech/npamp_protocol</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/bubblefish-tech/npamp_protocol</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>npamp;n-pamp;protocol;wire-format;aes-gcm;hkdf;ed25519</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Library = OPEN-layer primitives + handshake binding only. Keep the generator's entry point,
+         the KAT test entry points, and the examples out of the packaged assembly. -->
+    <Compile Remove="Vectors.cs" />
+    <Compile Remove="test/**/*.cs" />
+    <Compile Remove="examples/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ed25519 (RFC 8032) for the CertVerify / Finished handshake binding; the .NET BCL has no
+         Ed25519. MIT-licensed. Pinned to the version the handshake KAT build already resolves. -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,358 @@
+[
+  {
+    "op": "telemetry.body.decode",
+    "profile": "Standard",
+    "tests": [
+      {
+        "tcId": 1,
+        "requirement": "87/5/deterministic-cbor-map",
+        "comment": "valid standalone TELEMETRY_REPORT: batch_seq + metrics, no corr",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010003000481a400686370752e6c6f6164011b0000018bcfe56800020003182a"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256
+        }
+      },
+      {
+        "tcId": 2,
+        "requirement": "87/5/subscribed-report",
+        "comment": "valid subscribed TELEMETRY_REPORT: corr + sub_id + batch_seq + events",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001416302412a03070581a3006867632e7061757365011b0000018bcfe568010202"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 3,
+        "requirement": "87/5.3/report-health",
+        "comment": "valid TELEMETRY_REPORT carrying a health statement",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010003010681a3006773746f72616765011b0000018bcfe568020201"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256
+        }
+      },
+      {
+        "tcId": 4,
+        "requirement": "87/5/report-mixed",
+        "comment": "valid TELEMETRY_REPORT mixing metrics + events + health",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010003020481a4006b71756575652e6465707468011b0000018bcfe56803020203220581a2006572656b6579011b0000018bcfe568040681a300636e6574011b0000018bcfe568050200"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256
+        }
+      },
+      {
+        "tcId": 5,
+        "requirement": "87/6.1/subscribe",
+        "comment": "valid TELEMETRY_SUBSCRIBE: corr + credit",
+        "in": {
+          "frameType": 257,
+          "body": "a3001901010141630708"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 257,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 6,
+        "requirement": "87/6.1/subscribe-selector",
+        "comment": "valid TELEMETRY_SUBSCRIBE with classes + names + min_severity selector",
+        "in": {
+          "frameType": 257,
+          "body": "a600190101014163028200010381686370752e6c6f616405020704"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 257,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 7,
+        "requirement": "87/6.2/sub-ack",
+        "comment": "valid TELEMETRY_SUB_ACK: corr + sub_id + credit",
+        "in": {
+          "frameType": 258,
+          "body": "a40019010201416302412a0304"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 258,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 8,
+        "requirement": "87/6.3/unsubscribe",
+        "comment": "valid TELEMETRY_UNSUBSCRIBE: corr + sub_id",
+        "in": {
+          "frameType": 259,
+          "body": "a30019010301416302412a"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 259,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 9,
+        "requirement": "87/7/credit",
+        "comment": "valid TELEMETRY_CREDIT: corr + sub_id + credit",
+        "in": {
+          "frameType": 260,
+          "body": "a40019010401416302412a0310"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 260,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 10,
+        "requirement": "87/8/error",
+        "comment": "valid TELEMETRY_ERROR: corr + code",
+        "in": {
+          "frameType": 261,
+          "body": "a3001901050141630201"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 261,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 11,
+        "requirement": "87/4/forward-compat-accept-nonneg",
+        "comment": "unknown NON-negative key (99) MUST be accepted",
+        "in": {
+          "frameType": 257,
+          "body": "a400190101014163070818636c6675747572652d6669656c64"
+        },
+        "result": "acceptable",
+        "expected": {
+          "frame_kind": 257,
+          "corr": "63"
+        },
+        "flags": [
+          "ForwardCompat"
+        ]
+      },
+      {
+        "tcId": 12,
+        "requirement": "87/4/non-deterministic-cbor-MUST-reject",
+        "comment": "key 0 in non-shortest form (0x18 0x00)",
+        "in": {
+          "frameType": 257,
+          "body": "a1180000"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 13,
+        "requirement": "87/4/non-canonical-key-order-MUST-reject",
+        "comment": "map keys out of canonical order (key 1 before key 0)",
+        "in": {
+          "frameType": 257,
+          "body": "a201416300190101"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 14,
+        "requirement": "87/4/unknown-negative-key-MUST-reject",
+        "comment": "unknown NEGATIVE integer key (-1)",
+        "in": {
+          "frameType": 257,
+          "body": "a40019010101416307082009"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "UnknownNegativeKey"
+        ]
+      },
+      {
+        "tcId": 15,
+        "requirement": "87/6.1/missing-required-key-MUST-reject",
+        "comment": "TELEMETRY_SUBSCRIBE missing REQUIRED credit(7)",
+        "in": {
+          "frameType": 257,
+          "body": "a200190101014163"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 16,
+        "requirement": "87/4.1/corr-wrong-type-MUST-reject",
+        "comment": "corr(1) is an unsigned int where a byte string is required",
+        "in": {
+          "frameType": 257,
+          "body": "a30019010101090708"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 17,
+        "requirement": "87/4.1/corr-empty-MUST-reject",
+        "comment": "corr(1) is an empty byte string (violates 1-64 B length)",
+        "in": {
+          "frameType": 257,
+          "body": "a30019010101400708"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 18,
+        "requirement": "87/4.1/frame-kind-mismatch-MUST-reject",
+        "comment": "frame_kind says SUBSCRIBE(0x0101) but frame is REPORT(0x0100)",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010103000481a4006178010102000301"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "FrameKindMismatch"
+        ]
+      },
+      {
+        "tcId": 19,
+        "requirement": "87/5/report-empty-content-MUST-reject",
+        "comment": "TELEMETRY_REPORT with no metrics, events, or health",
+        "in": {
+          "frameType": 256,
+          "body": "a2001901000300"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MalformedPayload"
+        ]
+      },
+      {
+        "tcId": 20,
+        "requirement": "87/5/report-missing-batch-seq-MUST-reject",
+        "comment": "TELEMETRY_REPORT missing REQUIRED batch_seq(3)",
+        "in": {
+          "frameType": 256,
+          "body": "a2001901000481a4006178010102000301"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 21,
+        "requirement": "87/5/report-corr-without-sub-id-MUST-reject",
+        "comment": "subscribed TELEMETRY_REPORT has corr(1) but omits sub_id(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001416303000481a4006178010102000301"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MalformedPayload"
+        ]
+      },
+      {
+        "tcId": 22,
+        "requirement": "87/5.1/metric-missing-required-MUST-reject",
+        "comment": "MetricSample missing REQUIRED value(3)",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010003000481a300617801010200"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 23,
+        "requirement": "87/5.1/metric-wrong-type-MUST-reject",
+        "comment": "MetricSample name(0) is a uint where text is required",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010003000481a40009010102000301"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 24,
+        "requirement": "87/5.3/health-missing-required-MUST-reject",
+        "comment": "HealthReport missing REQUIRED status(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a30019010003000681a2006773746f726167650101"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 25,
+        "requirement": "87/4/payload-not-a-map-MUST-reject",
+        "comment": "payload is a bare uint, not a CBOR map",
+        "in": {
+          "frameType": 257,
+          "body": "05"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NotAMap"
+        ]
+      }
+    ]
+  }
+]

@@ -49,7 +49,7 @@ func (c *Conn) KeyUpdate(ctx context.Context, channel npamp.ChannelID) error {
 	}
 	st.seq++
 	// Rotate: zeroize the retired key, bump epoch, reset seq, derive the new key.
-	if err := st.advance(c.master, c.sendDir, channel, c.profile); err != nil {
+	if err := st.advance(c.masterSend, c.sendDir, channel, c.profile); err != nil {
 		return fmt.Errorf("npamp/sdk: advance send epoch: %w", err)
 	}
 	return nil
@@ -71,7 +71,7 @@ func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext
 	if next != st.epoch+1 {
 		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d announced epoch %d, want %d", channel, next, st.epoch+1)
 	}
-	if err := st.advance(c.master, c.recvDir, channel, c.profile); err != nil {
+	if err := st.advance(c.masterRecv, c.recvDir, channel, c.profile); err != nil {
 		return fmt.Errorf("npamp/sdk: advance recv epoch: %w", err)
 	}
 

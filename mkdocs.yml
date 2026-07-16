@@ -232,6 +232,14 @@ nav:
           - "Channel ops: Memory": spec/companion/81_memory_channel.md
           - "Channel ops: Sensory": spec/companion/82_sensory_channel.md
           - "Channel ops: Spatial": spec/companion/83_spatial_channel.md
+          - "Channel ops: Capability": spec/companion/84_capability_channel.md
+          - "Channel ops: Immune": spec/companion/85_immune_channel.md
+          - "Channel ops: Settlement": spec/companion/86_settlement_channel.md
+          - "Channel ops: Telemetry": spec/companion/87_telemetry_channel.md
+          - "Channel ops: Commerce": spec/companion/88_commerce_channel.md
+          - "Channel ops: Interaction": spec/companion/89_interaction_channel.md
+          - "Channel ops: Workflow": spec/companion/8a_workflow_channel.md
+          - "Channel ops: Knowledge": spec/companion/8b_knowledge_channel.md
   - Registries: spec/07_tlv_registry.md
   - Conformance:
       - Requirements: spec/companion/55_conformance_requirements.md

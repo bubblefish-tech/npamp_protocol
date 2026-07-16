@@ -15,6 +15,9 @@ draft-bubblefish-npamp-*.pdf
 node_modules/
 .venv/
 __pycache__/
+# xml2rfc reference cache (regenerated from the network on draft build) + local run log.
+.refcache/
+tracker.log
 
 # Language build outputs (regenerate from source; never publish — they embed
 # absolute build paths and platform binaries)
@@ -24,3 +27,31 @@ target/
 *.rlib
 *.rmeta
 *.pdb
+# SwiftPM / native cross-compile output dirs (target-triple build trees + the
+# generated build manifest embed absolute /mnt/... and /home/... compile paths).
+.swiftpm/
+plugin-tools.yaml
+**/plugin-tools.yaml
+*-apple-macosx/
+*-unknown-linux-gnu/
+*-unknown-linux-musl/
+x86_64-*/
+aarch64-*/
+arm64-*/
+*.o
+*.d
+*.swiftmodule
+*.swiftdoc
+ModuleCache/
+# SwiftPM in-place build/workspace state (impl/swift built with output in the package dir,
+# not .build/ — these regenerate from `swift package resolve` + `swift build`; keep only
+# Package.swift + Package.resolved + Sources/ + Tests/ + QUICKSTART.md + run.sh).
+impl/swift/checkouts/
+impl/swift/repositories/
+impl/swift/workspace-state.json
+impl/swift/build.db
+impl/swift/release.yaml
+impl/swift/release
+impl/*/checkouts/
+impl/*/repositories/
+impl/*/workspace-state.json

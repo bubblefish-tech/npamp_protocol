@@ -40,12 +40,14 @@ wire encoding, event schema, event vocabulary, message schema, or operation
 contract. Accordingly, this reference describes the Interaction interface at the
 level the core specification actually fixes — the traffic *class* named by the
 registry purpose (§4) — and does not invent frame layouts, event types, field
-structures, or semantics that the core specification does not state. A future
-companion specification MAY define a concrete Interaction operation encoding
-within the channel-specific code points the core specification leaves available;
-until then, the public Interaction interface is exactly what this reference
-restates, and any richer agent-to-human interaction carried today rides the
-bridge framework by deployment choice (§6).
+structures, or semantics that the core specification does not state. The companion
+specification NPAMP-INTERACTION (`../companion/89_interaction_channel.md`) now
+defines a concrete Interaction operation encoding within the channel-specific code
+points the core specification leaves available (`0x0100`–`0x0107`); the core
+specification itself still neither defines nor requires such an encoding. This
+reference restates the public Interaction interface at the registry level the core
+specification fixes, and any richer agent-to-human interaction rides that companion
+encoding or the bridge framework by deployment choice (§6).
 
 ## 2. Channel identity
 
@@ -146,12 +148,13 @@ point the core specification reserves for another channel.
 Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which an
 Interaction-specific operation encoding — for example concrete user-interface-event
-request and reply frames (§4) — would be assigned. The core specification defines
-**no** Interaction-specific frame type in this range, and no companion
-specification in the current set (`../companion/00_companion_index.md`) defines an
-Interaction-**native** frame here. Consequently there is, at present, no core- or
-companion-defined native Interaction operation frame; §4 describes the interface at
-the registry level the core specification actually fixes.
+request and reply frames (§4) — is assigned. The core specification defines
+**no** Interaction-specific frame type in this range; the companion specification
+NPAMP-INTERACTION (`../companion/89_interaction_channel.md`) now defines the native
+Interaction operation frames here (`0x0100`–`0x0107`), while the core specification
+itself still neither defines nor requires them. §4 describes the interface at the
+registry level the core specification actually fixes, and the companion, not this
+reference, supplies the native operation encoding (§6).
 
 A deployment that OPTIONALLY carries a foreign agent-to-human interaction protocol
 on this channel (per the channel-selection guidance discussed in §6) does so under
@@ -179,8 +182,9 @@ Notes and honest boundaries:
   the traffic class ("agent-to-human user-interface events") but defines **no**
   event type, event vocabulary, field set, or encoding for it. This reference does
   not manufacture a taxonomy of user-interface events, and MUST NOT be cited as the
-  source of one. A companion specification MAY define such a vocabulary and its
-  encoding precisely.
+  source of one. The companion specification NPAMP-INTERACTION
+  (`../companion/89_interaction_channel.md`) now defines such a vocabulary and its
+  encoding precisely; the core specification itself still does not.
 - **No operation encoding is defined here.** Because the core specification assigns
   no Interaction-specific frame type (§3.3) and reserves no Interaction frame-type
   range (§3.2), the traffic class above has **no core-defined request frame, reply
@@ -195,9 +199,10 @@ Notes and honest boundaries:
   per-direction sequence space (core specification §5), which orders frames within a
   direction. The core specification does not define how an Interaction reply (if
   any) is correlated to a request (unlike the Bridge channel, where NPAMP-BRIDGE §5
-  defines a `correlation_id`); an Interaction operation encoding, when specified by
-  a companion, is where such correlation would be defined. This reference does not
-  define it.
+  defines a `correlation_id`); the companion specification NPAMP-INTERACTION
+  (`../companion/89_interaction_channel.md`) defines that correlation for the native
+  Interaction operation encoding (an in-body correlation token), while the core
+  specification and this reference do not.
 - **Foreign interaction protocols ride the bridge framework, not a native
   encoding.** A deployment MAY carry a foreign agent-to-human interaction protocol
   (for example the Agent-User Interaction Protocol, AG-UI) on this channel, but it
@@ -245,12 +250,14 @@ minimum profile is met, and no upper profile bound.
 The Interaction channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
-carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Interaction channel has **no
-dedicated companion specification** that defines a native Interaction operation
-encoding, in the current companion set (`../companion/00_companion_index.md`). It is
-therefore not itself a bridge carriage class and defines no native interface that
-builds on NPAMP-BRIDGE.
+carriage classes, the Interaction channel — like the Discovery channel (`0x0010`),
+elaborated by NPAMP-DISC (`../companion/40_discovery.md`) — carries N-PAMP's own
+native encoding. Its **dedicated companion specification** NPAMP-INTERACTION
+(`../companion/89_interaction_channel.md`) now defines that native Interaction
+operation encoding in the current companion set
+(`../companion/00_companion_index.md`); the core specification itself still neither
+defines nor requires it. The Interaction channel is therefore not itself a bridge
+carriage class and defines no native interface that builds on NPAMP-BRIDGE.
 
 The Interaction channel does, however, appear in the companion index's
 **"Channel selection for carriage"** guidance (`../companion/00_companion_index.md`).
@@ -287,20 +294,22 @@ public contract is exactly what §2–§5 restate:
 - Its **public interface** — the agent-to-human user-interface-event traffic class,
   described at the registry level, with **no core-defined wire encoding** (§4); and
 - Its **reserved extension surface** — **none** at the frame-type level: the core
-  specification reserves no Interaction-specific frame-type range, and no current
-  companion defines a native Interaction frame in the `0x0100`+ namespace (§3.2,
-  §3.3).
+  specification reserves no Interaction-specific sub-`0x0100` frame-type range, and
+  the companion specification NPAMP-INTERACTION
+  (`../companion/89_interaction_channel.md`) likewise reserves no such range —
+  defining its native Interaction frames directly in the channel-specific `0x0100`+
+  namespace (`0x0100`–`0x0107`) rather than in a reserved band (§3.2, §3.3).
 
 Should richer, interoperable Interaction traffic be wanted, two paths exist, both
 already available. A deployment MAY carry a foreign agent-to-human interaction
 protocol on this channel today via NPAMP-BRIDGE and a carriage class (or Class
-OPAQUE for an unmapped protocol), as above; or a future companion specification MAY
-define a native Interaction operation encoding within the channel-specific `0x0100`+
-code points, verified against the core specification. Until such a companion exists,
-an implementation carries native Interaction traffic under the channel identity
-above, and there is no additional core- or companion-defined **native** Interaction
-behavior to conform to. This reference documents the interface at that public level
-and defines no new behavior.
+OPAQUE for an unmapped protocol), as above; or it MAY use the native Interaction
+operation encoding that the companion specification NPAMP-INTERACTION
+(`../companion/89_interaction_channel.md`) now defines within the channel-specific
+`0x0100`+ code points, verified against the core specification. The core
+specification itself still neither defines nor requires that native encoding; this
+reference documents the interface at the public registry level and defines no new
+behavior, deferring the native operation semantics to NPAMP-INTERACTION.
 
 ## 7. Conformance
 
@@ -321,8 +330,10 @@ only if, for channel `0x000F`, it:
    Interaction application traffic (§3.1);
 5. Assigns **no** Interaction-specific meaning to any core-reserved sub-`0x0100`
    frame-type range, because the core specification reserves no such range for the
-   Interaction channel (§3.2), and places any future Interaction-native operation
-   encoding only in the channel-specific `0x0100`+ namespace (§3.3);
+   Interaction channel (§3.2), and places any Interaction-native operation encoding
+   — as the companion specification NPAMP-INTERACTION
+   (`../companion/89_interaction_channel.md`) now does — only in the channel-specific
+   `0x0100`+ namespace (§3.3);
 6. Does not treat the traffic-class description in §4 as a normative wire encoding,
    and does not cite this reference as the source of any Interaction event schema,
    event vocabulary, request frame, reply frame, correlation scheme, or error model,
@@ -336,9 +347,9 @@ only if, for channel `0x000F`, it:
    mapping, treating the foreign message as opaque and octet-exact, and does not rely
    on any native Interaction behavior this page defines beyond the core registry
    line — deferring all Interaction-native operation semantics beyond the
-   registry-level interface of §4 to a future companion specification and adding no
-   native Interaction behavior of its own that the core specification does not
-   reserve (§4, §6).
+   registry-level interface of §4 to the companion specification NPAMP-INTERACTION
+   (`../companion/89_interaction_channel.md`) and adding no native Interaction
+   behavior of its own that the core specification does not reserve (§4, §6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not emit or honor any

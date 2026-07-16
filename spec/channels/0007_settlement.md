@@ -41,10 +41,12 @@ encoding, message schema, value or amount representation, ledger model, or recei
 format. Accordingly, this reference describes the Settlement interface at the level
 the core specification actually fixes — the operation *classes* named by the
 registry purpose (§4) — and does not invent frame layouts, field structures, or
-semantics that the core specification does not state. A future companion
-specification MAY define a concrete Settlement operation encoding within the code
-points the core specification reserves; until then, the public Settlement interface
-is exactly what this reference restates.
+semantics that the core specification does not state. The companion specification
+NPAMP-SETTLEMENT (`../companion/86_settlement_channel.md`) now defines a concrete
+Settlement operation encoding within the code points the core specification reserves;
+the core specification itself still neither defines nor requires them, so the public
+Settlement interface this reference restates remains exactly the registry-level
+surface the core specification fixes.
 
 ## 2. Channel identity
 
@@ -128,11 +130,14 @@ specification can define them without colliding with the core wire format
   transparency-log entries"). This reference does not manufacture a per-channel
   split the core specification does not state; a companion that defines these frames
   is where any such partition would be fixed.
-- **No companion defines these frames.** No companion specification in the current
-  set (`../companion/00_companion_index.md`) defines the `0x00A0`–`0x00A3` frames.
-  An implementation therefore MUST NOT treat any batch-commitment behavior as
-  specified by the core specification, and MUST NOT assign `0x00A0`–`0x00A3` to any
-  other purpose.
+- **The Settlement companion defines the public half of these frames.** The companion
+  specification NPAMP-SETTLEMENT (`../companion/86_settlement_channel.md`) now defines
+  the public Settlement batch-commitment frames `0x00A0`–`0x00A1`; the Audit half
+  `0x00A2`–`0x00A3` of this shared range remains reserved and undefined for the public
+  Settlement channel. The core specification itself neither defines nor requires these
+  frames. An implementation therefore MUST NOT treat any batch-commitment behavior as
+  specified by the core specification — the public half is defined by NPAMP-SETTLEMENT,
+  not the core — and MUST NOT assign `0x00A0`–`0x00A3` to any other purpose.
 
 > **Known editorial inconsistency in -00 (carried, not corrected here).** The core
 > specification states that channel-specific frame types begin at `0x0100`
@@ -147,10 +152,13 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Settlement-specific
 operation encoding — for example concrete settlement request/response and receipt
 frames (§4) — would be assigned. The core specification defines **no**
-Settlement-specific frame type in this range, and no companion specification in the
-current set defines one. Consequently there is, at present, no core- or
-companion-defined Settlement operation frame; §4 describes the interface at the
-registry level the core specification actually fixes.
+Settlement-specific frame type in this range. The companion specification
+NPAMP-SETTLEMENT (`../companion/86_settlement_channel.md`) now defines Settlement
+operation frames in this `0x0100`+ channel-specific range (settlement-intent and
+receipt request/result operations and a structured error, `0x0100`–`0x0104`); the
+core specification itself still neither defines nor requires them. §4 describes the
+interface at the registry level the core specification actually fixes, and defers the
+concrete operation encoding to NPAMP-SETTLEMENT.
 
 ## 4. Interface and operations (public level)
 
@@ -183,8 +191,9 @@ Notes and honest boundaries:
 - **Batch commitment.** The only Settlement-specific extension surface the core
   specification names beyond the registry purpose is the **batch-commitment**
   frame-type range it reserves jointly with the Audit channel
-  (`0x00A0`–`0x00A3`, §3.2). Its semantics are undefined by the core specification
-  and out of scope for this reference until a companion defines them.
+  (`0x00A0`–`0x00A3`, §3.2). Its semantics are undefined by the core specification;
+  the public half `0x00A0`–`0x00A1` is defined by the companion NPAMP-SETTLEMENT, not
+  by the core, and remains out of scope for this core-level reference (§3.2).
 - **No operation encoding is defined here.** Because the core specification assigns
   no Settlement-specific frame type (§3.3), the operation classes above have **no
   core-defined request frame, reply frame, addressing scheme, value encoding,
@@ -243,33 +252,41 @@ The Settlement channel is a **native core channel**: unlike the Bridge channel
 elaborated by the NPAMP-BRIDGE companion framework
 (`../companion/10_bridge_framework.md`) and its carriage classes, and unlike the
 Discovery channel (`0x0010`), elaborated by NPAMP-DISC
-(`../companion/40_discovery.md`), the Settlement channel has **no dedicated companion
-specification** in the current companion set (`../companion/00_companion_index.md`).
+(`../companion/40_discovery.md`), the Settlement channel is elaborated by a
+**native-core-channel operation companion**, NPAMP-SETTLEMENT
+(`../companion/86_settlement_channel.md`), in the current companion set
+(`../companion/00_companion_index.md`) — not a bridge companion framework.
 It is therefore not a bridge carriage class and does not build on NPAMP-BRIDGE, and
 it does not appear in the companion index's "Channel selection for carriage" table —
 which routes payment-mandate and multi-party commerce traffic to the **Commerce**
-channel (`0x000E`), not to Settlement. This mirrors the Memory channel (`0x0001`;
-`./0001_memory.md`), another native core channel with no dedicated companion.
+channel (`0x000E`), not to Settlement.
 
-The consequence for an implementer is that the Settlement channel's public contract
-is exactly what §2–§5 restate:
+The consequence for an implementer is that the Settlement channel's core-level public
+contract is exactly what §2–§5 restate (its concrete operation encoding being defined
+by NPAMP-SETTLEMENT, not by the core specification):
 
 - Its **identity** — id `0x0007`, name Settlement, purpose "agent-to-agent
   settlement and receipts", minimum profile Standard, direction Bidirectional (§2);
 - Its **public interface** — the settlement and receipt operation classes, described
   at the registry level, with **no core-defined wire encoding** (§4);
-- Its **reserved extension surface** — the `0x00A0`–`0x00A3` batch-commitment
-  frame-type range, reserved by the core specification under a label shared with the
-  Audit channel and defined by neither the core specification nor any current
-  companion (§3.2).
+- Its **reserved and companion-defined extension surface** — the `0x00A0`–`0x00A3`
+  batch-commitment frame-type range, reserved by the core specification under a label
+  shared with the Audit channel, whose public half `0x00A0`–`0x00A1` is now defined by
+  the companion specification NPAMP-SETTLEMENT (`../companion/86_settlement_channel.md`)
+  while the Audit half `0x00A2`–`0x00A3` remains reserved and undefined for the public
+  Settlement channel; the core specification itself neither defines nor requires these
+  frames, and NPAMP-SETTLEMENT further defines Settlement operation frames in the
+  channel-specific `0x0100`+ namespace (§3.2, §3.3).
 
-Should richer, interoperable Settlement operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines a Settlement
-operation encoding within the reserved code points, verified against the core
-specification. Until such a companion exists, an implementation carries Settlement
-traffic under the channel identity and reserved code points above, and there is no
-additional core- or companion-defined Settlement behavior to conform to. This
-reference documents the interface at that public level and defines no new behavior.
+Richer, interoperable Settlement operations are defined by exactly such a companion:
+NPAMP-SETTLEMENT (`../companion/86_settlement_channel.md`) defines a Settlement
+operation encoding within the channel-specific `0x0100`+ code points and the public
+batch-commitment half `0x00A0`–`0x00A1`, verified against the core specification. An
+implementation carries core-level Settlement traffic under the channel identity and
+reserved code points above; the core specification itself defines no additional
+Settlement behavior, and the concrete operation semantics an implementation conforms
+to are those NPAMP-SETTLEMENT defines. This reference documents the core-level public
+interface and defines no new behavior.
 
 ## 7. Conformance
 
@@ -304,8 +321,9 @@ if, for channel `0x0007`, it:
    independent per-direction sequence spaces and traffic keys — and does not treat the
    channel as Multi-stream (§2, §4); and
 8. Defers all Settlement operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adding no Settlement behavior of its own that
-   the core specification does not reserve (§6).
+   to the NPAMP-SETTLEMENT companion specification
+   (`../companion/86_settlement_channel.md`), adding no Settlement behavior of its own
+   that neither the core specification reserves nor that companion defines (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not advertise, emit, or

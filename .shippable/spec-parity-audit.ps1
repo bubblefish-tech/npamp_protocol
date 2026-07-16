@@ -83,6 +83,17 @@ if ($Coverage) {
 
 if ($VerifyClaims) {
     foreach ($cap in $ledger.capabilities) {
+        # -- Over-claim: a wired/graded entry's spec_anchor MUST resolve. A conformance_status=graded
+        #    or impl_status=wired claim on a spec document that does not exist is an F4 false-green
+        #    (the HANDSHAKE-anchor-typo class). A planned/spec-audited entry is a TRACKED gap whose
+        #    document MAY still be in authoring, so it is exempt here -- coverage, not honesty, tracks
+        #    a companion's existence.
+        if (([string]$cap.impl_status -ieq 'wired' -or [string]$cap.conformance_status -ieq 'graded') -and $cap.spec_anchor) {
+            $sf = Join-Path $RepoRoot ([string]$cap.spec_anchor)
+            if (-not (Test-Path $sf)) {
+                $violations += "HONESTY: '$($cap.name)' is impl_status=$($cap.impl_status)/conformance_status=$($cap.conformance_status) but its spec_anchor does not resolve: $($cap.spec_anchor) (false-green -- a graded/wired claim on a missing document)."
+            }
+        }
         # -- Over-claim: wired must have resolving impl anchors.
         if ([string]$cap.impl_status -ieq 'wired') {
             if (-not $cap.impl_anchors -or @($cap.impl_anchors).Count -eq 0) {

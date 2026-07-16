@@ -148,7 +148,7 @@ else skip csharp "no pwsh (run csharp/test/build-handshake-kat.ps1 where the .NE
 
 # --- swift (executable npamp-handshake-kat: all five vectors incl. KEM-wire; native `swift` on
 # Linux/macOS, else via WSL Ubuntu on a Windows host — swift/run.sh builds + runs; args passed
-# positionally with /x/ -> /mnt/x/ path conversion to avoid MSYS->WSL quoting issues; the runner
+# positionally with a Windows drive-letter to WSL-mount path conversion to avoid MSYS->WSL quoting issues; the runner
 # prints its ML-KEM SKIPs and emits 'ALL PASS' only when all 15 executable legs ran and passed) ---
 if command -v swift >/dev/null 2>&1; then
   o="$(bash "$IMPL/swift/run.sh" handshake-kat "$VEC" 2>&1)"; ec=$?

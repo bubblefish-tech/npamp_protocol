@@ -1,0 +1,207 @@
+[
+  {
+    "op": "capability.body.decode",
+    "profile": "Standard",
+    "tests": [
+      {
+        "tcId": 1,
+        "requirement": "84/4.1/deterministic-cbor-map",
+        "comment": "valid CAP_ISSUE_REQ: envelope + subject + authority + effect",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001417a02676167656e742d62036b726561643a6c65646765720902"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "7a"
+        }
+      },
+      {
+        "tcId": 2,
+        "requirement": "84/4.1/deterministic-cbor-map",
+        "comment": "valid CAP_DELEGATE_REQ: envelope + token_id + subject + effect",
+        "in": {
+          "frameType": 258,
+          "body": "a50019010201417a02656361702d3103676167656e742d630702"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 258,
+          "corr": "7a"
+        }
+      },
+      {
+        "tcId": 3,
+        "requirement": "84/4.1/deterministic-cbor-map",
+        "comment": "valid CAP_REVOKE_REQ: envelope + token_id + destructive effect",
+        "in": {
+          "frameType": 260,
+          "body": "a40019010401417a02656361702d310503"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 260,
+          "corr": "7a"
+        }
+      },
+      {
+        "tcId": 4,
+        "requirement": "84/6.4/lookup-scoping-optional",
+        "comment": "valid CAP_LOOKUP_REQ: envelope + read_only effect, no scoping filter",
+        "in": {
+          "frameType": 262,
+          "body": "a30019010601417a0800"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 262,
+          "corr": "7a"
+        }
+      },
+      {
+        "tcId": 5,
+        "requirement": "84/8/error-frame",
+        "comment": "valid CAP_ERROR: envelope + code + message",
+        "in": {
+          "frameType": 264,
+          "body": "a40019010801417a02040371617070726f76616c207265717569726564"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 264,
+          "corr": "7a"
+        }
+      },
+      {
+        "tcId": 6,
+        "requirement": "84/4.3/forward-compat-accept-nonneg",
+        "comment": "unknown NON-negative key (99) MUST be accepted",
+        "in": {
+          "frameType": 256,
+          "body": "a60019010001417a02676167656e742d62036b726561643a6c6564676572090218636c6675747572652d6669656c64"
+        },
+        "result": "acceptable",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "7a"
+        },
+        "flags": [
+          "ForwardCompat"
+        ]
+      },
+      {
+        "tcId": 7,
+        "requirement": "84/4.1/non-deterministic-cbor-MUST-reject",
+        "comment": "key 0 in non-shortest form (0x18 0x00)",
+        "in": {
+          "frameType": 256,
+          "body": "a1180000"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 8,
+        "requirement": "84/4.3/unknown-negative-key-MUST-reject",
+        "comment": "unknown NEGATIVE integer key (-1)",
+        "in": {
+          "frameType": 256,
+          "body": "a60019010001417a02676167656e742d62036b726561643a6c656467657209022009"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "UnknownNegativeKey"
+        ]
+      },
+      {
+        "tcId": 9,
+        "requirement": "84/4.1/missing-required-key-MUST-reject",
+        "comment": "CAP_ISSUE_REQ missing REQUIRED subject(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a40019010001417a036b726561643a6c65646765720902"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 10,
+        "requirement": "84/4.1/wrong-major-type-MUST-reject",
+        "comment": "subject(2) is uint where text is required",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001417a0209036b726561643a6c65646765720902"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 11,
+        "requirement": "84/4.2/frame-kind-mismatch-MUST-reject",
+        "comment": "frame_kind says ISSUE_RESULT(0x0101) but frame is ISSUE_REQ(0x0100)",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010101417a02676167656e742d62036b726561643a6c65646765720902"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "FrameKindMismatch"
+        ]
+      },
+      {
+        "tcId": 12,
+        "requirement": "84/4.2/corr-not-byte-string-MUST-reject",
+        "comment": "corr(1) is an Unsigned int, not the required byte string",
+        "in": {
+          "frameType": 256,
+          "body": "a50019010001187a02676167656e742d62036b726561643a6c65646765720902"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 13,
+        "requirement": "84/4.2/corr-empty-MUST-reject",
+        "comment": "corr(1) is an empty byte string; a non-empty 1-64 B corr is required",
+        "in": {
+          "frameType": 256,
+          "body": "a500190100014002676167656e742d62036b726561643a6c65646765720902"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeEmptyCorr"
+        ]
+      },
+      {
+        "tcId": 14,
+        "requirement": "84/4.1/payload-not-a-map-MUST-reject",
+        "comment": "payload is a bare uint, not a CBOR map",
+        "in": {
+          "frameType": 256,
+          "body": "05"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NotAMap"
+        ]
+      }
+    ]
+  }
+]

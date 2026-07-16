@@ -13,6 +13,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
@@ -79,8 +80,23 @@ type Config struct {
 type Conn struct {
 	raw     net.Conn
 	profile npamp.Profile
-	master  []byte
-	peerID  ed25519.PublicKey
+	// masterSend / masterRecv are the two per-direction connection ROOTS of the
+	// Hybrid Tree Ratchet (spec/10 section 5). Both are seeded from a copy of the
+	// handshake master at generation 0 (so gen-0 keys are byte-identical to the
+	// pre-ratchet schedule), and each advances INDEPENDENTLY as its direction
+	// ratchets. masterSend is the root for the direction this endpoint sends (==
+	// the peer's masterRecv); masterRecv is the root for the direction it receives.
+	// genSend / genRecv are the generation indices of the two roots, starting 0.
+	// They are atomic so Conn.ReKEM can read the receive generation lock-free when
+	// choosing a Tier-2 target — an app Recv-loop holds rmu for the entire blocking
+	// Recv, so ReKEM (which holds wmu) must never take rmu. Each is WRITTEN under
+	// its direction's lock (wmu for genSend, rmu for genRecv) together with the
+	// matching root swap, so a same-direction reader sees a consistent root/gen pair.
+	masterSend []byte
+	masterRecv []byte
+	genSend    atomic.Uint64
+	genRecv    atomic.Uint64
+	peerID     ed25519.PublicKey
 
 	sendDir npamp.Direction
 	recvDir npamp.Direction
@@ -89,6 +105,13 @@ type Conn struct {
 	sendKeys map[npamp.ChannelID]*epochKeys
 	rmu      sync.Mutex
 	recvKeys map[npamp.ChannelID]*epochKeys
+
+	// pmu guards pendingReKEM, the initiator-side state of an in-flight Tier-2
+	// re-KEM (the ephemeral KEM client + the generation it will heal). It is set
+	// under wmu by ReKEM and consumed under rmu by the REKEM_ACK handler, so it
+	// has its own lock to avoid coupling the two direction locks.
+	pmu          sync.Mutex
+	pendingReKEM *pendingReKEM
 
 	closeOnce sync.Once
 
@@ -201,14 +224,54 @@ func (c *Conn) Zeroize() {
 	c.rmu.Lock()
 	defer c.rmu.Unlock()
 	c.closed = true
-	for i := range c.master {
-		c.master[i] = 0
-	}
+	// Wipe BOTH per-direction ratchet roots (Step 8 of the HTR build map): after
+	// teardown neither root — from which any generation's traffic key is derivable
+	// — lingers in the heap.
+	wipeRoot(c.masterSend)
+	wipeRoot(c.masterRecv)
 	for _, st := range c.sendKeys {
 		st.zeroize()
 	}
 	for _, st := range c.recvKeys {
 		st.zeroize()
+	}
+	// Wipe any in-flight Tier-2 ephemeral KEM material so a pending re-KEM's
+	// private keys do not outlive the connection.
+	c.pmu.Lock()
+	if c.pendingReKEM != nil {
+		c.pendingReKEM.zeroize()
+		c.pendingReKEM = nil
+	}
+	c.pmu.Unlock()
+}
+
+// wipeRoot zeroizes a ratchet root (or any secret byte slice) in place. It is the
+// factored-out form of the Zeroize wipe loop, reused between ratchet steps (not
+// only at Close) so a retired root is erased the moment its successor is derived —
+// mirroring the derive-next -> zeroize-old-in-place -> replace discipline. Best
+// effort: Go's GC may have copied the bytes earlier (see the epochKeys.zeroize
+// caveat), so the one-wayness guarantee is only as strong as this in-place wipe.
+func wipeRoot(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+}
+
+// dropSendKeys zeroizes and forgets every cached send-direction epoch key so that
+// after a root advance every channel lazily re-derives off the NEW root at leaf
+// epoch 0 (the MLS-epoch "fresh tree per generation"). Caller holds wmu.
+func (c *Conn) dropSendKeys() {
+	for ch, st := range c.sendKeys {
+		st.zeroize()
+		delete(c.sendKeys, ch)
+	}
+}
+
+// dropRecvKeys is dropSendKeys for the receive direction. Caller holds rmu.
+func (c *Conn) dropRecvKeys() {
+	for ch, st := range c.recvKeys {
+		st.zeroize()
+		delete(c.recvKeys, ch)
 	}
 }
 
@@ -255,7 +318,7 @@ func (c *Conn) sendState(channel npamp.ChannelID) (*epochKeys, error) {
 	st := c.sendKeys[channel]
 	if st == nil {
 		st = &epochKeys{}
-		if err := st.derive(c.master, c.sendDir, channel, c.profile); err != nil {
+		if err := st.derive(c.masterSend, c.sendDir, channel, c.profile); err != nil {
 			return nil, err
 		}
 		c.sendKeys[channel] = st
@@ -305,6 +368,38 @@ func (c *Conn) Recv(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []by
 			continue // transparent control frame; read the next
 		case npamp.FrameKeyUpdateAck:
 			continue // confirmation of our own KeyUpdate; nothing to do
+		case frameMasterRatchet:
+			// Master-ratchet control frames are Control-channel-specific; the same
+			// numeric value on another channel belongs to that channel's namespace and
+			// is returned to the caller unchanged.
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, nil
+			}
+			if err := c.handleMasterRatchet(ch, pt); err != nil {
+				return 0, 0, nil, err
+			}
+			continue
+		case frameMasterRatchetAck:
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, nil
+			}
+			continue // informational confirmation of our own Tier-1 step
+		case frameReKEM:
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, nil
+			}
+			if err := c.handleReKEM(ch, pt); err != nil {
+				return 0, 0, nil, err
+			}
+			continue
+		case frameReKEMAck:
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, nil
+			}
+			if err := c.handleReKEMAck(pt); err != nil {
+				return 0, 0, nil, err
+			}
+			continue
 		default:
 			return ch, npamp.FrameType(f.Type), pt, nil
 		}
@@ -320,7 +415,7 @@ func (c *Conn) recvState(channel npamp.ChannelID) (*epochKeys, error) {
 	st := c.recvKeys[channel]
 	if st == nil {
 		st = &epochKeys{}
-		if err := st.derive(c.master, c.recvDir, channel, c.profile); err != nil {
+		if err := st.derive(c.masterRecv, c.recvDir, channel, c.profile); err != nil {
 			return nil, err
 		}
 		c.recvKeys[channel] = st

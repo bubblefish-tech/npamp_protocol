@@ -27,6 +27,11 @@ const (
 	TLVPathResponse    TLVType = 0x16
 	TLVKeyUpdateMarker TLVType = 0x17
 	TLVProtectionMode  TLVType = 0x18
+	// TLVRatchetGeneration carries an 8-octet big-endian master-ratchet generation
+	// index in the MASTER_RATCHET / REKEM control frames (spec/10 section 5, Hybrid
+	// Tree Ratchet), mirroring TLVKeyUpdateMarker's 8-octet layout one level up at
+	// the connection root.
+	TLVRatchetGeneration TLVType = 0x19
 )
 
 var ErrTruncatedTLV = errors.New("npamp: truncated TLV")

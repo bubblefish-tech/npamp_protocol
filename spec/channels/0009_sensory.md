@@ -135,10 +135,12 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Sensory-specific
 observation encoding — for example concrete bulk-observation frames (§4) — would be
 assigned. The core specification defines **no** Sensory-specific frame type in this
-range, and no companion specification in the current set
-(`../companion/00_companion_index.md`) defines one. Consequently there is, at
-present, no core- or companion-defined Sensory frame; §4 describes the interface at
-the registry level the core specification actually fixes.
+range; the companion specification NPAMP-SENSORY
+(`../companion/82_sensory_channel.md`) now defines the bulk-observation and
+subscription/backpressure frames (`0x0100`–`0x0105`) in this range, while the core
+specification itself still defines none. §4 describes the interface at the registry
+level the core specification actually fixes; the concrete observation encoding is
+defined by NPAMP-SENSORY, not by the core specification.
 
 ## 4. Interface and operations (public level)
 
@@ -169,14 +171,16 @@ Notes and honest boundaries:
 - **No named operation classes.** The registry purpose does not enumerate
   operations; this reference does not manufacture create/read/update-style
   operation classes for the Sensory channel, because the core specification does not
-  state them. A companion specification MAY define a concrete Sensory observation
-  encoding within the `0x0100`+ namespace; until one exists, the public Sensory
-  interface is exactly what this reference restates.
+  state them. The companion specification NPAMP-SENSORY
+  (`../companion/82_sensory_channel.md`) now defines a concrete Sensory observation
+  encoding within the `0x0100`+ namespace; the core-specification-level public
+  Sensory interface is exactly what this reference restates.
 - **Correlation and ordering.** The Sensory channel has an independent per-direction
   sequence space (core specification §5), which orders frames within a direction.
   The core specification does not define how, or whether, a Sensory frame is
-  correlated to any other; a Sensory encoding, when specified by a companion, is
-  where such semantics would be defined. This reference does not define them.
+  correlated to any other; the companion specification NPAMP-SENSORY
+  (`../companion/82_sensory_channel.md`) is where such semantics are defined, not the
+  core specification. This reference does not define them.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
   deployment MAY carry concurrent bulk observation traffic over multiple transport
   streams within the channel's stream family; the core specification permits this at
@@ -223,13 +227,16 @@ profile bound.
 
 ## 6. Relationship to companion specifications
 
-The Sensory channel is a **native core channel**: like the Memory channel
-(`0x0001`), and unlike the Bridge channel (`0x000D`), which encapsulates foreign
-agent protocols and is elaborated by the NPAMP-BRIDGE companion framework
-(`../companion/10_bridge_framework.md`) and its carriage classes, the Sensory
-channel has **no dedicated companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage class
-and does not build on NPAMP-BRIDGE; the companion set does not reference it.
+The Sensory channel is a **native core channel**: unlike the Bridge channel
+(`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
+NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
+carriage classes, the Sensory channel is elaborated by its own dedicated companion
+specification, NPAMP-SENSORY (`../companion/82_sensory_channel.md`), in the current
+companion set (`../companion/00_companion_index.md`). That companion is a
+native-operation framework, not a bridge carriage class: the Sensory channel is
+therefore not a bridge carriage class and does not build on NPAMP-BRIDGE. The
+companion defines the channel's concrete observation encoding; the core
+specification itself still neither defines nor requires these frames.
 
 The consequence for an implementer is that the Sensory channel's public contract is
 exactly what §2–§5 restate:
@@ -240,20 +247,24 @@ exactly what §2–§5 restate:
   described at the registry level, with **no core-defined wire encoding** and no
   named operation classes (§4);
 - Its **frame-type surface** — the reserved all-channel frame types (§3.1) and the
-  `0x0100`+ channel-specific namespace (§3.3), with **no** core-reserved
-  Sensory-specific extension range (§3.2); and
+  `0x0100`+ channel-specific namespace (§3.3), in which the companion NPAMP-SENSORY
+  (`../companion/82_sensory_channel.md`) now defines the Sensory observation frames
+  (`0x0100`–`0x0105`) while the core specification reserves **no** Sensory-specific
+  sub-`0x0100` extension range (§3.2); and
 - Its **firewall gate** — the High minimum profile, above which the channel's
   operational and cryptographic internals are governed by the core specification's
   profile negotiation and are out of scope for this public reference (§5).
 
-Should richer, interoperable Sensory operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines a Sensory
-observation encoding within the `0x0100`+ namespace, verified against the core
-specification and consistent with the channel's firewall gate. Until such a
-companion exists, an implementation carries Sensory traffic under the channel
-identity and frame-type surface above, and there is no additional core- or
-companion-defined Sensory behavior to conform to. This reference documents the
-interface at that public level and defines no new behavior.
+Richer, interoperable Sensory operations follow the same path as for any N-PAMP
+extension: a companion specification that defines a Sensory observation encoding
+within the `0x0100`+ namespace, verified against the core specification and
+consistent with the channel's firewall gate. That companion now exists —
+NPAMP-SENSORY (`../companion/82_sensory_channel.md`) defines the concrete Sensory
+observation encoding — so an implementation that carries Sensory traffic under the
+channel identity and frame-type surface above conforms to the core-defined interface
+this reference restates, while the concrete observation behavior is defined by
+NPAMP-SENSORY, not by the core specification. This reference documents the interface
+at that public level and defines no new behavior.
 
 ## 7. Conformance
 
@@ -284,8 +295,9 @@ if, for channel `0x0009`, it:
    channel's stream family, each peer maintaining independent per-direction sequence
    spaces and traffic keys (§2, §4); and
 8. Defers all Sensory operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adds no Sensory behavior of its own that the
-   core specification does not reserve, and does not publish or rely on any High- or
+   to the companion specification NPAMP-SENSORY (`../companion/82_sensory_channel.md`),
+   adds no Sensory behavior of its own that the core specification does not reserve,
+   and does not publish or rely on any High- or
    Sovereign-profile cryptographic internal or parameter through this public
    reference (§5, §6).
 

@@ -9,6 +9,10 @@ use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use hkdf::Hkdf;
 use sha2::{Sha256, Sha384};
 
+/// Native-channel deterministic-CBOR operation-body decoders (companion specs 84–8b:
+/// Capability, Immune, Settlement, Telemetry, Commerce, Interaction, Workflow, Knowledge).
+pub mod bodies;
+
 pub const HEADER_SIZE: usize = 36;
 pub const PROTOCOL_VERSION: u8 = 0x2;
 pub const MAGIC: [u8; 4] = [0x4E, 0x50, 0x41, 0x4D];

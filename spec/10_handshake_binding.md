@@ -318,3 +318,219 @@ schedule (HKDF-Extract → `handshake_secret` → `c_hs`/`s_hs`/`master` ladder 
 handshake-phase traffic key/iv, binding the AEAD code point the vector fixes as its test input — AES-256-GCM `0x0001`, the KAT fixture, not the AUTH-sealing rule; AUTH uses the negotiated AEAD per §6.4). Only the KEM-wire KAT
 remains on the Go reference — broadening it across the `impl/` languages is follow-on work: the ML-KEM
 KEM-wire layout needs a per-language ML-KEM dependency that is not generally available.
+
+## 9. Master ratchet — Hybrid Tree Ratchet (normative)
+
+The key schedule of §5 retains a single connection `master` for the connection lifetime, so
+`DeriveTrafficSecret(master, …)` can reproduce every channel's `(key, iv)` at every epoch. That is
+forward-secure across *sessions* (the master derives from the ephemeral hybrid KEM of §4) but NOT
+*within* a session: a `master` compromise discloses all past and future epochs of the live
+connection (the §7 LIMITATION). The **master ratchet** — a two-tier **Hybrid Tree Ratchet (HTR)**
+— closes that intra-session gap. It advances the connection root over time so that a `master`
+compromise is bounded on both sides, and it does so entirely above generation 0, so the §5
+schedule, the §3 transcript, and all five §8 handshake KATs are **unchanged**. **[D→N-PAMP]**
+
+The ratchet is **per-direction**. Each endpoint keeps two roots and two generation counters:
+
+```
+master_send   root for the direction this endpoint SENDS    (== the peer's master_recv)
+master_recv   root for the direction this endpoint RECEIVES  (== the peer's master_send)
+gen_send      generation index of master_send, starts 0
+gen_recv      generation index of master_recv, starts 0
+```
+
+At handshake completion both roots are seeded from the §5 `master` (the `TH_cCV`-bound value) at
+generation 0; i.e. `master_send_0 = master_recv_0 = master`. **Generation 0 is byte-identical to the
+§5 schedule**: because the ratcheted root enters `DeriveTrafficSecret` unchanged (the leaf context
+tuple of §5 is not modified — see §9.4), a connection that never ratchets derives exactly the keys
+it derives today, and the §8 key-schedule/traffic KATs still pass. **[D→N-PAMP]**
+
+Because every ratchet step is deterministic in its inputs, both peers compute the same
+`master_{G}` for the same direction and generation; the leaf `dir` octet (unchanged, §5) keeps the
+two directions' traffic keys separated exactly as today.
+
+### 9.1 Tier 1 — symmetric forward step (forward secrecy)
+
+For a direction at generation `G`, the Tier-1 step advances the root by one HKDF-Expand-Label
+(the §5 primitive), then zeroizes the retired root in place: **[D→RFC]** (RFC 8446 §7.1
+Expand-Label with the `"n-pamp "` prefix)
+
+```
+master_{G+1} = HKDF-Expand-Label(master_G, "master ratchet", gen(8 BE, value G+1), HashLen)
+```
+
+- The context is the **new** generation index `G+1` as an 8-octet big-endian integer.
+- The full label on the wire is `"n-pamp master ratchet"` (`"n-pamp " ‖ "master ratchet"`).
+- HKDF-Expand is one-way, so `master_G` and every earlier generation are unrecoverable from
+  `master_{G+1}`. This provides **forward secrecy, not self-healing**: the chain is deterministic,
+  so an attacker who holds `master_G` can compute every *future* Tier-1 root. Post-compromise
+  self-healing is Tier 2 (§9.2). **[D→N-PAMP]**
+
+An implementation MUST zeroize `master_G` in place after deriving `master_{G+1}` (best-effort per
+the §7 memory-model caveat), and MUST drop every cached per-channel key of that direction so each
+channel re-derives off the new root at leaf epoch 0. Tier 1 injects nothing on the wire beyond the
+boundary marker (§9.3) and so needs no transcript point.
+
+### 9.2 Tier 2 — asymmetric re-KEM step (forward secrecy + post-compromise security)
+
+The Tier-2 step mixes fresh entropy from a new ephemeral `X25519MLKEM768` exchange — the **same**
+construction, TLVs, and 64-octet combined secret as the handshake KEM (§4), with no new primitive —
+through an Extract-then-Expand step that mirrors the §5 `handshake_secret`→`master` shape: **[STD]**
+(KEM per §4), **[D→RFC]** (RFC 5869 §2.2 Extract; RFC 8446 §7.1 Expand-Label)
+
+```
+new_ss       = ML-KEM_SS ‖ X25519_SS                                          // 64 octets, exactly as §4
+rekem_secret = HKDF-Extract(salt = master_G, IKM = new_ss)                    // dual-PRF combiner
+master_{G+1} = HKDF-Expand-Label(rekem_secret, "master ratchet rekem", TH_rekem_G, HashLen)
+```
+
+- The full label on the wire is `"n-pamp master ratchet rekem"`.
+- The **old root sits in the salt position and the fresh secret in the IKM position** (RFC 5869
+  §2.2 / the Signal root-KDF placement), unlike the §5 handshake Extract whose salt is `HashLen`
+  zero octets. Consequently `master_{G+1}` is uniform even if `master_G` is fully known to the
+  attacker: without `new_ss` the attacker cannot compute `master_{G+1}`, and the direction
+  **self-heals** — genuine **post-quantum** post-compromise security, since the re-KEM is the same
+  hybrid KEM as the handshake. **[D→N-PAMP]**
+- Confidentiality of `master_{G+1}` extends the §7 dual-PRF claim one level: it holds if EITHER the
+  chained old root OR one fresh KEM component (X25519 or ML-KEM-768) is unbroken. **[STD]**
+
+`TH_rekem_G` (§9.5) binds the exact REKEM/REKEM_ACK exchange bytes into the new root, defeating
+splicing and reflection the same way `master` is bound to `TH_cCV` (§3, §5). An implementation MUST
+zeroize `master_G`, `rekem_secret`, `new_ss`, and the ephemeral KEM private keys after the step,
+and MUST drop every cached per-channel key of the affected direction (leaf epoch resets to 0). A
+Tier-1-only deployment provides forward secrecy but NOT self-healing and MUST NOT be reported as
+providing post-compromise security. **[D→N-PAMP]**
+
+### 9.3 Control frame types and TLV (extends §1.1)
+
+The four ratchet control frames are **Control channel-specific** frame types in the space `>=
+0x0100` (grouped with the §1.1 handshake frames, which occupy `0x0100`–`0x0103`). They are
+interpreted ONLY on the Control channel (`0x0000`); the same numeric values carry unrelated
+per-channel meanings in other channels' frame-type namespaces (`04_frame_types.md`), so a receiver
+MUST dispatch ratchet handling only for a frame of these types arriving on channel `0x0000`. Each
+is sealed under the **current** generation's Control-channel key (like KEY_UPDATE). **[D→N-PAMP]**
+
+| Type | Name | Direction | Role |
+|------|------|-----------|------|
+| `0x0104` | MASTER_RATCHET | sender→peer | Tier-1 **boundary**: last frame at `gen_send`; carries `TLVRatchetGeneration = gen_send+1` |
+| `0x0105` | MASTER_RATCHET_ACK | peer→sender | Tier-1 confirmation (informational, like KEY_UPDATE_ACK) |
+| `0x0106` | REKEM | initiator→responder | Tier-2 **request** (not a boundary); carries `KEMShare 0x07` ‖ `TLVRatchetGeneration` |
+| `0x0107` | REKEM_ACK | responder→initiator | Tier-2 **boundary** for the responder's send direction; carries `KEMCiphertext 0x08` ‖ `TLVRatchetGeneration` |
+
+TLV code points: **[D→N-PAMP]**
+
+| TLV | Status | Value |
+|-----|--------|-------|
+| `TLVRatchetGeneration 0x19` | **NEW** (next free after `0x18`) | 8-octet big-endian generation, mirroring `TLVKeyUpdateMarker 0x17` |
+| `TLVKEMShare 0x07` | reused (§4) | ML-KEM-768 ek (1184) ‖ X25519 pub (32) = **1216** octets |
+| `TLVKEMCiphertext 0x08` | reused (§4) | ML-KEM-768 ct (1088) ‖ server X25519 pub (32) = **1120** octets |
+
+REKEM carries exactly `KEMShare` then `TLVRatchetGeneration`; REKEM_ACK carries exactly
+`KEMCiphertext` then `TLVRatchetGeneration`; MASTER_RATCHET and MASTER_RATCHET_ACK carry exactly a
+single `TLVRatchetGeneration`. A receiver MUST reject any other TLV layout, and MUST reject a
+`KEMShare`/`KEMCiphertext` of the wrong length (§4 sizes) and a `TLVRatchetGeneration` that is not
+8 octets. **[D→N-PAMP]**
+
+### 9.4 Leaf derivation is unchanged (parity)
+
+Application traffic secrets keep hanging off the ratcheted root, MLS-epoch-style. The §5
+`DeriveTrafficSecret` and its context tuple are **byte-for-byte unchanged**: **[D→N-PAMP]**
+
+```
+traffic_secret = DeriveTrafficSecret(master_G, dir, epoch, suite, channel, H)
+               // context = dir(1) ‖ epoch(8 BE) ‖ suite(2 BE) ‖ channel(2 BE), label "traffic"  — UNCHANGED from §5
+```
+
+The generation `G` enters ONLY through the parent root `master_G`, **never** the leaf context.
+This is the load-bearing parity point: generation 0 reproduces the §5 keys exactly, so no §8 KAT,
+no AEAD AAD, and no data-frame header changes. Per-channel isolation remains the §5 spatial
+domain-separation (the `channel` octet), not root-independence: within one generation a root
+compromise still falls all channels of that direction — HTR bounds exposure over *time*, not the
+blast radius inside a generation. **[D→N-PAMP]**
+
+### 9.5 Re-KEM transcript point `TH_rekem_G`
+
+`TH_rekem_G` is a per-generation transcript-hash point computed with the §3 construction (the
+2-octet big-endian frame type via `AddFrameType`; each TLV in canonical `Type(2) ‖ Length(2) ‖
+Value` via `AddTLV`), absorbing the REKEM exchange in wire order: **[D→N-PAMP]**
+
+```
+TH_rekem_G = H( AddFrameType(0x0106) ‖ AddTLV(KEMShare) ‖ AddTLV(RatchetGeneration)
+              ‖ AddFrameType(0x0107) ‖ AddTLV(KEMCiphertext) ‖ AddTLV(RatchetGeneration) )
+```
+
+Both peers assemble it identically from the decoded on-wire bytes they exchanged, so a spliced or
+reflected REKEM/REKEM_ACK yields a divergent root and the next frame fails to open (fails closed).
+Tier 1 requires no transcript point (§9.1). **[D→N-PAMP]**
+
+### 9.6 On-wire choreography
+
+Every boundary marker is sealed under the OLD (current-generation) key and is the **last frame at
+that generation** on its direction — exactly the KEY_UPDATE discipline. Directions ratchet
+independently; each direction's send root has a single writer, so there is no concurrent-initiation
+tie-break. **[D→N-PAMP]**
+
+**Tier 1** (per direction; one boundary frame + informational ACK). Because the root is
+deterministic, each side computes `master_{G+1}` locally on processing the boundary — no agreement
+round trip:
+
+```
+sender ── MASTER_RATCHET{gen=G+1}  (sealed under gen-G Control key, last gen-G send frame) ──▶ peer
+        sender then advances master_send→G+1, wipes master_G, drops cached send keys
+        peer opens under gen-G, MUST verify the marker == gen_recv+1, advances master_recv→G+1,
+             wipes its master_G, drops cached recv keys
+peer   ── MASTER_RATCHET_ACK{gen=G+1}  (informational, off the receive path) ──▶ sender
+```
+
+**Tier 2** (heals ONE direction — the stream the initiator RECEIVES — two frames, 1 RTT). Full
+bidirectional PCS is two such exchanges, one initiated by each side:
+
+```
+initiator ── REKEM{KEMShare, gen}  (sealed under gen-G; initiator does NOT switch yet) ──▶ responder
+          responder Encapsulate → (KEMCiphertext, new_ss); compute TH_rekem
+responder ── REKEM_ACK{KEMCiphertext, gen}  (sealed under gen-G, BOUNDARY: last gen-G send frame) ──▶ initiator
+          responder advances its master_send via Extract-then-Expand (§9.2), drops cached send keys,
+                    wipes new_ss + ephemerals
+          initiator opens REKEM_ACK under gen-G, Decapsulate → new_ss, advances master_recv identically,
+                    wipes new_ss + ephemerals
+```
+
+A receiver MUST verify the announced generation equals its own `gen_recv+1` (and, for the
+initiator, the pending REKEM's target) before advancing; a mismatch (generation skew) MUST fail
+closed without advancing, leaving the direction at generation `G`. ML-KEM implicit rejection of a
+corrupt ciphertext (§4) yields a pseudorandom `new_ss`, diverging the two roots so the next frame
+fails to open — the fail-closed analogue of a failed Finished MAC. A low-order/all-zero X25519
+output MUST be rejected (§4). **[D→N-PAMP]**
+
+Steady-state per-frame cost is unchanged (the generation rides in the parent root, not the wire
+context). Both tiers are per-connection/per-direction, not per-channel, so cost does not scale with
+the channel count: Tier 1 is one small control frame (a 36-octet header + the 8-octet
+`TLVRatchetGeneration`) plus an informational ACK; Tier 2 is one hybrid-KEM round trip reusing the
+§4 TLVs (`REKEM` 1216 + `REKEM_ACK` 1120 ≈ 2.3 KiB), amortized over the re-KEM cadence, with no
+identity re-authentication (the peers are already authenticated). **[D→N-PAMP]**
+
+### 9.7 Conformance
+
+The master ratchet is graded by two standards-derived, **non-circular** KATs that extend the §8
+key-schedule KAT (ADR-0008) discipline and reuse its EXACT external anchor — no new anchor family:
+N-PAMP's HKDF-Expand-Label is RFC 8446 §7.1 with the `"n-pamp "` prefix and its HKDF-Extract is
+RFC 5869 §2.2, so the KATs first re-prove an independent Expand-Label/Extract oracle against **RFC
+8448** (TLS 1.3) and **RFC 5869** (raw HKDF), then apply that proven oracle with the `"n-pamp "`
+prefix to compute the expected roots. The expected values are NOT produced by the implementation
+under test. **[D→N-PAMP]**
+
+- **Tier-1 symmetric-step KAT** — fixed `master_G` + fixed target generation → `master_{G+1}` via
+  `HKDF-Expand-Label(master_G, "master ratchet", gen(8 BE), HashLen)` (§9.1); a chained
+  multi-generation check confirms one-wayness. Mutation-proven: a wrong generation context fails
+  the implementation leg only.
+- **Tier-2 re-KEM-step KAT** — fixed `master_G` + fixed `new_ss` + fixed `TH_rekem` →
+  `master_{G+1}` via `HKDF-Expand-Label(HKDF-Extract(salt = master_G, IKM = new_ss), "master
+  ratchet rekem", TH_rekem, HashLen)` (§9.2). The KAT pins the salt/IKM placement (a swapped
+  salt/IKM yields a different root), that a different `new_ss` self-heals to a divergent root, and
+  that a spliced `TH_rekem` diverges. Mutation-proven per the same discipline.
+
+The Go reference implementation carries both KATs (`RatchetMasterTier1` / `RatchetMasterTier2`,
+graded in `impl/go`), consistent with the shipped SDK (`impl/go/sdk/ratchet.go`). Mirroring the two
+ratchet KATs across the remaining `impl/` reference languages (via
+`impl/_conformance-harness/kat-handshake-all-langs.sh`, as for the §8 handshake KATs) is tracked
+corpus growth. **[D→N-PAMP]**

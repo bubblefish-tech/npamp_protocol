@@ -37,8 +37,9 @@ the level the core specification supports: the channel's identity, its place in 
 frame-type and profile model, and the operations implied by its registered purpose.
 A concrete retrieval query/result encoding, ranking model, or provenance schema is
 **out of scope for the core specification and for this reference**; any such
-encoding is the subject of a future companion specification and MUST NOT be inferred
-from this document (§4, §6).
+encoding is defined by the companion specification NPAMP-KNOWLEDGE
+(`../companion/8b_knowledge_channel.md`), not by the core specification or by this
+reference, and MUST NOT be inferred from this document (§4, §6).
 
 ## 2. Channel identity
 
@@ -102,10 +103,12 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). Any frame type that carries a retrieval query,
 a ranked result, or provenance on the Knowledge channel is a channel-specific frame
 type and, under the `0x0100`+ convention, MUST be assigned from that range. The core
-specification does **not** define any such frame type for the Knowledge channel;
-this reference does not define one either, and an implementation MUST NOT treat any
-`0x0100`+ code point on this channel as having a core-defined meaning until a
-companion specification assigns it (§4, §6).
+specification does **not** define any such frame type for the Knowledge channel, and
+this reference does not define one either; the companion specification NPAMP-KNOWLEDGE
+(`../companion/8b_knowledge_channel.md`) now defines these code points in the `0x0100`+
+band (§6). An implementation MUST NOT treat any `0x0100`+ code point on this channel as
+having a *core-defined* meaning — such code points are defined by NPAMP-KNOWLEDGE, not
+by the core specification (§4, §6).
 
 ### 3.3 No Knowledge-specific reserved companion range
 
@@ -114,10 +117,11 @@ several channels' companion extensions — Memory (`0x0035`–`0x0036`), Capabil
 (`0x0060`–`0x0063`), Control (`0x0080`), Audit (`0x0090`), Settlement/Audit
 (`0x00A0`–`0x00A3`), Governance (`0x00B0`–`0x00B4`), and Immune (`0x00C0`–`0x00C4`)
 (core specification, Extension Points → Reserved Frame-Type Ranges;
-`../04_frame_types.md`). **No range is reserved for the Knowledge channel.** A
-companion specification that later defines Knowledge-channel frames therefore uses
-the channel-specific `0x0100`+ namespace (§3.2); this reference reserves no range and
-an implementation MUST NOT assume one.
+`../04_frame_types.md`). **No range is reserved for the Knowledge channel.** The
+companion specification NPAMP-KNOWLEDGE (`../companion/8b_knowledge_channel.md`), which
+defines Knowledge-channel frames, therefore uses the channel-specific `0x0100`+
+namespace (§3.2); this reference reserves no range and an implementation MUST NOT
+assume one.
 
 > **Editorial note (carried, not corrected).** The core specification's §4.6 states
 > that channel-specific frame types begin at `0x0100`, while the same section also
@@ -154,9 +158,11 @@ This reference intentionally does **not** specify a query grammar, a result reco
 layout, a scoring or ranking algorithm, a provenance/attestation schema, pagination,
 or a per-query correlation identifier. The core specification defines none of these
 for the Knowledge channel, and this reference MUST NOT be read as introducing them.
-An interface at that concrete level requires a companion specification authored
-against a defined retrieval model (§6); until such a document exists, only the
-registry-level interface described here is normative.
+An interface at that concrete level is provided by the companion specification
+NPAMP-KNOWLEDGE (`../companion/8b_knowledge_channel.md`), authored against a defined
+retrieval model (§6); at the level of this reference, only the registry-level
+interface described here is normative, and the concrete retrieval interface is
+normative in NPAMP-KNOWLEDGE rather than in the core specification or here.
 
 ## 5. Profile applicability
 
@@ -183,15 +189,16 @@ cryptographic parameter.
 
 ## 6. Relationship to companion specifications
 
-**No dedicated companion specification defines the Knowledge channel.** Unlike the
+**The Knowledge channel has a dedicated operational companion.** Like the
 Discovery channel `0x0010` — for which `../companion/40_discovery.md` (NPAMP-DISC)
-defines runtime operations — the Knowledge channel has no operational companion
-document at the time of writing, and the core specification fixes it by the single
-registry line quoted in §1–§2. This reference does not fill that gap with invented
-behavior; a concrete retrieval-query interface (query language, ranked-result and
-provenance schema, and any `0x0100`+ frame types to carry them) would be defined in a
-future companion specification authored against a chosen retrieval model, and only
-such a document could make those details normative.
+defines runtime operations — the Knowledge channel is elaborated by the companion
+specification NPAMP-KNOWLEDGE (`../companion/8b_knowledge_channel.md`), which defines a
+concrete retrieval interface (ranked, provenance-bearing retrieval with streamed
+results, plus continuing-query subscription and credit) in the `0x0100`+ application
+band. The core specification itself fixes the channel only by the single registry line
+quoted in §1–§2; NPAMP-KNOWLEDGE, not the core specification, makes the operational
+details above that line normative. This reference introduces no such behavior of its
+own and defers to NPAMP-KNOWLEDGE for it.
 
 Retrieval traffic MAY also reach an N-PAMP peer as a **bridged foreign protocol**
 rather than as native Knowledge-channel traffic. Consistent with the companion set's
@@ -235,8 +242,8 @@ if it conforms to the core specification and, for the channel `0x0012`, it:
 7. Introduces, as a normative requirement of this reference, **no** query language,
    ranking algorithm, result schema, provenance format, or channel-specific frame
    body — because the core specification defines the Knowledge channel only at the
-   registry level — and defers any such interface to a future companion
-   specification (§1, §4, §6).
+   registry level — and defers any such interface to the companion specification
+   NPAMP-KNOWLEDGE (`../companion/8b_knowledge_channel.md`) (§1, §4, §6).
 
 A conformance test SHOULD assert clauses 1–6 by exercising a Standard-profile
 association that advertises `0x0012`, confirming that frames on an unadvertised

@@ -4450,6 +4450,3047 @@
           ]
         }
       ]
+    },
+    {
+      "op": "capability.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "84/4.1/deterministic-cbor-map",
+          "comment": "valid CAP_ISSUE_REQ: envelope + subject + authority + effect",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001417a02676167656e742d62036b726561643a6c65646765720902"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "7a"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "84/4.1/deterministic-cbor-map",
+          "comment": "valid CAP_DELEGATE_REQ: envelope + token_id + subject + effect",
+          "in": {
+            "frameType": 258,
+            "body": "a50019010201417a02656361702d3103676167656e742d630702"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "7a"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "84/4.1/deterministic-cbor-map",
+          "comment": "valid CAP_REVOKE_REQ: envelope + token_id + destructive effect",
+          "in": {
+            "frameType": 260,
+            "body": "a40019010401417a02656361702d310503"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 260,
+            "corr": "7a"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "84/6.4/lookup-scoping-optional",
+          "comment": "valid CAP_LOOKUP_REQ: envelope + read_only effect, no scoping filter",
+          "in": {
+            "frameType": 262,
+            "body": "a30019010601417a0800"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 262,
+            "corr": "7a"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "84/8/error-frame",
+          "comment": "valid CAP_ERROR: envelope + code + message",
+          "in": {
+            "frameType": 264,
+            "body": "a40019010801417a02040371617070726f76616c207265717569726564"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 264,
+            "corr": "7a"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "84/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a60019010001417a02676167656e742d62036b726561643a6c6564676572090218636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "7a"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 7,
+          "requirement": "84/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "84/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a60019010001417a02676167656e742d62036b726561643a6c656467657209022009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "84/4.1/missing-required-key-MUST-reject",
+          "comment": "CAP_ISSUE_REQ missing REQUIRED subject(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001417a036b726561643a6c65646765720902"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "84/4.1/wrong-major-type-MUST-reject",
+          "comment": "subject(2) is uint where text is required",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001417a0209036b726561643a6c65646765720902"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "84/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says ISSUE_RESULT(0x0101) but frame is ISSUE_REQ(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010101417a02676167656e742d62036b726561643a6c65646765720902"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "84/4.2/corr-not-byte-string-MUST-reject",
+          "comment": "corr(1) is an Unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001187a02676167656e742d62036b726561643a6c65646765720902"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "84/4.2/corr-empty-MUST-reject",
+          "comment": "corr(1) is an empty byte string; a non-empty 1-64 B corr is required",
+          "in": {
+            "frameType": 256,
+            "body": "a500190100014002676167656e742d62036b726561643a6c65646765720902"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeEmptyCorr"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "84/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "immune.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "85/6.2/deterministic-cbor-map",
+          "comment": "valid IMMUNE_REPORT_REQ: envelope + report_id + anomaly_class + severity",
+          "in": {
+            "frameType": 256,
+            "body": "a500190100014163026a616e6f6d616c792d343203010403"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "85/6.2/deterministic-cbor-map",
+          "comment": "valid IMMUNE_REPORT_RESULT: envelope + disposition + tracking_id",
+          "in": {
+            "frameType": 257,
+            "body": "a4001901010141630201036574726b2d37"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "85/8/deterministic-cbor-map",
+          "comment": "valid IMMUNE_ERROR: envelope + code + message",
+          "in": {
+            "frameType": 258,
+            "body": "a400190102014163020103716d616c666f726d65642072657175657374"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "85/6.4/deterministic-cbor-map",
+          "comment": "valid IMMUNE_GOSSIP_ADVERTISE: envelope + items[gossip_descriptor]",
+          "in": {
+            "frameType": 192,
+            "body": "a30018c00141630281a300429a1c01070303"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 192,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "85/6.6/deterministic-cbor-map",
+          "comment": "valid IMMUNE_GOSSIP_RETRACT: envelope + item_id + version + reason",
+          "in": {
+            "frameType": 196,
+            "body": "a50018c401416302429a1c03080400"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 196,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "85/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100014163026a616e6f6d616c792d34320301040318636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 7,
+          "requirement": "85/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "85/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100014163026178030104032009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "85/6.2/missing-required-key-MUST-reject",
+          "comment": "IMMUNE_REPORT_REQ missing REQUIRED report_id(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001416303010403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "85/6.2/wrong-major-type-MUST-reject",
+          "comment": "anomaly_class(3) is text where an unsigned int is required",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001416302617803636261640403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "85/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says REPORT_RESULT(0x0101) but frame is REPORT_REQ(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010101416302617803010403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "85/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001186302617803010403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "85/4.2/corr-empty-MUST-reject",
+          "comment": "corr(1) is an empty byte string (\u00a74.2 requires non-empty 1-64 B)",
+          "in": {
+            "frameType": 256,
+            "body": "a500190100014002617803010403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "85/4.2/missing-corr-MUST-reject",
+          "comment": "IMMUNE_REPORT_REQ missing REQUIRED corr(1) envelope field",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010002617803010403"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "85/6.4/nested-descriptor-missing-item-id-MUST-reject",
+          "comment": "gossip_descriptor in items[] omits REQUIRED item_id(0)",
+          "in": {
+            "frameType": 192,
+            "body": "a30018c00141630281a10107"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "85/6.6/retract-missing-version-MUST-reject",
+          "comment": "IMMUNE_GOSSIP_RETRACT missing REQUIRED version(3)",
+          "in": {
+            "frameType": 196,
+            "body": "a40018c401416302429a1c0400"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 17,
+          "requirement": "85/4.1/map-keys-out-of-order-MUST-reject",
+          "comment": "map keys not in canonical ascending order (key 1 before key 0)",
+          "in": {
+            "frameType": 256,
+            "body": "a201416300190100"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 18,
+          "requirement": "85/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "settlement.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "86/4.1/deterministic-cbor-map",
+          "comment": "valid SETTLE_INTENT_REQ: envelope + obligation_ref + effect",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001440102030402756f626c69676174696f6e3a696e766f6963652d34320802"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "86/6.1/settle-intent-result",
+          "comment": "valid SETTLE_INTENT_RESULT: envelope + settlement_ref + status",
+          "in": {
+            "frameType": 257,
+            "body": "a4001901010144010203040270736574746c656d656e743a732d3030310367736574746c6564"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "86/6.2/receipt-req",
+          "comment": "valid RECEIPT_REQ: envelope + settlement_ref + effect=read_only",
+          "in": {
+            "frameType": 258,
+            "body": "a4001901020144010203040270736574746c656d656e743a732d3030310400"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "86/6.2/receipt-result",
+          "comment": "valid RECEIPT_RESULT: envelope + settlement_receipt map",
+          "in": {
+            "frameType": 259,
+            "body": "a30019010301440102030402a3006d726563656970743a722d3030310170736574746c656d656e743a732d3030310567736574746c6564"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 259,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "86/8.1/settle-error-approval-required",
+          "comment": "valid SETTLE_ERROR: approval_required(4) carrying approval_id",
+          "in": {
+            "frameType": 260,
+            "body": "a50019010401440102030402040371617070726f76616c207265717569726564056e617070726f76616c3a612d303031"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 260,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "86/6.3/batch-commit-req",
+          "comment": "valid SETTLE_BATCH_COMMIT_REQ: envelope + batch_ref + commitment + effect",
+          "in": {
+            "frameType": 160,
+            "body": "a50018a0014401020304026f62617463683a622d323032362d30370344deadbeef0702"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 160,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "86/6.3/batch-commit-result",
+          "comment": "valid SETTLE_BATCH_COMMIT_RESULT: envelope + batch_ref + status",
+          "in": {
+            "frameType": 161,
+            "body": "a40018a1014401020304026f62617463683a622d323032362d30370369636f6d6d6974746564"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 161,
+            "corr": "01020304"
+          }
+        },
+        {
+          "tcId": 8,
+          "requirement": "86/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001440102030402756f626c69676174696f6e3a696e766f6963652d3432080218636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "01020304"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "86/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "86/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001440102030402617808022009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "86/6.1/missing-required-key-MUST-reject",
+          "comment": "SETTLE_INTENT_REQ missing REQUIRED obligation_ref(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a3001901000144010203040802"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "86/4.1/wrong-major-type-MUST-reject",
+          "comment": "obligation_ref(2) is uint where text is required",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001440102030402090802"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "86/5.3/missing-effect-MUST-reject",
+          "comment": "state-mutating SETTLE_INTENT_REQ missing REQUIRED effect(8)",
+          "in": {
+            "frameType": 256,
+            "body": "a300190100014401020304026178"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "86/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says RECEIPT_REQ(0x0102) but frame is SETTLE_INTENT_REQ(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a4001901020144010203040261780802"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "86/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an Unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001040261780802"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "86/4.2/corr-empty-MUST-reject",
+          "comment": "corr(1) is an empty byte string; a non-empty 1-64-byte corr is required",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001400261780802"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 17,
+          "requirement": "86/6.3/batch-missing-commitment-MUST-reject",
+          "comment": "SETTLE_BATCH_COMMIT_REQ missing REQUIRED commitment(3)",
+          "in": {
+            "frameType": 160,
+            "body": "a40018a0014401020304026962617463683a622d310702"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 18,
+          "requirement": "86/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "telemetry.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "87/5/deterministic-cbor-map",
+          "comment": "valid standalone TELEMETRY_REPORT: batch_seq + metrics, no corr",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010003000481a400686370752e6c6f6164011b0000018bcfe56800020003182a"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "87/5/subscribed-report",
+          "comment": "valid subscribed TELEMETRY_REPORT: corr + sub_id + batch_seq + events",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010001416302412a03070581a3006867632e7061757365011b0000018bcfe568010202"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "87/5.3/report-health",
+          "comment": "valid TELEMETRY_REPORT carrying a health statement",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010003010681a3006773746f72616765011b0000018bcfe568020201"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "87/5/report-mixed",
+          "comment": "valid TELEMETRY_REPORT mixing metrics + events + health",
+          "in": {
+            "frameType": 256,
+            "body": "a50019010003020481a4006b71756575652e6465707468011b0000018bcfe56803020203220581a2006572656b6579011b0000018bcfe568040681a300636e6574011b0000018bcfe568050200"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "87/6.1/subscribe",
+          "comment": "valid TELEMETRY_SUBSCRIBE: corr + credit",
+          "in": {
+            "frameType": 257,
+            "body": "a3001901010141630708"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "87/6.1/subscribe-selector",
+          "comment": "valid TELEMETRY_SUBSCRIBE with classes + names + min_severity selector",
+          "in": {
+            "frameType": 257,
+            "body": "a600190101014163028200010381686370752e6c6f616405020704"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "87/6.2/sub-ack",
+          "comment": "valid TELEMETRY_SUB_ACK: corr + sub_id + credit",
+          "in": {
+            "frameType": 258,
+            "body": "a40019010201416302412a0304"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 8,
+          "requirement": "87/6.3/unsubscribe",
+          "comment": "valid TELEMETRY_UNSUBSCRIBE: corr + sub_id",
+          "in": {
+            "frameType": 259,
+            "body": "a30019010301416302412a"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 259,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 9,
+          "requirement": "87/7/credit",
+          "comment": "valid TELEMETRY_CREDIT: corr + sub_id + credit",
+          "in": {
+            "frameType": 260,
+            "body": "a40019010401416302412a0310"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 260,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 10,
+          "requirement": "87/8/error",
+          "comment": "valid TELEMETRY_ERROR: corr + code",
+          "in": {
+            "frameType": 261,
+            "body": "a3001901050141630201"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 261,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 11,
+          "requirement": "87/4/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 257,
+            "body": "a400190101014163070818636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "63"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "87/4/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 257,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "87/4/non-canonical-key-order-MUST-reject",
+          "comment": "map keys out of canonical order (key 1 before key 0)",
+          "in": {
+            "frameType": 257,
+            "body": "a201416300190101"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "87/4/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 257,
+            "body": "a40019010101416307082009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "87/6.1/missing-required-key-MUST-reject",
+          "comment": "TELEMETRY_SUBSCRIBE missing REQUIRED credit(7)",
+          "in": {
+            "frameType": 257,
+            "body": "a200190101014163"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "87/4.1/corr-wrong-type-MUST-reject",
+          "comment": "corr(1) is an unsigned int where a byte string is required",
+          "in": {
+            "frameType": 257,
+            "body": "a30019010101090708"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 17,
+          "requirement": "87/4.1/corr-empty-MUST-reject",
+          "comment": "corr(1) is an empty byte string (violates 1-64 B length)",
+          "in": {
+            "frameType": 257,
+            "body": "a30019010101400708"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 18,
+          "requirement": "87/4.1/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says SUBSCRIBE(0x0101) but frame is REPORT(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010103000481a4006178010102000301"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 19,
+          "requirement": "87/5/report-empty-content-MUST-reject",
+          "comment": "TELEMETRY_REPORT with no metrics, events, or health",
+          "in": {
+            "frameType": 256,
+            "body": "a2001901000300"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MalformedPayload"
+          ]
+        },
+        {
+          "tcId": 20,
+          "requirement": "87/5/report-missing-batch-seq-MUST-reject",
+          "comment": "TELEMETRY_REPORT missing REQUIRED batch_seq(3)",
+          "in": {
+            "frameType": 256,
+            "body": "a2001901000481a4006178010102000301"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 21,
+          "requirement": "87/5/report-corr-without-sub-id-MUST-reject",
+          "comment": "subscribed TELEMETRY_REPORT has corr(1) but omits sub_id(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001416303000481a4006178010102000301"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MalformedPayload"
+          ]
+        },
+        {
+          "tcId": 22,
+          "requirement": "87/5.1/metric-missing-required-MUST-reject",
+          "comment": "MetricSample missing REQUIRED value(3)",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010003000481a300617801010200"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 23,
+          "requirement": "87/5.1/metric-wrong-type-MUST-reject",
+          "comment": "MetricSample name(0) is a uint where text is required",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010003000481a40009010102000301"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 24,
+          "requirement": "87/5.3/health-missing-required-MUST-reject",
+          "comment": "HealthReport missing REQUIRED status(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010003000681a2006773746f726167650101"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 25,
+          "requirement": "87/4/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 257,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "commerce.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "88/4.1/deterministic-cbor-map",
+          "comment": "valid COMMERCE_MANDATE_CREATE_REQ: envelope + payer + payee + amount + effect",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "88/6.2/deterministic-cbor-map",
+          "comment": "valid COMMERCE_MANDATE_READ_REQ: envelope + mandate_id + effect=read_only",
+          "in": {
+            "frameType": 258,
+            "body": "a400190102014163026b6d616e646174653a78797a0300"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "88/6.6/deterministic-cbor-map",
+          "comment": "valid COMMERCE_INTENT_PROPOSE_REQ: parties + legs (from/to named) + effect",
+          "in": {
+            "frameType": 264,
+            "body": "a50019010801416302826770617274793a616770617274793a620381a3006770617274793a61016770617274793a6202a300193039010202635553440702"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 264,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "88/8.1/approval-required-distinct-outcome",
+          "comment": "valid COMMERCE_ERROR: code=approval_required carries approval_id (a held, NOT-executed outcome)",
+          "in": {
+            "frameType": 270,
+            "body": "a50019010e01416302040371617070726f76616c2072657175697265640568617070723a313233"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 270,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "88/4.4/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a700190100014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d0318636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 6,
+          "requirement": "88/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 7,
+          "requirement": "88/4.4/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a70019010001416302617003617104a300193039010202635553440d032009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "88/4.1/missing-required-key-MUST-reject",
+          "comment": "COMMERCE_MANDATE_CREATE_REQ missing REQUIRED amount(4)",
+          "in": {
+            "frameType": 256,
+            "body": "a500190100014163026b70617965723a616c696365036970617965653a626f620d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "88/4.1/wrong-major-type-MUST-reject",
+          "comment": "payer(2) is uint where text is required",
+          "in": {
+            "frameType": 256,
+            "body": "a6001901000141630209036970617965653a626f6204a300193039010202635553440d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "88/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says READ(0x0102) but frame is CREATE(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a600190102014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "88/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100011863026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "88/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "88/4.3/malformed-amount-MUST-reject",
+          "comment": "amount omits REQUIRED currency(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a20019303901020d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MalformedAmount"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "88/4.3/malformed-amount-wrong-type-MUST-reject",
+          "comment": "amount scale(1) is text where an unsigned int is required",
+          "in": {
+            "frameType": 256,
+            "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a300193039016374776f02635553440d03"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MalformedAmount"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "88/6.6/leg-party-not-in-parties-MUST-reject",
+          "comment": "a leg names a `to` party (party:c) that is not in `parties`",
+          "in": {
+            "frameType": 264,
+            "body": "a50019010801416302826770617274793a616770617274793a620381a3006770617274793a61016770617274793a6302a300193039010202635553440702"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "LegPartyNotNamed"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "interaction.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "89/6.1/deterministic-cbor-map",
+          "comment": "valid INTERACT_EVENT: envelope + event_class",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010001412a0203"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "89/6.2/deterministic-cbor-map",
+          "comment": "valid INTERACT_PROMPT_REQ: envelope + prompt_kind + prompt",
+          "in": {
+            "frameType": 258,
+            "body": "a40019010201412a0201036a596f7572206e616d653f"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 258,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "89/6.3/deterministic-cbor-map",
+          "comment": "valid INTERACT_APPROVAL_REQ: envelope + action + severity",
+          "in": {
+            "frameType": 260,
+            "body": "a40019010401412a026f64656c657465207265636f726420580302"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 260,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "89/6.3/deterministic-cbor-map",
+          "comment": "valid INTERACT_APPROVAL_RESULT: envelope + decision(granted)",
+          "in": {
+            "frameType": 261,
+            "body": "a30019010501412a0200"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 261,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "89/8.1/approval-held-distinct-outcome",
+          "comment": "valid INTERACT_ERROR approval_held: code 6 + message + approval_id",
+          "in": {
+            "frameType": 263,
+            "body": "a50019010701412a0206037820617070726f76616c2068656c6420666f722068756d616e206465636973696f6e05686131623263336434"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 263,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "89/6.1/event-ack-envelope-only",
+          "comment": "valid INTERACT_EVENT_ACK: envelope only (echoes corr)",
+          "in": {
+            "frameType": 257,
+            "body": "a20019010101412a"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "2a"
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "89/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001412a020318636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "2a"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "89/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "89/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a40019010001412a02032009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "89/6.1/missing-required-key-MUST-reject",
+          "comment": "INTERACT_EVENT missing REQUIRED event_class(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a20019010001412a"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "89/4.1/wrong-major-type-MUST-reject",
+          "comment": "event_class(2) is text where an unsigned int is required",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010001412a026178"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "89/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says PROMPT_REQ(0x0102) but frame is EVENT(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010201412a0203"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "89/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010001182a0203"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "89/4.2/missing-corr-MUST-reject",
+          "comment": "INTERACT_EVENT missing REQUIRED corr(1)",
+          "in": {
+            "frameType": 256,
+            "body": "a2001901000203"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "89/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "workflow.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "8a/6.1/deterministic-cbor-map",
+          "comment": "valid WORKFLOW_SUBMIT_REQ: envelope + task_type + effect",
+          "in": {
+            "frameType": 256,
+            "body": "a400190100014163026973756d6d6172697a650b01"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "8a/6.1/deterministic-cbor-map",
+          "comment": "valid WORKFLOW_SUBMIT_RESULT: envelope + task_id + state",
+          "in": {
+            "frameType": 257,
+            "body": "a40019010101416302667461736b2d370300"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "8a/6.4/step-event-no-corr",
+          "comment": "valid WORKFLOW_STEP_EVENT: task-scoped, carries NO corr (\u00a74.2)",
+          "in": {
+            "frameType": 262,
+            "body": "a40019010602667461736b2d3703000401"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 262
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "8a/6.5/complete-no-corr",
+          "comment": "valid WORKFLOW_COMPLETE: terminal, task-scoped, NO corr (\u00a74.2)",
+          "in": {
+            "frameType": 263,
+            "body": "a40019010702667461736b2d3703030402"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 263
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "8a/8.1/approval-required-distinct",
+          "comment": "valid WORKFLOW_ERROR approval_required carrying approval_id",
+          "in": {
+            "frameType": 264,
+            "body": "a5001901080141630204037768656c6420666f722068756d616e20617070726f76616c0566617070722d31"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 264,
+            "corr": "63"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "8a/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a500190100014163026973756d6d6172697a650b0118636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "63"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 7,
+          "requirement": "8a/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "8a/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a5001901000141630261780b012009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "8a/6.1/missing-required-key-MUST-reject",
+          "comment": "SUBMIT_REQ missing REQUIRED task_type(2)",
+          "in": {
+            "frameType": 256,
+            "body": "a3001901000141630b01"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "8a/5.3/missing-required-effect-MUST-reject",
+          "comment": "SUBMIT_REQ missing REQUIRED effect(11)",
+          "in": {
+            "frameType": 256,
+            "body": "a300190100014163026178"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "8a/4.1/wrong-major-type-MUST-reject",
+          "comment": "effect(11) is text where an unsigned int is required",
+          "in": {
+            "frameType": 256,
+            "body": "a4001901000141630261780b646e6f7065"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "8a/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says STATUS_REQ(0x0102) but frame is SUBMIT_REQ(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a4001901020141630261780b01"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "8a/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a4001901000118630261780b01"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "8a/5.1/missing-corr-MUST-reject",
+          "comment": "SUBMIT_REQ omits the REQUIRED corr(1) an *_REQ MUST carry",
+          "in": {
+            "frameType": 256,
+            "body": "a3001901000261780b01"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "8a/8/missing-error-message-MUST-reject",
+          "comment": "WORKFLOW_ERROR missing REQUIRED message(3)",
+          "in": {
+            "frameType": 264,
+            "body": "a3001901080141630204"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "8a/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "knowledge.body.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "8b/4.2/deterministic-cbor-map",
+          "comment": "valid KNOWLEDGE_QUERY_REQ: envelope only (all \u00a76.1 body fields optional)",
+          "in": {
+            "frameType": 256,
+            "body": "a200190100014171"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "8b/6.1/query-scoping-fields",
+          "comment": "valid KNOWLEDGE_QUERY_REQ: query + source + limit",
+          "in": {
+            "frameType": 256,
+            "body": "a5001901000141710270766563746f72206461746162617365730368636f727075732d61060a"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "8b/6.2/query-result-required-keys",
+          "comment": "valid KNOWLEDGE_QUERY_RESULT: results array + has_more",
+          "in": {
+            "frameType": 257,
+            "body": "a4001901010141710281a30065646f632d3101757468652072657472696576656420636f6e74656e740468636f727075732d6103f4"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 257,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "8b/6.4/subscribe-req-credit-required",
+          "comment": "valid KNOWLEDGE_SUBSCRIBE_REQ: credit present",
+          "in": {
+            "frameType": 260,
+            "body": "a400190104014171026e7374616e64696e672071756572790904"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 260,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "8b/6.4/subscribe-ack-required-keys",
+          "comment": "valid KNOWLEDGE_SUBSCRIBE_ACK: sub_id + credit",
+          "in": {
+            "frameType": 261,
+            "body": "a400190105014171024201020304"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 261,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "8b/6.5/update-removed-only",
+          "comment": "valid KNOWLEDGE_UPDATE: removed present (results absent)",
+          "in": {
+            "frameType": 262,
+            "body": "a500190106014171024201020307058165646f632d39"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 262,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "8b/6.5/update-results-present",
+          "comment": "valid KNOWLEDGE_UPDATE: results present (removed absent)",
+          "in": {
+            "frameType": 262,
+            "body": "a5001901060141710242010203080481a30065646f632d3101757468652072657472696576656420636f6e74656e740468636f727075732d61"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 262,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 8,
+          "requirement": "8b/9/error-required-keys",
+          "comment": "valid KNOWLEDGE_ERROR: code + message",
+          "in": {
+            "frameType": 265,
+            "body": "a400190109014171020103716d616c666f726d65642072657175657374"
+          },
+          "result": "valid",
+          "expected": {
+            "frame_kind": 265,
+            "corr": "71"
+          }
+        },
+        {
+          "tcId": 9,
+          "requirement": "8b/4.3/forward-compat-accept-nonneg",
+          "comment": "unknown NON-negative key (99) MUST be accepted",
+          "in": {
+            "frameType": 256,
+            "body": "a30019010001417118636c6675747572652d6669656c64"
+          },
+          "result": "acceptable",
+          "expected": {
+            "frame_kind": 256,
+            "corr": "71"
+          },
+          "flags": [
+            "ForwardCompat"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "8b/4.1/non-deterministic-cbor-MUST-reject",
+          "comment": "key 0 in non-shortest form (0x18 0x00)",
+          "in": {
+            "frameType": 256,
+            "body": "a1180000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NonDeterministicCBOR"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "8b/4.3/unknown-negative-key-MUST-reject",
+          "comment": "unknown NEGATIVE integer key (-1)",
+          "in": {
+            "frameType": 256,
+            "body": "a4001901000141710261782009"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UnknownNegativeKey"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "8b/6.4/missing-required-key-MUST-reject",
+          "comment": "KNOWLEDGE_SUBSCRIBE_REQ missing REQUIRED credit(9)",
+          "in": {
+            "frameType": 260,
+            "body": "a300190104014171026171"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "8b/6.4/wrong-major-type-MUST-reject",
+          "comment": "credit(9) is text where an unsigned int is required",
+          "in": {
+            "frameType": 260,
+            "body": "a300190104014171096178"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "WrongMajorType"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "8b/4.2/frame-kind-mismatch-MUST-reject",
+          "comment": "frame_kind says QUERY_RESULT(0x0101) but frame is QUERY_REQ(0x0100)",
+          "in": {
+            "frameType": 256,
+            "body": "a200190101014171"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "FrameKindMismatch"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "8b/4.2/corr-not-bytes-MUST-reject",
+          "comment": "corr(1) is an unsigned int, not the required byte string",
+          "in": {
+            "frameType": 256,
+            "body": "a2001901000105"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "8b/4.2/corr-empty-MUST-reject",
+          "comment": "corr(1) is an empty byte string (violates 1-64 B non-empty)",
+          "in": {
+            "frameType": 256,
+            "body": "a2001901000140"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeWrongType"
+          ]
+        },
+        {
+          "tcId": 17,
+          "requirement": "8b/6.5/update-neither-MUST-reject",
+          "comment": "KNOWLEDGE_UPDATE carries neither results(4) nor removed(5)",
+          "in": {
+            "frameType": 262,
+            "body": "a400190106014171024201020301"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "UpdateNeitherResultsNorRemoved"
+          ]
+        },
+        {
+          "tcId": 18,
+          "requirement": "8b/4.2/missing-corr-MUST-reject",
+          "comment": "KNOWLEDGE_QUERY_REQ missing REQUIRED corr(1) envelope key",
+          "in": {
+            "frameType": 256,
+            "body": "a100190100"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MissingRequiredKey"
+          ]
+        },
+        {
+          "tcId": 19,
+          "requirement": "8b/4.1/payload-not-a-map-MUST-reject",
+          "comment": "payload is a bare uint, not a CBOR map",
+          "in": {
+            "frameType": 256,
+            "body": "05"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotAMap"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "frame.seal",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "02/4.2/aead-aad-header-prefix",
+          "comment": "seal binds the 21-octet header prefix as AAD (Memory, seq 7)",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 1,
+            "seq": 7,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "pt": "6e70616d702d6672616d652d7061796c6f6164"
+          },
+          "result": "valid",
+          "expected": {
+            "sealed": "b5bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210d"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "06/nonce/seq-into-nonce",
+          "comment": "seal folds a large 8-octet seq into the nonce (Stream, seq 0xff00000a)",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 257,
+            "channel": 12,
+            "seq": 4278190090,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "pt": "73747265616d2d646174612d626f6479"
+          },
+          "result": "valid",
+          "expected": {
+            "sealed": "9e2469f41e20b2b2916f04adfb5736a9f0381886ab328e86ee8ab8700c4eae77"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "06/nonce/seq-zero-nonce-equals-iv",
+          "comment": "seq 0 => nonce == iv (Control PING)",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 1,
+            "channel": 0,
+            "seq": 0,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "pt": "50494e47"
+          },
+          "result": "valid",
+          "expected": {
+            "sealed": "b651326a46ec3ccaf8d17b24f4b4bd53511bd251"
+          }
+        }
+      ]
+    },
+    {
+      "op": "frame.open",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "02/4.2/aead-open-roundtrip",
+          "comment": "open recovers the payload sealed under the header-prefix AAD",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 1,
+            "seq": 7,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "b5bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210d"
+          },
+          "result": "valid",
+          "expected": {
+            "pt": "6e70616d702d6672616d652d7061796c6f6164"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "06/nonce/seq-zero-open",
+          "comment": "open a seq-0 frame (nonce == iv)",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 1,
+            "channel": 0,
+            "seq": 0,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "b651326a46ec3ccaf8d17b24f4b4bd53511bd251"
+          },
+          "result": "valid",
+          "expected": {
+            "pt": "50494e47"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "02/4.2/tampered-aad-MUST-reject",
+          "comment": "open with a tampered header field (channel 0x0001->0x0002): AAD mismatch",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 2,
+            "seq": 7,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "b5bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "AeadAadMismatch"
+          ]
+        },
+        {
+          "tcId": 4,
+          "requirement": "06/nonce/wrong-seq-MUST-reject",
+          "comment": "open with the wrong sequence number (7->8): nonce mismatch",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 1,
+            "seq": 8,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "b5bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "AeadNonceMismatch"
+          ]
+        },
+        {
+          "tcId": 5,
+          "requirement": "02/4.2/tampered-tag-MUST-reject",
+          "comment": "open with a flipped AEAD tag nibble",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 1,
+            "seq": 7,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "b5bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210c"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "AeadTagMismatch"
+          ]
+        },
+        {
+          "tcId": 6,
+          "requirement": "02/4.2/tampered-ciphertext-MUST-reject",
+          "comment": "open with a flipped ciphertext bit",
+          "in": {
+            "suite": "AES-256-GCM",
+            "ver": 2,
+            "flags": 2,
+            "frameType": 256,
+            "channel": 1,
+            "seq": 7,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "sealed": "35bc2a775bd97a4ad5a078a930a674e0de9673d05ba32b57d89d89c3473089ab87210d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "AeadCiphertextTamper"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "hkdf.expand_label",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/5/expand-label-prefix-discriminator",
+          "comment": "'key'(32): expected bytes require the 'n-pamp ' prefix; a 'tls13 ' impl fails",
+          "in": {
+            "hash": "sha256",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "label": "key",
+            "context": "",
+            "length": 32
+          },
+          "result": "valid",
+          "expected": {
+            "out": "3ed9435c451cfedb0cbccdb8e5a8fd957f4e942a834fd1de6ac4aa00de088150"
+          },
+          "flags": [
+            "LabelPrefixDiscriminator"
+          ]
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/expand-label-iv",
+          "comment": "'iv'(12) derivation, empty context",
+          "in": {
+            "hash": "sha256",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "label": "iv",
+            "context": "",
+            "length": 12
+          },
+          "result": "valid",
+          "expected": {
+            "out": "0d9a0b276cd21e696c09c452"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/6.2/expand-label-finished",
+          "comment": "'finished'(HashLen) key, empty context",
+          "in": {
+            "hash": "sha256",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "label": "finished",
+            "context": "",
+            "length": 32
+          },
+          "result": "valid",
+          "expected": {
+            "out": "e09de935b094501795c653b885cc9f863a9f79a8054daa522658b0d3f6ff4dba"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/expand-label-with-context",
+          "comment": "'c hs' with a 32-octet transcript context (TH_kem)",
+          "in": {
+            "hash": "sha256",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "label": "c hs",
+            "context": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+            "length": 32
+          },
+          "result": "valid",
+          "expected": {
+            "out": "01b4c0ef106e5204e5b485fffdea7f8ab7bf08b1960017cd7ecfc3a6d65de82d"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/5/expand-label-sha384",
+          "comment": "SHA-384 path (High/Sovereign): 'master'(48), empty context",
+          "in": {
+            "hash": "sha384",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+            "label": "master",
+            "context": "",
+            "length": 48
+          },
+          "result": "valid",
+          "expected": {
+            "out": "336e8b95fe0a85fdb0cdbdb75af6f646b88d5a7461ac3f005ce6045351b558bfd10166c83c869c5b384b6238b086f436"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "10/5/expand-label-length-MUST-reject",
+          "comment": "length > 255*HashLen (8161 > 255*32) MUST be rejected (RFC 5869 \u00a72.3)",
+          "in": {
+            "hash": "sha256",
+            "secret": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "label": "key",
+            "context": "",
+            "length": 8161
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "HkdfLengthExceeded"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "keys.derive_traffic",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/5/traffic-c2s-control",
+          "comment": "Standard C2S, epoch 0, AES-256-GCM, Control channel",
+          "in": {
+            "profile": "Standard",
+            "master": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "dir": 0,
+            "epoch": 0,
+            "suite": 1,
+            "channel": 0
+          },
+          "expected": {
+            "key": "4e56739d78066f3f2bd0edf62fb652b3e90398d5c5b95f38287eb1d767e6dacc",
+            "iv": "0d45a2552d9ea33375b2d11c"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/traffic-dir-discriminator",
+          "comment": "same tuple, S2C direction -> different (key,iv) (direction binding)",
+          "in": {
+            "profile": "Standard",
+            "master": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "dir": 1,
+            "epoch": 0,
+            "suite": 1,
+            "channel": 0
+          },
+          "expected": {
+            "key": "8d53363df4f41c3b53b1d03d80761ac72bbdf5f6c922226adbfda269e16874c6",
+            "iv": "29be009f5364a86090089312"
+          },
+          "result": "valid",
+          "flags": [
+            "DirectionDiscriminator"
+          ]
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/5/traffic-channel-discriminator",
+          "comment": "same tuple, Memory channel -> different (key,iv) (channel binding)",
+          "in": {
+            "profile": "Standard",
+            "master": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "dir": 0,
+            "epoch": 0,
+            "suite": 1,
+            "channel": 1
+          },
+          "expected": {
+            "key": "f9fd0ac17b096ba2e22ff8f8479d88396f878b0a80da26ddded820a590cc86e0",
+            "iv": "89e38010d128513dad30099e"
+          },
+          "result": "valid",
+          "flags": [
+            "ChannelDiscriminator"
+          ]
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/traffic-epoch-suite-binding",
+          "comment": "epoch 5 + ChaCha20-Poly1305 + Stream channel (epoch/suite binding)",
+          "in": {
+            "profile": "Standard",
+            "master": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "dir": 0,
+            "epoch": 5,
+            "suite": 2,
+            "channel": 12
+          },
+          "expected": {
+            "key": "20024f3e2ae4fdc690cf325c913b703e39a02730bc6c31e15b800eea2068e005",
+            "iv": "246cb32f9835b64386faf2b6"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/5/traffic-sha384-high",
+          "comment": "High profile SHA-384 traffic secret -> 32-octet key, 12-octet iv",
+          "in": {
+            "profile": "High",
+            "master": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+            "dir": 0,
+            "epoch": 0,
+            "suite": 1,
+            "channel": 0
+          },
+          "expected": {
+            "key": "3563a4d0c367f614c66b012790072de040794c1309e98ec1d82d4c6de3e18c98",
+            "iv": "796ce4749ebd77d152784b22"
+          },
+          "result": "valid"
+        }
+      ]
+    },
+    {
+      "op": "bridge.envelope.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/4/envelope-request",
+          "comment": "BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 1,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": {
+              "effect": 2,
+              "scope": "fs:/tmp"
+            },
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-echoes-corr",
+          "comment": "BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "frameType": 257,
+            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 2,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/6/preserve-foreign-error",
+          "comment": "BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
+          "in": {
+            "frameType": 258,
+            "payload": "0010001401040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 4,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/notify-corr-len-zero",
+          "comment": "BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
+          "in": {
+            "frameType": 259,
+            "payload": "0010001b0203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 2,
+            "message_kind": 3,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "",
+            "method": "notifications/message",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/4/reserved-flags-ignored",
+          "comment": "BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
+          "in": {
+            "frameType": 260,
+            "payload": "0010001401050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 5,
+            "content_type": 1,
+            "flags": 2,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "6368756e6b2d30"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "10/2/stream-end-final",
+          "comment": "BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
+          "in": {
+            "frameType": 261,
+            "payload": "0010001401060101040a0b0c0d0a746f6f6c732f63616c6c"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 6,
+            "content_type": 1,
+            "flags": 1,
+            "final": true,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": ""
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "10/4/envelope-absent-MUST-reject",
+          "comment": "payload's first TLV is a SafetyLabel, not the REQUIRED BridgeEnvelope",
+          "in": {
+            "frameType": 256,
+            "payload": "001300030001787b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeAbsent"
+          ]
+        },
+        {
+          "tcId": 8,
+          "requirement": "10/4/envelope-tlv-truncated-MUST-reject",
+          "comment": "BridgeEnvelope TLV length exceeds the remaining payload",
+          "in": {
+            "frameType": 256,
+            "payload": "001000200101010004"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 9,
+          "requirement": "10/4/envelope-value-truncated-MUST-reject",
+          "comment": "corr_len=8 but only 3 correlation octets present",
+          "in": {
+            "frameType": 256,
+            "payload": "001000080101010008aabbcc"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 10,
+          "requirement": "10/4/message-kind-mismatch-MUST-reject",
+          "comment": "message_kind=response(0x02) contradicts frame type BRIDGE_REQUEST(0x0100)",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MessageKindMismatch"
+          ]
+        },
+        {
+          "tcId": 11,
+          "requirement": "10/5/request-empty-corr-MUST-reject",
+          "comment": "BRIDGE_REQUEST carries an empty correlation_id (corr_len=0)",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001001010100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 12,
+          "requirement": "10/5/notify-nonempty-corr-MUST-reject",
+          "comment": "BRIDGE_NOTIFY carries a non-empty correlation_id (corr_len>0)",
+          "in": {
+            "frameType": 259,
+            "payload": "0010001f02030100040a0b0c0d156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 13,
+          "requirement": "10/5/reply-empty-corr-MUST-reject",
+          "comment": "BRIDGE_RESPONSE carries an empty correlation_id and cannot echo the request",
+          "in": {
+            "frameType": 257,
+            "payload": "0010001001020100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 14,
+          "requirement": "10/4/envelope-trailing-octets-MUST-reject",
+          "comment": "method_len=4 but 7 method octets present (trailing octets in the envelope value)",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001201010100040a0b0c0d04746f6f6c63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 15,
+          "requirement": "10/7/safetylabel-truncated-MUST-reject",
+          "comment": "present SafetyLabel TLV value is truncated (scope_len=5, 1 octet)",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c001300030205667b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "SafetyLabelMalformed"
+          ]
+        },
+        {
+          "tcId": 16,
+          "requirement": "10/2/not-a-bridge-frame-MUST-reject",
+          "comment": "frame type PING(0x0001) is not a Bridge operation frame",
+          "in": {
+            "frameType": 1,
+            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotABridgeFrame"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "bridge.envelope.encode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/4/envelope-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 1,
+              "message_kind": 1,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": {
+                "effect": 2,
+                "scope": "fs:/tmp"
+              },
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+            }
+          },
+          "expected": {
+            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-echoes-corr",
+          "comment": "canonical encode of: BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 1,
+              "message_kind": 2,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+            }
+          },
+          "expected": {
+            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/6/preserve-foreign-error",
+          "comment": "canonical encode of: BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
+          "in": {
+            "fields": {
+              "frameType": 258,
+              "protocol_id": 1,
+              "message_kind": 4,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+            }
+          },
+          "expected": {
+            "payload": "0010001401040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/notify-corr-len-zero",
+          "comment": "canonical encode of: BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
+          "in": {
+            "fields": {
+              "frameType": 259,
+              "protocol_id": 2,
+              "message_kind": 3,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "",
+              "method": "notifications/message",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+            }
+          },
+          "expected": {
+            "payload": "0010001b0203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/4/reserved-flags-ignored",
+          "comment": "canonical encode of: BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
+          "in": {
+            "fields": {
+              "frameType": 260,
+              "protocol_id": 1,
+              "message_kind": 5,
+              "content_type": 1,
+              "flags": 2,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "6368756e6b2d30"
+            }
+          },
+          "expected": {
+            "payload": "0010001401050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 6,
+          "requirement": "10/2/stream-end-final",
+          "comment": "canonical encode of: BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
+          "in": {
+            "fields": {
+              "frameType": 261,
+              "protocol_id": 1,
+              "message_kind": 6,
+              "content_type": 1,
+              "flags": 1,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": ""
+            }
+          },
+          "expected": {
+            "payload": "0010001401060101040a0b0c0d0a746f6f6c732f63616c6c"
+          },
+          "result": "valid"
+        }
+      ]
+    },
+    {
+      "op": "bridge.correlate",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/5/reply-correlates",
+          "comment": "BRIDGE_RESPONSE echoing the request correlation_id correlates",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 257,
+            "replyPayload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "expected": {
+            "match": true
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-different-corr-does-not-correlate",
+          "comment": "a reply with a different correlation_id does NOT correlate",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 257,
+            "replyPayload": "001000140102010004ffffffff0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "expected": {
+            "match": false
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/5/stream-reply-correlates",
+          "comment": "a BRIDGE_STREAM_DATA chunk echoing the correlation_id correlates",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 260,
+            "replyPayload": "0010001401050100040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "expected": {
+            "match": true
+          },
+          "result": "valid"
+        }
+      ]
+    },
+    {
+      "op": "nonce.derive",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "06/nonce/seq-zero-identity",
+          "comment": "seq 0 => nonce == iv (XOR identity on the low 8 octets)",
+          "in": {
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "seq": "0"
+          },
+          "result": "valid",
+          "expected": {
+            "nonce": "a0a1a2a3a4a5a6a7a8a9aaab"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "06/nonce/low-octet",
+          "comment": "seq 1 flips only the last nonce octet",
+          "in": {
+            "iv": "a0a1a2a3a4a5a6a7a8a9aaab",
+            "seq": "1"
+          },
+          "result": "valid",
+          "expected": {
+            "nonce": "a0a1a2a3a4a5a6a7a8a9aaaa"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "06/nonce/high-seq-into-octets-4-11",
+          "comment": "large seq lands entirely in octets 4..11 (zero IV)",
+          "in": {
+            "iv": "000000000000000000000000",
+            "seq": "4278190090"
+          },
+          "result": "valid",
+          "expected": {
+            "nonce": "0000000000000000ff00000a"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "06/nonce/full-width-xor",
+          "comment": "every low-8 octet is XORed (all-ones IV, 8-octet seq)",
+          "in": {
+            "iv": "ffffffffffffffffffffffff",
+            "seq": "72623859790382856"
+          },
+          "result": "valid",
+          "expected": {
+            "nonce": "fffffffffefdfcfbfaf9f8f7"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "06/nonce/iv-length-MUST-reject",
+          "comment": "IV must be exactly 12 octets; a 13-octet IV is invalid",
+          "in": {
+            "iv": "00000000000000000000000000",
+            "seq": "0"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "IvWrongLength"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "tlv.encode",
+      "profile": "any",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "02/tlv/encode-path-challenge",
+          "comment": "PathChallenge (0x0015), 32-octet value",
+          "in": {
+            "type": 21,
+            "value": "1111111111111111111111111111111111111111111111111111111111111111"
+          },
+          "result": "valid",
+          "expected": {
+            "tlv": "001500201111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "02/tlv/encode-zero-length",
+          "comment": "ProfileSelect (0x0002) with an empty value -> length 0x0000",
+          "in": {
+            "type": 2,
+            "value": ""
+          },
+          "result": "valid",
+          "expected": {
+            "tlv": "00020000"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "02/tlv/encode-keyupdate-marker",
+          "comment": "KeyUpdateMarker (0x0017), 8-octet BE value",
+          "in": {
+            "type": 23,
+            "value": "0001020304050607"
+          },
+          "result": "valid",
+          "expected": {
+            "tlv": "001700080001020304050607"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "02/tlv/encode-ratchet-generation",
+          "comment": "RatchetGeneration (0x0019), 8-octet BE generation index",
+          "in": {
+            "type": 25,
+            "value": "0000000000000005"
+          },
+          "result": "valid",
+          "expected": {
+            "tlv": "001900080000000000000005"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "02/tlv/encode-high-bit-type-is-legal",
+          "comment": "encoding a forward-incompatible (high-bit) type is legal; only DECODING an unknown one rejects",
+          "in": {
+            "type": 32769,
+            "value": "abcd"
+          },
+          "result": "valid",
+          "expected": {
+            "tlv": "80010002abcd"
+          }
+        }
+      ]
     }
   ]
 }

@@ -44,9 +44,13 @@ the core specification actually fixes — the traffic *classes* named by the reg
 purpose (§4) — and does not invent frame layouts, field structures, or semantics
 that the core specification does not state. A future companion specification MAY
 define a concrete Commerce operation encoding within the code points the core
-specification reserves; until then, the public Commerce interface is exactly what
-this reference restates, together with the foreign-protocol carriage the companion
-set routes onto this channel (§6).
+specification reserves — and the companion specification **NPAMP-COMMERCE**
+(`../companion/88_commerce_channel.md`) now does so, defining native
+payment-mandate-lifecycle and multi-party settlement-intent operation frames in the
+`0x0100`+ channel-specific namespace; the core specification itself still neither
+defines nor requires them. Beyond that companion-defined encoding, the public
+Commerce interface is exactly what this reference restates, together with the
+foreign-protocol carriage the companion set routes onto this channel (§6).
 
 ## 2. Channel identity
 
@@ -149,11 +153,13 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Commerce-specific
 operation encoding — for example concrete commerce or payment-mandate request and
 reply frames (§4) — would be assigned. The core specification defines **no**
-Commerce-specific frame type in this range, and no companion specification in the
-current set (`../companion/00_companion_index.md`) defines a Commerce-native frame
-type. Consequently there is, at present, no core- or companion-defined
-Commerce-native operation frame; §4 describes the interface at the registry level
-the core specification actually fixes.
+Commerce-specific frame type in this range. The companion specification
+**NPAMP-COMMERCE** (`../companion/88_commerce_channel.md`) now defines
+Commerce-native operation frames in this range — native payment-mandate-lifecycle
+and multi-party settlement-intent request/result frames at code points
+`0x0100`–`0x010E`; the core specification itself still neither defines nor requires
+them. Where a deployment uses those operations they are governed by NPAMP-COMMERCE;
+§4 describes the registry-level interface the core specification actually fixes.
 
 Where a deployment carries a **foreign** commerce protocol on this channel by
 routing NPAMP-BRIDGE encapsulation onto it (§6), that traffic occupies the
@@ -186,14 +192,18 @@ Notes and honest boundaries:
   classes but does not further define how commerce is expressed, what a mandate is
   an authorization over, or what a mandate contains; this reference records that both
   terms appear and does not manufacture a structure the core specification does not
-  state. A companion specification MAY define them precisely.
+  state. The companion specification **NPAMP-COMMERCE**
+  (`../companion/88_commerce_channel.md`) now defines the payment-mandate lifecycle
+  precisely; the core specification itself still does not.
 - **"Multi-party" is named, not defined.** The registry purpose says **multi-party**,
   yet the channel is a two-peer, Bidirectional single-stream association (§2). The
   core specification defines **no** multi-party fan-out, party enumeration,
   coordination, routing, or settlement-of-multiple-parties mechanism at the channel
   level. This reference MUST NOT be read to define one; multi-party coordination,
   where wanted, is the province of a foreign commerce protocol carried over the
-  channel (§6) or a future companion, not of the core Commerce registry line.
+  channel (§6) or of the Commerce-native companion **NPAMP-COMMERCE**
+  (`../companion/88_commerce_channel.md`), which defines multi-party settlement-intent
+  operations, not of the core Commerce registry line.
 - **No mandate, value, or ledger schema is defined here.** The registry purpose does
   not fix a currency, amount, asset, mandate serialization, or ledger model, and the
   core specification defines **no** commerce or payment-mandate message schema, value
@@ -210,10 +220,11 @@ Notes and honest boundaries:
 - **Correlation and ordering.** The Commerce channel has an independent per-direction
   sequence space (core specification §5), which orders frames within a direction. The
   core specification does not define how a Commerce reply is correlated to a request
-  (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a `correlation_id`); a
-  Commerce operation encoding, when specified by a companion — or the NPAMP-BRIDGE
-  correlation used by a foreign commerce protocol routed onto this channel (§6) — is
-  where such correlation would be defined. This reference does not define it.
+  (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a `correlation_id`). The
+  Commerce-native companion **NPAMP-COMMERCE** (`../companion/88_commerce_channel.md`)
+  now defines an in-body correlation token for its operations — or, for a foreign
+  commerce protocol routed onto this channel (§6), the NPAMP-BRIDGE correlation
+  provides it; the core specification and this reference themselves define neither.
 - **Bidirectional single stream.** Because the channel is Bidirectional and not
   Multi-stream (§2), both peers exchange commerce and mandate frames over a single
   stream; either peer MAY originate traffic. The core specification does not assign
@@ -261,12 +272,14 @@ profile is met, and no upper profile bound.
 
 ## 6. Relationship to companion specifications
 
-The Commerce channel is a **native core channel**: no companion specification in the
-current set (`../companion/00_companion_index.md`) defines the Commerce channel
-itself, and — like the Memory channel (`0x0001`; `./0001_memory.md`) and the
-Settlement channel (`0x0007`; `./0007_settlement.md`) — it has **no dedicated
-companion specification** elaborating a Commerce-native encoding. It is not itself a
-bridge carriage class and does not build on NPAMP-BRIDGE as its native definition.
+The Commerce channel is a **native core channel**: the core specification defines
+the channel's registry entry, not a Commerce-native operation encoding. The
+companion specification **NPAMP-COMMERCE** (`../companion/88_commerce_channel.md`)
+now provides a dedicated Commerce-native encoding — native payment-mandate-lifecycle
+and multi-party settlement-intent operation frames in the `0x0100`+ channel-specific
+namespace; the core specification itself still neither defines nor requires them. The
+Commerce channel is not itself a bridge carriage class and does not build on
+NPAMP-BRIDGE as its native definition.
 
 Unlike the Memory and Settlement channels, however, the Commerce channel **is a
 carriage-selection target**. The companion index's "Channel selection for carriage"
@@ -318,16 +331,17 @@ exactly what §2–§5 restate:
   channels, the core specification reserves **no** sub-`0x0100` frame-type range for
   the Commerce channel (§3.2).
 
-Should richer, interoperable Commerce operations be wanted, the paths are: carry an
+Richer, interoperable Commerce operations are available by two paths: carry an
 existing foreign commerce protocol over the channel via NPAMP-BRIDGE and its carriage
 class under the relevant mapping (as AP2, UCP, and AITP above already provide); or
-author a Commerce-native companion specification that defines a commerce operation
-encoding within the `0x0100`+ channel-specific namespace, verified against the core
-specification. Until such a native companion exists, an implementation carries
-Commerce traffic under the channel identity above and any foreign commerce protocol
-routed onto it per the mappings, and there is no additional core- or
-companion-defined Commerce-native behavior to conform to. This reference documents
-the interface at that public level and defines no new behavior.
+use the Commerce-native companion specification **NPAMP-COMMERCE**
+(`../companion/88_commerce_channel.md`), which defines a commerce operation encoding
+within the `0x0100`+ channel-specific namespace, verified against the core
+specification. Beyond the registry-level channel identity above, the Commerce-native
+operation behavior an implementation conforms to is that defined by NPAMP-COMMERCE;
+the core specification itself still neither defines nor requires it. This reference
+documents the interface at that public registry level and defines no new behavior of
+its own.
 
 ## 7. Conformance
 
@@ -367,8 +381,9 @@ if, for channel `0x000E`, it:
    NPAMP-BRIDGE `0x0100`+ frame types, treating the foreign message's operation
    semantics as the foreign protocol's and not this channel's (§3.3, §6); and
 9. Defers all Commerce operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adding no Commerce-native behavior of its own
-   that the core specification does not reserve (§6).
+   to the Commerce-native companion specification NPAMP-COMMERCE
+   (`../companion/88_commerce_channel.md`), adding no Commerce-native behavior of its
+   own that the core specification does not reserve (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation advertises, emits, or honors no

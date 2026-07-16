@@ -39,10 +39,11 @@ format, message schema, or operation contract. Accordingly, this reference
 describes the Capability interface at the level the core specification actually
 fixes — the operation *classes* named by the registry purpose (§4) — and does not
 invent frame layouts, field structures, token formats, or semantics that the core
-specification does not state. A future companion specification MAY define a concrete
-Capability operation encoding within the code points the core specification
-reserves; until then, the public Capability interface is exactly what this
-reference restates.
+specification does not state. The companion specification NPAMP-CAPABILITY
+(`../companion/84_capability_channel.md`) now defines a concrete Capability
+operation encoding within the code points the core specification reserves; the
+core specification itself still fixes only the registry entry and reserved range
+this reference restates.
 
 ## 2. Channel identity
 
@@ -117,10 +118,13 @@ reference `../09_extension_points.md`):
 This range is **reserved, not defined**. The core specification neither defines
 nor requires any capability token extension frame; it only reserves the code
 points so a companion specification can define them without colliding with the
-core wire format (core specification §8). No companion specification in the current
-set (`../companion/00_companion_index.md`) defines these frames. An implementation
-therefore MUST NOT treat any capability token extension behavior as specified by
-the core specification, and MUST NOT assign `0x0060`–`0x0063` to any other purpose.
+core wire format (core specification §8). The companion specification NPAMP-CAPABILITY
+(`../companion/84_capability_channel.md`) now defines these code points as OPTIONAL
+capability token extension frames; the core specification itself still neither defines
+nor requires them. An implementation therefore MUST NOT treat any capability token
+extension behavior as specified by the core specification — those semantics are defined
+by NPAMP-CAPABILITY, not the core — and MUST NOT assign `0x0060`–`0x0063` to any other
+purpose.
 
 > **Known editorial inconsistency in -00 (carried, not corrected here).** The core
 > specification states that channel-specific frame types begin at `0x0100`
@@ -135,10 +139,12 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Capability-specific
 operation encoding — for example concrete issuance/delegation/revocation/lookup
 request and reply frames (§4) — would be assigned. The core specification defines
-**no** Capability-specific frame type in this range, and no companion specification
-in the current set defines one. Consequently there is, at present, no core- or
-companion-defined Capability operation frame; §4 describes the interface at the
-registry level the core specification actually fixes.
+**no** Capability-specific frame type in this range; the companion specification
+NPAMP-CAPABILITY (`../companion/84_capability_channel.md`) now defines the
+issuance/delegation/revocation/lookup request/result frames (`0x0100`–`0x0108`) in
+this range, while the core specification itself still defines none. §4 describes the
+interface at the registry level the core specification actually fixes; the concrete
+operation encoding is defined by NPAMP-CAPABILITY, not by the core specification.
 
 ## 4. Interface and operations (public level)
 
@@ -182,14 +188,15 @@ Notes and honest boundaries:
   core specification names is the **capability token extension** frame range, and it
   names it only by reserving frame code points for it (`0x0060`–`0x0063`, §3.2).
   Their semantics are undefined by the core specification and out of scope for this
-  reference until a companion defines them.
+  reference; the companion NPAMP-CAPABILITY (`../companion/84_capability_channel.md`)
+  now defines them, not the core specification.
 - **Correlation and ordering.** The Capability channel has an independent
   per-direction sequence space (core specification §5), which orders frames within a
   direction. The core specification does not define how a Capability reply is
   correlated to its request (unlike the Bridge channel, where NPAMP-BRIDGE §5
-  defines a `correlation_id`); a Capability operation encoding, when specified by a
-  companion, is where such correlation would be defined. This reference does not
-  define it.
+  defines a `correlation_id`); the companion NPAMP-CAPABILITY
+  (`../companion/84_capability_channel.md`) defines this correlation (an in-body
+  correlation token). This reference does not define it.
 - **Bidirectional origination.** Because the channel is Bidirectional (§2), either
   peer MAY originate traffic on it — an issuer MAY grant or revoke, and a holder MAY
   delegate onward or look up — each direction using its own sequence space and
@@ -229,10 +236,12 @@ The Capability channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
 carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Capability channel has **no
-dedicated companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage
-class and does not build on NPAMP-BRIDGE.
+NPAMP-DISC (`../companion/40_discovery.md`), the Capability channel is elaborated
+by its own dedicated companion specification, NPAMP-CAPABILITY
+(`../companion/84_capability_channel.md`), in the current companion set
+(`../companion/00_companion_index.md`). That companion is a native-operation
+framework, not a bridge carriage class: the Capability channel is therefore not a
+bridge carriage class and does not build on NPAMP-BRIDGE.
 
 The Capability channel `0x0002` is also distinct from the two other channels whose
 registry purposes mention capabilities, and this reference does not conflate them:
@@ -258,17 +267,20 @@ is exactly what §2–§5 restate:
   classes, described at the registry level, with **no core-defined wire encoding or
   capability-token format** (§4);
 - Its **reserved extension surface** — the `0x0060`–`0x0063` capability token
-  extension frame-type range, reserved by the core specification and defined by
-  neither the core specification nor any current companion (§3.2).
+  extension frame-type range, reserved by the core specification and now defined by
+  the companion NPAMP-CAPABILITY (`../companion/84_capability_channel.md`), not by
+  the core specification (§3.2).
 
-Should richer, interoperable Capability operations be wanted, the path is the same
-as for any N-PAMP extension: author a companion specification that defines a
-Capability operation encoding (and, if needed, the capability token format) within
-the reserved code points, verified against the core specification. Until such a
-companion exists, an implementation carries Capability traffic under the channel
-identity and reserved code points above, and there is no additional core- or
-companion-defined Capability behavior to conform to. This reference documents the
-interface at that public level and defines no new behavior.
+Richer, interoperable Capability operations follow the same path as any N-PAMP
+extension: a companion specification that defines a Capability operation encoding
+(and, where needed, the capability token format) within the reserved code points,
+verified against the core specification. That companion now exists — NPAMP-CAPABILITY
+(`../companion/84_capability_channel.md`) defines the concrete Capability operation
+encoding — so an implementation that carries Capability traffic under the channel
+identity and reserved code points above conforms to the core-defined interface this
+reference restates, while the concrete operation behavior is defined by
+NPAMP-CAPABILITY. This reference documents the interface at that public level and
+defines no new behavior.
 
 ## 7. Conformance
 
@@ -304,8 +316,8 @@ only if, for channel `0x0002`, it:
    (§2, §4); and
 8. Defers all Capability operation semantics beyond the registry-level interface of
    §4 — including any capability-token format, delegation, revocation, and lookup
-   semantics — to a future companion specification, adding no Capability behavior of
-   its own that the core specification does not reserve (§6).
+   semantics — to the companion specification NPAMP-CAPABILITY, adding no Capability
+   behavior of its own that the core specification does not reserve (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not advertise, emit, or

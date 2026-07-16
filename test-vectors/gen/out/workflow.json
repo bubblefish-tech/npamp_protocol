@@ -1,0 +1,233 @@
+[
+  {
+    "op": "workflow.body.decode",
+    "profile": "Standard",
+    "tests": [
+      {
+        "tcId": 1,
+        "requirement": "8a/6.1/deterministic-cbor-map",
+        "comment": "valid WORKFLOW_SUBMIT_REQ: envelope + task_type + effect",
+        "in": {
+          "frameType": 256,
+          "body": "a400190100014163026973756d6d6172697a650b01"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 2,
+        "requirement": "8a/6.1/deterministic-cbor-map",
+        "comment": "valid WORKFLOW_SUBMIT_RESULT: envelope + task_id + state",
+        "in": {
+          "frameType": 257,
+          "body": "a40019010101416302667461736b2d370300"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 257,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 3,
+        "requirement": "8a/6.4/step-event-no-corr",
+        "comment": "valid WORKFLOW_STEP_EVENT: task-scoped, carries NO corr (\u00a74.2)",
+        "in": {
+          "frameType": 262,
+          "body": "a40019010602667461736b2d3703000401"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 262
+        }
+      },
+      {
+        "tcId": 4,
+        "requirement": "8a/6.5/complete-no-corr",
+        "comment": "valid WORKFLOW_COMPLETE: terminal, task-scoped, NO corr (\u00a74.2)",
+        "in": {
+          "frameType": 263,
+          "body": "a40019010702667461736b2d3703030402"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 263
+        }
+      },
+      {
+        "tcId": 5,
+        "requirement": "8a/8.1/approval-required-distinct",
+        "comment": "valid WORKFLOW_ERROR approval_required carrying approval_id",
+        "in": {
+          "frameType": 264,
+          "body": "a5001901080141630204037768656c6420666f722068756d616e20617070726f76616c0566617070722d31"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 264,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 6,
+        "requirement": "8a/4.3/forward-compat-accept-nonneg",
+        "comment": "unknown NON-negative key (99) MUST be accepted",
+        "in": {
+          "frameType": 256,
+          "body": "a500190100014163026973756d6d6172697a650b0118636c6675747572652d6669656c64"
+        },
+        "result": "acceptable",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "63"
+        },
+        "flags": [
+          "ForwardCompat"
+        ]
+      },
+      {
+        "tcId": 7,
+        "requirement": "8a/4.1/non-deterministic-cbor-MUST-reject",
+        "comment": "key 0 in non-shortest form (0x18 0x00)",
+        "in": {
+          "frameType": 256,
+          "body": "a1180000"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 8,
+        "requirement": "8a/4.3/unknown-negative-key-MUST-reject",
+        "comment": "unknown NEGATIVE integer key (-1)",
+        "in": {
+          "frameType": 256,
+          "body": "a5001901000141630261780b012009"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "UnknownNegativeKey"
+        ]
+      },
+      {
+        "tcId": 9,
+        "requirement": "8a/6.1/missing-required-key-MUST-reject",
+        "comment": "SUBMIT_REQ missing REQUIRED task_type(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a3001901000141630b01"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 10,
+        "requirement": "8a/5.3/missing-required-effect-MUST-reject",
+        "comment": "SUBMIT_REQ missing REQUIRED effect(11)",
+        "in": {
+          "frameType": 256,
+          "body": "a300190100014163026178"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 11,
+        "requirement": "8a/4.1/wrong-major-type-MUST-reject",
+        "comment": "effect(11) is text where an unsigned int is required",
+        "in": {
+          "frameType": 256,
+          "body": "a4001901000141630261780b646e6f7065"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 12,
+        "requirement": "8a/4.2/frame-kind-mismatch-MUST-reject",
+        "comment": "frame_kind says STATUS_REQ(0x0102) but frame is SUBMIT_REQ(0x0100)",
+        "in": {
+          "frameType": 256,
+          "body": "a4001901020141630261780b01"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "FrameKindMismatch"
+        ]
+      },
+      {
+        "tcId": 13,
+        "requirement": "8a/4.2/corr-not-bytes-MUST-reject",
+        "comment": "corr(1) is an unsigned int, not the required byte string",
+        "in": {
+          "frameType": 256,
+          "body": "a4001901000118630261780b01"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 14,
+        "requirement": "8a/5.1/missing-corr-MUST-reject",
+        "comment": "SUBMIT_REQ omits the REQUIRED corr(1) an *_REQ MUST carry",
+        "in": {
+          "frameType": 256,
+          "body": "a3001901000261780b01"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 15,
+        "requirement": "8a/8/missing-error-message-MUST-reject",
+        "comment": "WORKFLOW_ERROR missing REQUIRED message(3)",
+        "in": {
+          "frameType": 264,
+          "body": "a3001901080141630204"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 16,
+        "requirement": "8a/4.1/payload-not-a-map-MUST-reject",
+        "comment": "payload is a bare uint, not a CBOR map",
+        "in": {
+          "frameType": 256,
+          "body": "05"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NotAMap"
+        ]
+      }
+    ]
+  }
+]

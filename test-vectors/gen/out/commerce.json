@@ -1,0 +1,221 @@
+[
+  {
+    "op": "commerce.body.decode",
+    "profile": "Standard",
+    "tests": [
+      {
+        "tcId": 1,
+        "requirement": "88/4.1/deterministic-cbor-map",
+        "comment": "valid COMMERCE_MANDATE_CREATE_REQ: envelope + payer + payee + amount + effect",
+        "in": {
+          "frameType": 256,
+          "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 2,
+        "requirement": "88/6.2/deterministic-cbor-map",
+        "comment": "valid COMMERCE_MANDATE_READ_REQ: envelope + mandate_id + effect=read_only",
+        "in": {
+          "frameType": 258,
+          "body": "a400190102014163026b6d616e646174653a78797a0300"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 258,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 3,
+        "requirement": "88/6.6/deterministic-cbor-map",
+        "comment": "valid COMMERCE_INTENT_PROPOSE_REQ: parties + legs (from/to named) + effect",
+        "in": {
+          "frameType": 264,
+          "body": "a50019010801416302826770617274793a616770617274793a620381a3006770617274793a61016770617274793a6202a300193039010202635553440702"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 264,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 4,
+        "requirement": "88/8.1/approval-required-distinct-outcome",
+        "comment": "valid COMMERCE_ERROR: code=approval_required carries approval_id (a held, NOT-executed outcome)",
+        "in": {
+          "frameType": 270,
+          "body": "a50019010e01416302040371617070726f76616c2072657175697265640568617070723a313233"
+        },
+        "result": "valid",
+        "expected": {
+          "frame_kind": 270,
+          "corr": "63"
+        }
+      },
+      {
+        "tcId": 5,
+        "requirement": "88/4.4/forward-compat-accept-nonneg",
+        "comment": "unknown NON-negative key (99) MUST be accepted",
+        "in": {
+          "frameType": 256,
+          "body": "a700190100014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d0318636c6675747572652d6669656c64"
+        },
+        "result": "acceptable",
+        "expected": {
+          "frame_kind": 256,
+          "corr": "63"
+        },
+        "flags": [
+          "ForwardCompat"
+        ]
+      },
+      {
+        "tcId": 6,
+        "requirement": "88/4.1/non-deterministic-cbor-MUST-reject",
+        "comment": "key 0 in non-shortest form (0x18 0x00)",
+        "in": {
+          "frameType": 256,
+          "body": "a1180000"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NonDeterministicCBOR"
+        ]
+      },
+      {
+        "tcId": 7,
+        "requirement": "88/4.4/unknown-negative-key-MUST-reject",
+        "comment": "unknown NEGATIVE integer key (-1)",
+        "in": {
+          "frameType": 256,
+          "body": "a70019010001416302617003617104a300193039010202635553440d032009"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "UnknownNegativeKey"
+        ]
+      },
+      {
+        "tcId": 8,
+        "requirement": "88/4.1/missing-required-key-MUST-reject",
+        "comment": "COMMERCE_MANDATE_CREATE_REQ missing REQUIRED amount(4)",
+        "in": {
+          "frameType": 256,
+          "body": "a500190100014163026b70617965723a616c696365036970617965653a626f620d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MissingRequiredKey"
+        ]
+      },
+      {
+        "tcId": 9,
+        "requirement": "88/4.1/wrong-major-type-MUST-reject",
+        "comment": "payer(2) is uint where text is required",
+        "in": {
+          "frameType": 256,
+          "body": "a6001901000141630209036970617965653a626f6204a300193039010202635553440d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "WrongMajorType"
+        ]
+      },
+      {
+        "tcId": 10,
+        "requirement": "88/4.2/frame-kind-mismatch-MUST-reject",
+        "comment": "frame_kind says READ(0x0102) but frame is CREATE(0x0100)",
+        "in": {
+          "frameType": 256,
+          "body": "a600190102014163026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "FrameKindMismatch"
+        ]
+      },
+      {
+        "tcId": 11,
+        "requirement": "88/4.2/corr-not-bytes-MUST-reject",
+        "comment": "corr(1) is an unsigned int, not the required byte string",
+        "in": {
+          "frameType": 256,
+          "body": "a600190100011863026b70617965723a616c696365036970617965653a626f6204a300193039010202635553440d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "EnvelopeWrongType"
+        ]
+      },
+      {
+        "tcId": 12,
+        "requirement": "88/4.1/payload-not-a-map-MUST-reject",
+        "comment": "payload is a bare uint, not a CBOR map",
+        "in": {
+          "frameType": 256,
+          "body": "05"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "NotAMap"
+        ]
+      },
+      {
+        "tcId": 13,
+        "requirement": "88/4.3/malformed-amount-MUST-reject",
+        "comment": "amount omits REQUIRED currency(2)",
+        "in": {
+          "frameType": 256,
+          "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a20019303901020d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MalformedAmount"
+        ]
+      },
+      {
+        "tcId": 14,
+        "requirement": "88/4.3/malformed-amount-wrong-type-MUST-reject",
+        "comment": "amount scale(1) is text where an unsigned int is required",
+        "in": {
+          "frameType": 256,
+          "body": "a600190100014163026b70617965723a616c696365036970617965653a626f6204a300193039016374776f02635553440d03"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "MalformedAmount"
+        ]
+      },
+      {
+        "tcId": 15,
+        "requirement": "88/6.6/leg-party-not-in-parties-MUST-reject",
+        "comment": "a leg names a `to` party (party:c) that is not in `parties`",
+        "in": {
+          "frameType": 264,
+          "body": "a50019010801416302826770617274793a616770617274793a620381a3006770617274793a61016770617274793a6302a300193039010202635553440702"
+        },
+        "result": "invalid",
+        "flags": [
+          "MustReject",
+          "LegPartyNotNamed"
+        ]
+      }
+    ]
+  }
+]

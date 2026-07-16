@@ -39,9 +39,11 @@ contract. Accordingly, this reference describes the Immune interface at the leve
 the core specification actually fixes — the operation *classes* named by the
 registry purpose (§4) — and does not invent frame layouts, field structures,
 report schemas, gossip mechanisms, or semantics that the core specification does
-not state. A future companion specification MAY define a concrete Immune operation
-encoding within the code points the core specification reserves; until then, the
-public Immune interface is exactly what this reference restates.
+not state. The companion specification NPAMP-IMMUNE
+(`../companion/85_immune_channel.md`) now defines a concrete Immune operation
+encoding within the code points the core specification reserves; this reference
+documents the channel's public, registry-level interface, while the core
+specification itself still defines no Immune operation encoding.
 
 ## 2. Channel identity
 
@@ -116,10 +118,12 @@ the Immune channel (core specification §8, Reserved Frame-Type Ranges; referenc
 This range is **reserved, not defined**. The core specification neither defines
 nor requires any propagation frame; it only reserves the code points so a
 companion specification can define them without colliding with the core wire
-format (core specification §8). No companion specification in the current set
-(`../companion/00_companion_index.md`) defines these frames. An implementation
-therefore MUST NOT treat any propagation behavior as specified by the core
-specification, and MUST NOT assign `0x00C0`–`0x00C4` to any other purpose.
+format (core specification §8). The companion specification NPAMP-IMMUNE
+(`../companion/85_immune_channel.md`) now defines these code points as the
+defensive-gossip propagation exchange; the core specification itself still neither
+defines nor requires them. An implementation therefore MUST NOT treat any propagation
+behavior as specified by the core specification — those semantics are defined by
+NPAMP-IMMUNE, not the core — and MUST NOT assign `0x00C0`–`0x00C4` to any other purpose.
 
 > **Known editorial inconsistency in -00 (carried, not corrected here).** The core
 > specification states that channel-specific frame types begin at `0x0100`
@@ -134,10 +138,14 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which an Immune-specific
 operation encoding — for example concrete anomaly-report and defensive-gossip
 request, reply, or notification frames (§4) — would be assigned. The core
-specification defines **no** Immune-specific frame type in this range, and no
-companion specification in the current set defines one. Consequently there is, at
-present, no core- or companion-defined Immune operation frame; §4 describes the
-interface at the registry level the core specification actually fixes.
+specification defines **no** Immune-specific frame type in this range. The companion
+specification NPAMP-IMMUNE (`../companion/85_immune_channel.md`) now defines the
+Immune anomaly-report operation frames in this application band —
+IMMUNE_REPORT_REQ (`0x0100`), IMMUNE_REPORT_RESULT (`0x0101`), and IMMUNE_ERROR
+(`0x0102`) — as its §3.1; the core specification itself still neither defines nor
+requires them. §4 describes the interface at the registry level the core
+specification actually fixes; the concrete companion-defined frames are normative in
+NPAMP-IMMUNE, not in the core specification.
 
 ## 4. Interface and operations (public level)
 
@@ -167,7 +175,10 @@ Notes and honest boundaries:
   reserving frame code points. Its semantics — including any fan-out, relay,
   suppression, freshness, or anti-entropy behavior a "defensive gossip"
   propagation might imply — are undefined by the core specification and out of
-  scope for this reference until a companion defines them. An implementation MUST
+  scope for this reference; the companion NPAMP-IMMUNE
+  (`../companion/85_immune_channel.md`) defines the propagation model (its §7),
+  while the core specification itself still neither defines nor requires it. An
+  implementation MUST
   NOT infer a propagation mechanism from the registry word "gossip" or from the
   reserved range's name.
 - **Correlation and ordering.** The Immune channel has an independent per-direction
@@ -223,13 +234,16 @@ The Immune channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
 carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Immune channel has **no dedicated
-companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage class
-and does not build on NPAMP-BRIDGE.
+NPAMP-DISC (`../companion/40_discovery.md`), the Immune channel's dedicated
+companion specification NPAMP-IMMUNE (`../companion/85_immune_channel.md`) — listed
+in the current companion set (`../companion/00_companion_index.md`) — defines a
+**native** Immune operation encoding rather than a foreign-protocol carriage. It is
+therefore not a bridge carriage class and does not build on NPAMP-BRIDGE.
 
-The consequence for an implementer is that the Immune channel's public contract is
-exactly what §2–§5 restate:
+The consequence for an implementer is that the Immune channel's public,
+registry-level contract — what this interface reference documents — is what §2–§5
+restate, above which the companion NPAMP-IMMUNE (`../companion/85_immune_channel.md`)
+defines the concrete operation encoding:
 
 - Its **identity** — id `0x0005`, name Immune, purpose "anomaly reports and
   defensive gossip", minimum profile Standard, direction Bidirectional (§2);
@@ -237,18 +251,21 @@ exactly what §2–§5 restate:
   classes, described at the registry level, with **no core-defined wire encoding**
   (§4);
 - Its **reserved extension surface** — the `0x00C0`–`0x00C4` propagation frame-type
-  range, reserved by the core specification and defined by neither the core
-  specification nor any current companion (§3.2); and
+  range, reserved by the core specification and now defined by the companion
+  NPAMP-IMMUNE (`../companion/85_immune_channel.md`), not by the core specification
+  (§3.2); and
 - Its **scheduling posture** — a priority channel alongside Control `0x0000`,
   scheduled above the bulk channels during congestion (§5).
 
-Should richer, interoperable Immune operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines an Immune
-operation encoding — anomaly-report and defensive-gossip frames — within the
-reserved code points, verified against the core specification. Until such a
-companion exists, an implementation carries Immune traffic under the channel
-identity and reserved code points above, and there is no additional core- or
-companion-defined Immune behavior to conform to. This reference documents the
+Richer, interoperable Immune operations are now defined by the companion
+specification NPAMP-IMMUNE (`../companion/85_immune_channel.md`), authored the same
+way as any N-PAMP extension: it defines an Immune operation encoding — anomaly-report
+frames in the application band and defensive-gossip propagation frames in the
+reserved code points — verified against the core specification. This interface
+reference documents the channel's public, registry-level contract; the concrete
+operation encoding, in-body correlation discipline, propagation model, and error
+model live in NPAMP-IMMUNE, not here, and the core specification itself still neither
+defines nor requires them. This reference documents the
 interface at that public level and defines no new behavior.
 
 ## 7. Conformance
@@ -283,8 +300,9 @@ if, for channel `0x0005`, it:
    sequence space and traffic keys — and does not treat the channel as Multi-stream
    (§2); and
 8. Defers all Immune operation semantics beyond the registry-level interface of §4
-   to a future companion specification, adding no Immune behavior of its own that
-   the core specification does not reserve (§6).
+   to the companion specification NPAMP-IMMUNE (`../companion/85_immune_channel.md`),
+   adding no Immune behavior of its own that the core specification does not reserve
+   (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not advertise, emit, or

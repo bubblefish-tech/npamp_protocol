@@ -291,6 +291,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "ed25519-dalek",
+ "getrandom",
  "hkdf",
  "hmac",
  "kem",

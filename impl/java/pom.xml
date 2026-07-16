@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Maven manifest for the N-PAMP (draft-bubblefish-npamp-01) OPEN reference library,
+    Java port. Makes impl/java a consumable, publishable Maven Central artifact:
+    coordinates sh.bubblefish:npamp. Dependency-free at runtime — the port builds on the
+    JDK (javax.crypto, java.security; Ed25519 via the "EdDSA" provider), so there are no
+    <dependencies>. Source layout is Maven-standard (src/main/java, src/test/java), which
+    matches the existing tree.
+
+    `mvn -B verify` builds and packages the publishable jar (+ sources jar). The KAT / conformance
+    tests in src/test/java are main()-driven (run per QUICKSTART.md and by the cross-language
+    conformance harness), not JUnit @Test methods, so Surefire execution is disabled here (the pom's
+    job is the publishable library; grading lives in impl/_conformance-harness). Test sources still
+    compile under test-compile, which keeps them honest against the main sources.
+  -->
+
+  <groupId>sh.bubblefish</groupId>
+  <artifactId>npamp</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <name>npamp</name>
+  <description>Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format — Java port: frame codec, AES-256-GCM record layer, HKDF-Expand-Label key schedule, and handshake-binding primitives (Standard profile).</description>
+  <url>https://github.com/bubblefish-tech/npamp_protocol</url>
+
+  <licenses>
+    <license>
+      <name>Apache-2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>BubbleFish Technologies, Inc.</name>
+    <url>https://bubblefish.sh</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <name>BubbleFish Technologies, Inc.</name>
+      <organization>BubbleFish Technologies, Inc.</organization>
+      <organizationUrl>https://bubblefish.sh</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/bubblefish-tech/npamp_protocol.git</connection>
+    <developerConnection>scm:git:git@github.com:bubblefish-tech/npamp_protocol.git</developerConnection>
+    <url>https://github.com/bubblefish-tech/npamp_protocol</url>
+  </scm>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Verified against OpenJDK 21 (QUICKSTART.md); the JDK "EdDSA" (Ed25519) provider
+         has been present since Java 15. -->
+    <maven.compiler.release>21</maven.compiler.release>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+
+      <!-- The KATs are main()-driven, not JUnit; the cross-language conformance harness
+           grades them. Compile them (test-compile stays on) but do not attempt to run them
+           through Surefire, which would find no @Test methods. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <skipTests>true</skipTests>
+        </configuration>
+      </plugin>
+
+      <!-- Publish a -sources jar alongside the library (required for Maven Central). -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>package</phase>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!--
+    The `release` profile carries the extra Maven Central requirements (javadoc jar, GPG
+    signatures, the Central Publishing plugin). It activates only on `mvn -P release deploy`,
+    so ordinary `mvn verify` / `mvn package` builds need no GPG key or credentials. The actual
+    deploy is credential-gated in .github/workflows/publish.yml (blocked until the operator adds
+    the Maven Central token + signing key).
+  -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <phase>package</phase>
+                <goals><goal>jar</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals><goal>sign</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.7.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

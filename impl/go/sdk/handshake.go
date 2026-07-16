@@ -118,15 +118,21 @@ func (l *Listener) Accept(ctx context.Context) (*Conn, error) {
 }
 
 func newConn(raw net.Conn, master []byte, peerID ed25519.PublicKey, sendDir, recvDir npamp.Direction) *Conn {
+	// Seed both per-direction ratchet roots from the handshake master at
+	// generation 0. Independent copies so each direction can advance (and wipe its
+	// predecessor) without disturbing the other; the caller's `master` backing
+	// array is not retained. Generation-0 roots ARE the handshake master, so
+	// gen-0 traffic keys are byte-identical to the pre-ratchet schedule (R4).
 	return &Conn{
-		raw:     raw,
-		profile: sdkProfile,
-		master:  master,
-		peerID:  append(ed25519.PublicKey(nil), peerID...),
-		sendDir: sendDir,
-		recvDir: recvDir,
-		sendKeys: make(map[npamp.ChannelID]*epochKeys),
-		recvKeys: make(map[npamp.ChannelID]*epochKeys),
+		raw:        raw,
+		profile:    sdkProfile,
+		masterSend: append([]byte(nil), master...),
+		masterRecv: append([]byte(nil), master...),
+		peerID:     append(ed25519.PublicKey(nil), peerID...),
+		sendDir:    sendDir,
+		recvDir:    recvDir,
+		sendKeys:   make(map[npamp.ChannelID]*epochKeys),
+		recvKeys:   make(map[npamp.ChannelID]*epochKeys),
 	}
 }
 

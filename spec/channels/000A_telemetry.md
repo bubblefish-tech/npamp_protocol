@@ -46,10 +46,12 @@ encoding, message schema, metric format, or operation contract. Accordingly, thi
 reference describes the Telemetry interface at the level the core specification
 actually fixes — the reporting *classes* named by the registry purpose (§4) — and
 does not invent frame layouts, field structures, metric schemas, or semantics that
-the core specification does not state. A future companion specification MAY define
-a concrete Telemetry operation encoding within the channel-specific code points the
-core specification leaves available; until then, the public Telemetry interface is
-exactly what this reference restates.
+the core specification does not state. The companion specification NPAMP-TELEMETRY
+(`../companion/87_telemetry_channel.md`) now defines a concrete Telemetry operation
+encoding within the channel-specific `0x0100`+ code points the core specification
+leaves available; the core specification itself still neither defines nor requires
+them, so the public Telemetry interface this reference restates remains exactly the
+registry-level surface the core specification fixes.
 
 ## 2. Channel identity
 
@@ -159,10 +161,13 @@ Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Telemetry-specific
 operation encoding — for example concrete metric-report and health-report request
 and reply frames (§4) — would be assigned. The core specification defines **no**
-Telemetry-specific frame type in this range, and no companion specification in the
-current set (`../companion/00_companion_index.md`) defines one. Consequently there
-is, at present, no core- or companion-defined Telemetry operation frame; §4
-describes the interface at the registry level the core specification actually fixes.
+Telemetry-specific frame type in this range. The companion specification
+NPAMP-TELEMETRY (`../companion/87_telemetry_channel.md`) now defines Telemetry
+operation frames in this `0x0100`+ channel-specific range (report, subscribe,
+acknowledge, unsubscribe, and credit operations); the core specification itself
+still neither defines nor requires them. §4 describes the interface at the registry
+level the core specification actually fixes, and defers the concrete operation
+encoding to NPAMP-TELEMETRY.
 
 ## 4. Interface and operations (public level)
 
@@ -248,29 +253,34 @@ The Telemetry channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
 carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Telemetry channel has **no
-dedicated companion specification** in the current companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage class
-and does not build on NPAMP-BRIDGE.
+NPAMP-DISC (`../companion/40_discovery.md`), the Telemetry channel is elaborated by
+a **native-core-channel operation companion**, NPAMP-TELEMETRY
+(`../companion/87_telemetry_channel.md`), in the current companion set
+(`../companion/00_companion_index.md`) — not a bridge companion framework. It is
+therefore not a bridge carriage class and does not build on NPAMP-BRIDGE.
 
-The consequence for an implementer is that the Telemetry channel's public contract
-is exactly what §2–§5 restate:
+The consequence for an implementer is that the Telemetry channel's core-level public
+contract is exactly what §2–§5 restate (its concrete operation encoding being defined
+by NPAMP-TELEMETRY, not by the core specification):
 
 - Its **identity** — id `0x000A`, name Telemetry, purpose "operational metrics and
   health reporting", minimum profile Standard, direction Bidirectional (§2);
 - Its **public interface** — the operational-metrics and health-reporting classes,
   described at the registry level, with **no core-defined wire encoding** (§4); and
-- Its **reserved extension surface** — **none** at the frame-type level: the core
-  specification reserves no Telemetry-specific frame-type range, and no current
-  companion defines a Telemetry frame in the `0x0100`+ namespace (§3.2, §3.3).
+- Its **reserved extension surface** — **none** at the core frame-type level: the core
+  specification reserves no Telemetry-specific frame-type range (§3.2). The companion
+  specification NPAMP-TELEMETRY (`../companion/87_telemetry_channel.md`) now defines
+  Telemetry operation frames in the channel-specific `0x0100`+ namespace; the core
+  specification itself still neither defines nor requires them (§3.3).
 
-Should richer, interoperable Telemetry operations be wanted, the path is the same as
-for any N-PAMP extension: author a companion specification that defines a Telemetry
+Richer, interoperable Telemetry operations are defined by exactly such a companion:
+NPAMP-TELEMETRY (`../companion/87_telemetry_channel.md`) defines a Telemetry
 operation encoding within the channel-specific `0x0100`+ code points, verified
-against the core specification. Until such a companion exists, an implementation
-carries Telemetry traffic under the channel identity above, and there is no
-additional core- or companion-defined Telemetry behavior to conform to. This
-reference documents the interface at that public level and defines no new behavior.
+against the core specification. An implementation carries core-level Telemetry
+traffic under the channel identity above; the core specification itself defines no
+additional Telemetry behavior, and the concrete operation semantics an implementation
+conforms to are those NPAMP-TELEMETRY defines. This reference documents the core-level
+public interface and defines no new behavior.
 
 ## 7. Conformance
 
@@ -305,8 +315,9 @@ if, for channel `0x000A`, it:
    spaces and traffic keys — and does not open multiple concurrent transport streams
    within the channel as though it were Multi-stream (§2); and
 8. Defers all Telemetry operation semantics beyond the registry-level interface of
-   §4 to a future companion specification, adding no Telemetry behavior of its own
-   that the core specification does not reserve (§6).
+   §4 to the NPAMP-TELEMETRY companion specification
+   (`../companion/87_telemetry_channel.md`), adding no Telemetry behavior of its own
+   that neither the core specification reserves nor that companion defines (§6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 5 by confirming that an implementation does not emit or honor any

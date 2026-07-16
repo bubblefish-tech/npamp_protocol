@@ -115,6 +115,55 @@ func DeriveFinishedKey(handshakeTrafficSecret []byte, p Profile) ([]byte, error)
 	return HkdfExpandLabel(handshakeTrafficSecret, "finished", nil, h().Size(), h)
 }
 
+// RatchetMasterTier1 performs the cheap symmetric forward step of the master
+// ratchet (spec/10 section 5, Hybrid Tree Ratchet Tier 1):
+//
+//	master_{G+1} = HKDF-Expand-Label(master_G, "master ratchet", gen(8 BE, value targetGen), HashLen)
+//
+// targetGen is the NEW generation index (G+1). The full wire label is
+// "n-pamp master ratchet". HKDF-Expand is one-way, so master_G cannot be
+// reconstructed from the result: this step provides forward secrecy, not
+// self-healing (the chain is deterministic — an attacker holding master_G can
+// compute every future Tier-1 root). The caller zeroizes master_G in place after
+// the step so the pre-step root does not linger.
+func RatchetMasterTier1(master []byte, targetGen uint64, p Profile) ([]byte, error) {
+	h := hashForProfile(p)
+	var ctx [8]byte
+	binary.BigEndian.PutUint64(ctx[:], targetGen)
+	return HkdfExpandLabel(master, "master ratchet", ctx[:], h().Size(), h)
+}
+
+// RatchetMasterTier2 performs the periodic asymmetric re-KEM step of the master
+// ratchet (spec/10 section 5, Hybrid Tree Ratchet Tier 2):
+//
+//	rekem_secret = HKDF-Extract(salt = master_G, IKM = new_ss)
+//	master_{G+1} = HKDF-Expand-Label(rekem_secret, "master ratchet rekem", TH_rekem, HashLen)
+//
+// new_ss is the 64-octet ML-KEM_SS || X25519_SS from a fresh X25519MLKEM768
+// exchange (SharedSecrets.Combined()). The full wire label is
+// "n-pamp master ratchet rekem". The old root sits in the salt position and the
+// fresh secret in the IKM position (RFC 5869 section 2.2 / the Signal root-KDF
+// placement), so master_{G+1} is uniform even if master_G is fully known to the
+// attacker: without new_ss the attacker cannot compute master_{G+1}, and the
+// direction self-heals (post-compromise security). TH_rekem binds the exact
+// REKEM/REKEM_ACK exchange bytes into the new root, defeating splicing. The
+// intermediate rekem_secret is wiped in place before return; the caller wipes
+// master_G, new_ss, and the ephemeral KEM private keys.
+func RatchetMasterTier2(master, newSS, thRekem []byte, p Profile) ([]byte, error) {
+	h := hashForProfile(p)
+	// HKDF-Extract(secret = IKM = new_ss, salt = master_G): the dual-PRF combiner
+	// with the OLD root as a non-zero salt (unlike the handshake's zero salt).
+	rekemSecret, err := hkdf.Extract(h, newSS, master)
+	if err != nil {
+		return nil, err
+	}
+	out, err := HkdfExpandLabel(rekemSecret, "master ratchet rekem", thRekem, h().Size(), h)
+	for i := range rekemSecret {
+		rekemSecret[i] = 0
+	}
+	return out, err
+}
+
 // DeriveKeyIV derives the 32-octet AEAD key and 12-octet AEAD IV from a traffic
 // secret (draft-00 section 7.5).
 func DeriveKeyIV(secret []byte, p Profile) (key [32]byte, iv [12]byte, err error) {

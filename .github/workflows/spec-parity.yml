@@ -36,4 +36,4 @@ jobs:
       # pwsh ships on ubuntu-latest (run via `shell: pwsh`), as in conformance.yml.
       - name: Spec-implementation parity audit (coverage + honesty + forward-drift)
         shell: pwsh
-        run: ./.shippable/spec-parity-audit.ps1 -RepoRoot $PWD
+        run: pwsh .shippable/spec-parity-audit.ps1 -RepoRoot $PWD -VerifyClaims -Coverage

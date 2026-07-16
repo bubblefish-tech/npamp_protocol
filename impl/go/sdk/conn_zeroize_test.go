@@ -30,10 +30,12 @@ func allZero(b []byte) bool {
 	return true
 }
 
-// TestZeroizeWipesMasterAndEpochKeys asserts Zeroize wipes both the master secret
-// and every cached per-epoch traffic key from memory, and is idempotent. It builds
-// a Conn directly (no handshake) with a known non-zero master so the wipe is
-// observable on the unexported field.
+// TestZeroizeWipesMasterAndEpochKeys asserts Zeroize wipes BOTH per-direction
+// ratchet roots (masterSend and masterRecv) and every cached per-epoch traffic
+// key from memory, and is idempotent. It builds a Conn directly (no handshake)
+// with a known non-zero master so the wipe is observable on the unexported
+// fields. (Step 8 of the HTR build map extends Zeroize from one master to two
+// roots.)
 func TestZeroizeWipesMasterAndEpochKeys(t *testing.T) {
 	master := make([]byte, 32)
 	for i := range master {
@@ -42,6 +44,11 @@ func TestZeroizeWipesMasterAndEpochKeys(t *testing.T) {
 	a, b := net.Pipe()
 	defer func() { _ = b.Close() }()
 	c := newConn(a, master, nil, npamp.DirClientToServer, npamp.DirServerToClient)
+
+	// The two roots are seeded from copies of the master and must be non-zero.
+	if allZero(c.masterSend) || allZero(c.masterRecv) {
+		t.Fatal("precondition: both ratchet roots should be non-zero before Zeroize")
+	}
 
 	// Populate a cached send + recv epoch key so we can prove they are wiped too.
 	sst, err := c.sendState(npamp.ChanMemory)
@@ -58,8 +65,11 @@ func TestZeroizeWipesMasterAndEpochKeys(t *testing.T) {
 
 	c.Zeroize()
 
-	if !allZero(master) {
-		t.Errorf("master not zeroized: %x", master)
+	if !allZero(c.masterSend) {
+		t.Errorf("masterSend root not zeroized: %x", c.masterSend)
+	}
+	if !allZero(c.masterRecv) {
+		t.Errorf("masterRecv root not zeroized: %x", c.masterRecv)
 	}
 	if !allZero(sst.key[:]) {
 		t.Error("send epoch key not zeroized")
@@ -84,8 +94,8 @@ func TestCloseZeroizesMaster(t *testing.T) {
 	c := newConn(a, master, nil, npamp.DirClientToServer, npamp.DirServerToClient)
 
 	_ = c.Close()
-	if !allZero(master) {
-		t.Errorf("Close did not zeroize master: %x", master)
+	if !allZero(c.masterSend) || !allZero(c.masterRecv) {
+		t.Errorf("Close did not zeroize both roots: send=%x recv=%x", c.masterSend, c.masterRecv)
 	}
 	// Second Close is safe (teardown + wipe each run once via closeOnce).
 	_ = c.Close()
@@ -113,9 +123,9 @@ func TestSendKeyUpdateAckWriteErrorDoesNotDeadlock(t *testing.T) {
 	}()
 	select {
 	case <-done:
-		// No deadlock: Close ran on the write-error path, so master must be wiped.
-		if !allZero(master) {
-			t.Error("expected master wiped after the ACK-write-error teardown")
+		// No deadlock: Close ran on the write-error path, so the roots must be wiped.
+		if !allZero(c.masterSend) || !allZero(c.masterRecv) {
+			t.Error("expected both roots wiped after the ACK-write-error teardown")
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("sendKeyUpdateAck deadlocked on the ACK-write-error path (reentrant wmu via Close)")

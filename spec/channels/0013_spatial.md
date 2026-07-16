@@ -13,9 +13,11 @@
 > change to the core wire format, and defines no behavior the core specification
 > does not already reserve. The Spatial channel is a **firewall-gated** channel: its
 > minimum profile is **High** (`../../registries/channels.csv`), so it is enabled
-> only under the High or Sovereign profile, and its operational and cryptographic
-> internals are governed above the public Standard-profile surface — they live in
-> the controlled track and are **out of scope** for this public reference. Where the
+> only under the High or Sovereign profile, and the cryptographic material bound to
+> the High and Sovereign profiles is governed above the public Standard-profile
+> surface — it lives in the controlled track and is **out of scope** for this public
+> reference; the channel's application operation encoding is defined by the public
+> companion NPAMP-SPATIAL (`../companion/83_spatial_channel.md`). Where the
 > core specification supplies only a registry line or reserves a code point without
 > defining its semantics, this reference says so and describes the interface at that
 > level. **The draft governs**: on any disagreement between this reference and the
@@ -39,10 +41,11 @@ specification actually fixes — the channel's identity, its public frame-type
 namespace, and the profile at which it may be enabled — and does not invent frame
 layouts, field structures, operation classes, or semantics that the core
 specification does not state. Because the channel is firewall-gated at the High
-profile, its operational behavior and the cryptographic material bound to the High
-and Sovereign profiles are governed by the core specification's profile
-negotiation and by the controlled track, and are **out of scope** for this public
-reference. This page documents only the channel's public surface: that it exists,
+profile, the cryptographic material bound to the High and Sovereign profiles is
+governed by the core specification's profile negotiation and by the controlled
+track, while the channel's application operation encoding is defined by the public
+companion NPAMP-SPATIAL (`../companion/83_spatial_channel.md`); both are **out of
+scope** for this public reference. This page documents only the channel's public surface: that it exists,
 its identifier and name, its purpose, its direction, its minimum profile, and its
 public frame-range reservations. All of these are already public in the core
 specification's §5 channel registry.
@@ -129,12 +132,15 @@ introduces none.
 Channel-specific frame types begin at **`0x0100`** within each channel's frame
 namespace (core specification §4.6). This is the range in which a Spatial-specific
 operation encoding would be assigned. The core specification defines **no**
-Spatial-specific frame type in this range, and no companion specification in the
-current public set (`../companion/00_companion_index.md`) defines one. Consequently
-there is, at the public level, no core- or public-companion-defined Spatial
-operation frame; §4 describes the interface at the registry level the core
-specification actually fixes, and the channel's operational frame set is governed
-by the controlled track (§5, §6) rather than by this public reference.
+Spatial-specific frame type in this range; the companion specification NPAMP-SPATIAL
+(`../companion/83_spatial_channel.md`), listed in the current public companion set
+(`../companion/00_companion_index.md`), now defines the Spatial application frames —
+FRAME_DEF, TRANSFORM, POSE_UPDATE, STATE_DELTA, OCCUPANCY_UPDATE, and the
+SPATIAL_QUERY/SPATIAL_SNAPSHOT/SPATIAL_ERROR request/reply triple (`0x0100`–`0x0107`)
+— in this range, while the core specification itself still defines none. §4 describes
+the interface at the registry level the core specification actually fixes; the
+concrete Spatial operation encoding is defined by NPAMP-SPATIAL, not by the core
+specification.
 
 ## 4. Interface (public level)
 
@@ -161,18 +167,23 @@ Honest boundaries at the public level:
 - **Correlation and ordering.** The Spatial channel has an independent per-direction
   sequence space (core specification §5), which orders frames within a direction.
   The core specification defines no request/reply correlation scheme for the channel
-  (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a `correlation_id`); any
-  such scheme, if defined, is governed elsewhere and not by this public reference.
+  (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a `correlation_id`); the
+  companion NPAMP-SPATIAL (`../companion/83_spatial_channel.md`) defines this
+  correlation (an in-body `corr` identifier carried on SPATIAL_QUERY and echoed
+  verbatim on its SPATIAL_SNAPSHOT/SPATIAL_ERROR reply). This reference does not
+  define it.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
   deployment MAY carry concurrent Spatial traffic over multiple transport streams
   within the channel's stream family; the core specification permits this at the
   channel level and does not constrain how traffic is distributed across those
   streams.
-- **Operational and cryptographic internals are out of scope.** The Spatial channel
-  is firewall-gated at the High profile (§2, §5). Its operational contract and the
-  cryptographic material bound to the High and Sovereign profiles are governed by
-  the core specification's profile negotiation and by the controlled track; they are
-  **not** published in this public reference and MUST NOT be inferred from it.
+- **Operational and cryptographic internals are out of scope of this reference.** The
+  Spatial channel is firewall-gated at the High profile (§2, §5). The channel's
+  application operation encoding is defined by the public companion NPAMP-SPATIAL
+  (`../companion/83_spatial_channel.md`), and the cryptographic material bound to the
+  High and Sovereign profiles is governed by the core specification's profile
+  negotiation and by the controlled track; **neither** is published in this public
+  reference and MUST NOT be inferred from it.
 
 ## 5. Profile applicability
 
@@ -204,21 +215,23 @@ therefore any operation on it, **requires the High or Sovereign profile**.
 - **Publishing scope.** This reference documents only the public interface surface
   of the channel — its existence, identifier, name, purpose, direction, minimum
   profile, and public frame-type namespace, all of which are public in the core
-  specification's §5 channel registry. The channel's operational internals and the
-  High- and Sovereign-profile cryptographic internals and parameters are governed by
-  the core specification's profile negotiation and by the controlled track and are
-  **out of scope** here; they MUST NOT be read into this document.
+  specification's §5 channel registry. The channel's application operation encoding is
+  defined by the public companion NPAMP-SPATIAL (`../companion/83_spatial_channel.md`),
+  and the High- and Sovereign-profile cryptographic internals and parameters are
+  governed by the core specification's profile negotiation and by the controlled
+  track; both are **out of scope** here and MUST NOT be read into this document.
 
 ## 6. Relationship to companion specifications
 
 The Spatial channel is a **native core channel**: unlike the Bridge channel
 (`0x000D`), which encapsulates foreign agent protocols and is elaborated by the
 NPAMP-BRIDGE companion framework (`../companion/10_bridge_framework.md`) and its
-carriage classes, and unlike the Discovery channel (`0x0010`), elaborated by
-NPAMP-DISC (`../companion/40_discovery.md`), the Spatial channel has **no dedicated
-companion specification** in the current public companion set
-(`../companion/00_companion_index.md`). It is therefore not a bridge carriage class
-and does not build on NPAMP-BRIDGE.
+carriage classes, the Spatial channel is elaborated by its own dedicated companion
+specification, NPAMP-SPATIAL (`../companion/83_spatial_channel.md`), in the current
+public companion set (`../companion/00_companion_index.md`) — as the Discovery
+channel (`0x0010`) is elaborated by NPAMP-DISC (`../companion/40_discovery.md`). That
+companion is a native-operation framework, not a bridge carriage class: the Spatial
+channel is therefore not a bridge carriage class and does not build on NPAMP-BRIDGE.
 
 The consequence for an implementer is that the Spatial channel's **public** contract
 is exactly what §2–§5 restate:
@@ -229,17 +242,20 @@ is exactly what §2–§5 restate:
 - Its **public frame-type surface** — the reserved all-channel frame types
   (`0x0001`–`0x000A`) with their fixed meanings, and the channel-specific `0x0100`+
   convention, with **no** Spatial-specific frame-type range reserved by the core
-  specification and **no** core- or public-companion-defined Spatial operation frame
+  specification and **no** core-defined Spatial operation frame — the concrete
+  Spatial operation frames (`0x0100`–`0x0107`) are defined by the companion
+  NPAMP-SPATIAL (`../companion/83_spatial_channel.md`), not by the core specification
   (§3); and
 - Its **profile gate** — availability at High and Sovereign only, never at Standard
   (§2, §5).
 
-Because the channel is firewall-gated at the High profile, its operational
-semantics and the cryptographic material bound to the High and Sovereign profiles
-are governed by the core specification's profile negotiation and by the controlled
-track — not by this public companion set. This public reference documents the
-channel at the registry level the core specification fixes and defines no new
-behavior. Where the core specification gives this channel only a registry line, this
+Because the channel is firewall-gated at the High profile, the cryptographic
+material bound to the High and Sovereign profiles is governed by the core
+specification's profile negotiation and by the controlled track; the channel's
+application operation encoding is defined by the public companion NPAMP-SPATIAL
+(`../companion/83_spatial_channel.md`) within the code points the core specification
+reserves. This public reference documents the channel at the registry level the core
+specification fixes and defines no new behavior. Where the core specification gives this channel only a registry line, this
 reference says so; it MUST NOT be read to add any Spatial behavior the core
 specification does not reserve.
 
@@ -272,11 +288,12 @@ if, for channel `0x0013`, it:
    the OPTIONAL opening of multiple concurrent transport streams within the channel's
    stream family, each peer maintaining independent per-direction sequence spaces and
    traffic keys (§2, §4); and
-8. Treats the channel's operational and cryptographic internals — including the
-   High- and Sovereign-profile cryptographic material — as governed by the core
-   specification's profile negotiation and the controlled track, out of scope for
-   this public reference, and adds no public Spatial behavior of its own that the
-   core specification does not reserve (§5, §6).
+8. Treats the channel's High- and Sovereign-profile cryptographic material as governed
+   by the core specification's profile negotiation and the controlled track, out of
+   scope for this public reference; obtains any Spatial operation encoding it
+   implements from the public companion NPAMP-SPATIAL, not from this reference; and
+   adds no Spatial behavior of its own that neither the core specification reserves
+   nor NPAMP-SPATIAL defines (§5, §6).
 
 A conformance test suite SHOULD assert each clause above, and in particular SHOULD
 verify clause 2 by confirming that an implementation neither advertises nor accepts

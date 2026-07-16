@@ -1,0 +1,30 @@
+{
+    "name": "bubblefish/npamp",
+    "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format — PHP port: frame codec, AES-256-GCM record layer, HKDF-Expand-Label key schedule, and handshake-binding primitives (Standard profile).",
+    "type": "library",
+    "keywords": ["npamp", "n-pamp", "protocol", "wire-format", "aes-gcm", "hkdf", "ed25519"],
+    "homepage": "https://github.com/bubblefish-tech/npamp_protocol",
+    "license": "Apache-2.0",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "BubbleFish Technologies, Inc.",
+            "homepage": "https://bubblefish.sh"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/bubblefish-tech/npamp_protocol/issues",
+        "source": "https://github.com/bubblefish-tech/npamp_protocol"
+    },
+    "require": {
+        "php": ">=8.1",
+        "ext-openssl": "*",
+        "ext-sodium": "*"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    },
+    "autoload-dev": {
+        "classmap": ["test/"]
+    }
+}
