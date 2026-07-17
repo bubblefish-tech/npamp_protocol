@@ -75,6 +75,17 @@ jobs:
         run: python -m pip install jsonschema
       - name: Validate registry CSVs against schemas (+ duplicate/overlap pass)
         run: python scripts/validate-registries.py
+      # The flat validate-registries.py cannot express the per-channel frame-type
+      # namespace (§4.6): the same numeric frame_type recurs per channel, so its
+      # single-code duplicate pass would false-positive. This composite-key validator
+      # enforces (channel_id, frame_type) uniqueness + Go-const lockstep instead.
+      - name: Validate per-channel frame-type registry (composite-key + Go lockstep)
+        run: python scripts/validate-frame-types-channel.py
+      # validate-registries.py checks CSV<->schema; it says nothing about the rendered
+      # docs/registries.md mirror. This closes that gap (F6): the page cannot drift from
+      # the CSVs it renders. Stdlib-only, no new docs-toolchain dependency.
+      - name: Check rendered registries doc has not drifted from the CSVs
+        run: python scripts/check-registries-doc.py
 
   cddl:
     name: wire-format CDDL well-formedness (RFC 8610)
@@ -224,3 +235,249 @@ jobs:
         run: go build -C impl/go ./...
       - name: Test impl/go (handshake flow, KAT sets, sdk loopback e2e)
         run: go test -C impl/go ./... -count=1
+
+# ===========================================================================
+# 10-language conformance MATRIX + cross-language handshake-KAT wiring.
+# These two jobs slot into .github/workflows/conformance.yml's `jobs:` map.
+# ---------------------------------------------------------------------------
+# ACTION / TOOLCHAIN PIN PROVENANCE
+#   actions/checkout@v7, actions/setup-go@v6, actions/setup-python@v6,
+#   actions/upload-artifact@v7 were verified against their GitHub READMEs on
+#   2026-07-02 (see the header of this workflow). The remaining pins
+#   (actions/setup-node@v4, actions/setup-java@v4, actions/setup-dotnet@v4,
+#   ruby/setup-ruby@v1, shivammathur/setup-php@v2, dtolnay/rust-toolchain@stable)
+#   mirror the majors/versions this repo's .github/workflows/publish.yml already
+#   uses; per publish.yml's own note the operator MUST reconfirm each major (and
+#   preferably pin to a commit SHA) - they are inert here beyond CI provisioning.
+#   kotlinc (Kotlin 2.4.x) and swift (6.3.x) are preinstalled on the ubuntu-24.04
+#   runner image (actions/runner-images Ubuntu2404-Readme.md), so the kotlin and
+#   swift legs run host-native with an honest `command -v` skip guard rather than
+#   a setup step.
+# ===========================================================================
+
+  conformance-matrix:
+    name: conformance (${{ matrix.lang }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One leg per reference language. fail-fast:false so a regression in one
+      # language does not cancel the other nine - every language reports its own
+      # verdict and its own JUnit artifact.
+      fail-fast: false
+      matrix:
+        lang: [go, rust, python, typescript, ruby, php, java, kotlin, csharp, swift]
+    env:
+      # Build every Go module standalone even if an ambient workspace is present.
+      GOWORK: "off"
+      # matrix.lang is a fixed, trusted set; route it through env rather than
+      # interpolating ${{ }} into a run: script.
+      LANG_ID: ${{ matrix.lang }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The Go runner (npamp-conform) owns all grading and is built in EVERY leg,
+      # so Go is provisioned unconditionally (the swift leg needs it too).
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: harness/runner/go.mod
+
+      # ---- per-language toolchain provisioning (conditional on matrix.lang) ----
+      - if: matrix.lang == 'python'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - if: matrix.lang == 'typescript'
+        uses: actions/setup-node@v4
+        with:
+          # >= 22.18 runs .ts via native type-stripping (no flag, no tsc build).
+          # The adapter has no package.json scope, so node auto-detects its ESM
+          # `import` syntax (default since 22.7), and imports impl/typescript/src/
+          # npamp.ts with an explicit .ts specifier as the type-stripping resolver
+          # requires. setup-node "22" resolves to the latest 22.x (>= 22.18).
+          node-version: "22"
+      - if: matrix.lang == 'ruby'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - if: matrix.lang == 'java' || matrix.lang == 'kotlin'
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - if: matrix.lang == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - if: matrix.lang == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          # impl/php/composer.json requires ext-openssl (AES-256-GCM / HKDF) and
+          # ext-sodium (Ed25519). openssl is what the conformance corpus exercises.
+          extensions: openssl, sodium
+      - if: matrix.lang == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      # The runner embeds harness/runner/corpus/conformance-corpus.json; it must be
+      # byte-identical to the pinned corpus, or the runner grades against stale
+      # vectors (the corpus expected-values derive from the spec golden vectors and
+      # the Project Wycheproof KAT corpora - independent of any adapter, so grading
+      # is non-circular).
+      - name: Embedded corpus equals the pinned corpus
+        run: cmp harness/runner/corpus/conformance-corpus.json test-vectors/v1/conformance-corpus.json
+
+      - name: Build runner (npamp-conform)
+        run: go build -C harness/runner -buildvcs=false -o npamp-conform .
+
+      - name: Build ${{ matrix.lang }} adapter and resolve the testee command
+        run: |
+          set -euo pipefail
+          # Honest SKIP: if a language's toolchain is not present (e.g. a
+          # preinstalled runtime was dropped from the image), record a TRACKED skip
+          # and exit 0 - never fail the leg on a missing toolchain, and never let a
+          # missing adapter masquerade as a pass. Provisioned toolchains (the
+          # setup-* steps above) are always present here; this guard is the safety
+          # net for the host-native legs (kotlin, swift) and for image drift.
+          need() {
+            if ! command -v "$1" >/dev/null 2>&1; then
+              echo "SKIP=1" >> "$GITHUB_ENV"
+              echo "::notice title=conformance ${LANG_ID}::SKIPPED - required tool '$1' not on this runner"
+              exit 0
+            fi
+          }
+          case "$LANG_ID" in
+            go)
+              need go
+              go build -C harness/adapters/go -o npamp-adapter-go .
+              echo 'TESTEE=./harness/adapters/go/npamp-adapter-go' >> "$GITHUB_ENV"
+              ;;
+            rust)
+              need cargo
+              # Builds impl/rust as a path dependency, so this also compiles the
+              # Rust reference implementation.
+              cargo build --manifest-path harness/adapters/rust/Cargo.toml
+              echo 'TESTEE=./harness/adapters/rust/target/debug/npamp-adapter' >> "$GITHUB_ENV"
+              ;;
+            python)
+              need python
+              # harness/adapters/python/adapter.py imports `cryptography` for AES-256-GCM.
+              python -m pip install --disable-pip-version-check "cryptography>=42"
+              echo 'TESTEE=python harness/adapters/python/adapter.py' >> "$GITHUB_ENV"
+              ;;
+            typescript)
+              need node
+              # No build step: node runs the .ts adapter directly (type-stripping).
+              echo 'TESTEE=node harness/adapters/typescript/adapter.ts' >> "$GITHUB_ENV"
+              ;;
+            ruby)
+              need ruby
+              # Pure-stdlib adapter (OpenSSL); no gem install needed.
+              echo 'TESTEE=ruby harness/adapters/ruby/adapter.rb' >> "$GITHUB_ENV"
+              ;;
+            php)
+              need php
+              echo 'TESTEE=php harness/adapters/php/adapter.php' >> "$GITHUB_ENV"
+              ;;
+            java)
+              need javac; need java
+              # Compile the whole reference package + the adapter (matches
+              # impl/_conformance-harness/run-all-langs.sh's javac invocation).
+              javac -d harness/adapters/java/out \
+                impl/java/src/main/java/sh/bubblefish/npamp/*.java \
+                harness/adapters/java/Adapter.java
+              echo 'TESTEE=java -cp harness/adapters/java/out sh.bubblefish.npamp.Adapter' >> "$GITHUB_ENV"
+              ;;
+            kotlin)
+              need kotlinc; need java
+              # Npamp.kt is self-contained (run-all-langs.sh compiles it with only
+              # Vectors.kt). -include-runtime bundles the Kotlin stdlib into the jar,
+              # so the run needs only `java -cp <jar>` + the file-derived main class
+              # (top-level main() in package ...adapter -> AdapterKt).
+              kotlinc \
+                impl/kotlin/src/main/kotlin/sh/bubblefish/npamp/Npamp.kt \
+                harness/adapters/kotlin/Adapter.kt \
+                -include-runtime -d harness/adapters/kotlin/npamp-adapter-kotlin.jar
+              echo 'TESTEE=java -cp harness/adapters/kotlin/npamp-adapter-kotlin.jar sh.bubblefish.npamp.adapter.AdapterKt' >> "$GITHUB_ENV"
+              ;;
+            csharp)
+              need dotnet
+              # Adapter.csproj (net8.0) compiles impl/csharp/Npamp.cs into the
+              # assembly; AssemblyName is npamp-adapter-csharp.
+              dotnet build harness/adapters/csharp/Adapter.csproj -c Release --nologo
+              echo 'TESTEE=dotnet harness/adapters/csharp/bin/Release/net8.0/npamp-adapter-csharp.dll' >> "$GITHUB_ENV"
+              ;;
+            swift)
+              need swift
+              # swift-adapter depends on impl/swift by local path, so this compiles
+              # the Swift reference implementation too. The release bin path is not
+              # hardcoded - resolve it with --show-bin-path (as the prior swift job did).
+              swift build -c release --package-path harness/adapters/swift-adapter
+              bin="$(swift build -c release --package-path harness/adapters/swift-adapter --show-bin-path)"
+              echo "TESTEE=${bin}/npamp-adapter" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "unknown matrix language: $LANG_ID" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Run conformance suite (${{ matrix.lang }})
+        run: |
+          set -euo pipefail
+          if [ "${SKIP:-0}" = "1" ]; then
+            echo "conformance ${LANG_ID}: SKIPPED (toolchain absent) - no adapter to grade"
+            exit 0
+          fi
+          # npamp-conform splits --testee on spaces (honoring quotes), so an
+          # interpreted testee such as "python .../adapter.py" is passed as one
+          # quoted argument. Any MUST failure exits non-zero and fails this leg.
+          ./harness/runner/npamp-conform run \
+            --testee "${TESTEE}" \
+            --junit "conformance-report-${LANG_ID}.xml"
+
+      - name: Upload JUnit report (${{ matrix.lang }})
+        if: always() && env.SKIP != '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-junit-${{ matrix.lang }}
+          path: conformance-report-${{ matrix.lang }}.xml
+
+  handshake-kat:
+    name: cross-language handshake KAT (RFC/FIPS/NIST-anchored, non-circular)
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v7
+
+      # Provision the toolchains the handshake gate exercises. kotlinc, swift, and
+      # pwsh are preinstalled on ubuntu-24.04, so they have no setup step. The gate
+      # (impl/_conformance-harness/kat-handshake-all-langs.sh) SKIPs Go by design -
+      # the Go handshake KATs run in the impl-go job - and it prints honest
+      # ran/skipped accounting, so a missing toolchain is a tracked SKIP, never a
+      # silent green: it passes only on exit 0 AND each language's positive token.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install python crypto dependency (Ed25519 - certverify + handshake-flow KATs)
+        run: python -m pip install --disable-pip-version-check "cryptography>=42"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: openssl, sodium
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Run the cross-language handshake KAT gate
+        run: bash impl/_conformance-harness/kat-handshake-all-langs.sh

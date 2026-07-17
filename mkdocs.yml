@@ -240,7 +240,11 @@ nav:
           - "Channel ops: Interaction": spec/companion/89_interaction_channel.md
           - "Channel ops: Workflow": spec/companion/8a_workflow_channel.md
           - "Channel ops: Knowledge": spec/companion/8b_knowledge_channel.md
-  - Registries: spec/07_tlv_registry.md
+  - Registries:
+      - All code-point registries: docs/registries.md
+      - TLV type registry: spec/07_tlv_registry.md
+      - Bridge protocol-ID registry: spec/companion/30_protocol_registry.md
+      - Registration request template: docs/REGISTRATION-REQUEST.md
   - Conformance:
       - Requirements: spec/companion/55_conformance_requirements.md
       - Harness overview: harness/README.md

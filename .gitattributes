@@ -4,3 +4,8 @@
 test-vectors/v1/conformance-corpus.json text eol=lf
 test-vectors/schemas/conformance-corpus.schema.json text eol=lf
 harness/runner/corpus/conformance-corpus.json text eol=lf
+
+# Hash-pinned per-channel frame-type registry + its schema (MANIFEST.sha256) — force LF
+# so the pinned SHA-256 matches on every platform (Windows autocrlf would otherwise drift it).
+registries/frame_types_channel.csv text eol=lf
+registries/schemas/frame_types_channel.schema.json text eol=lf
