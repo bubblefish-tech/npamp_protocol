@@ -1,7 +1,7 @@
 {
   "name": "npamp",
   "version": "0.1.0",
-  "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-00) wire format.",
+  "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
