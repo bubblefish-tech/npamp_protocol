@@ -15,6 +15,9 @@ draft-bubblefish-npamp-*.pdf
 node_modules/
 .venv/
 __pycache__/
+# npm build/pack outputs (regenerate via `npm run build` / `npm pack`)
+impl/typescript/dist/
+*.tgz
 # xml2rfc reference cache (regenerated from the network on draft build) + local run log.
 .refcache/
 tracker.log
