@@ -5,9 +5,10 @@
 //! for each op by calling the OPEN reference implementation crate `npamp` (path
 //! dependency `../../../impl/rust`). This file owns NO protocol logic: every op routes
 //! into a function exported by `npamp` (crc32c, Frame::unmarshal, header_prefix,
-//! seal_aes256gcm, open_aes256gcm, hkdf_expand). Operations the reference impl does not
-//! provide a function for (tlv.decode, profile.check) return {"skipped":...} and are
-//! reported Unimplemented, never reimplemented here.
+//! seal_aes256gcm, open_aes256gcm, hkdf_expand; and the channel body decoders
+//! bodies::validate_memory / validate_stream / validate_by_op). Operations the reference
+//! impl does not provide a function for (tlv.decode, profile.check) return {"skipped":...}
+//! and are reported Unimplemented, never reimplemented here.
 //!
 //! Windows note: stdin/stdout are used as raw binary byte streams (no text-mode CRLF
 //! translation exists on the `std::io::Stdin`/`Stdout` byte handles) and the adapter
@@ -151,12 +152,27 @@ impl<'a> Parser<'a> {
         let s = std::str::from_utf8(&self.b[start..self.i]).map_err(|_| "bad number".to_string())?;
         s.parse::<i64>().map_err(|_| format!("invalid integer {:?}", s))
     }
-    /// Parse a scalar value (string or integer) — the only kinds in the `in` object.
+    /// Parse a value from the `in` object. The flat contract consumes only scalars
+    /// (string / integer / bool / null); a nested object or array appears only for an
+    /// op the rust adapter does not implement (e.g. the `fields` object of
+    /// bridge.envelope.encode), so such a value is skipped whole and recorded as an
+    /// empty placeholder — the op then grades Unimplemented rather than crashing the
+    /// parser into a Fail.
     fn parse_value(&mut self) -> Result<Val, String> {
         self.skip_ws();
         match self.peek() {
             Some(b'"') => Ok(Val::Str(self.parse_string()?)),
             Some(c) if c == b'-' || c.is_ascii_digit() => Ok(Val::Int(self.parse_number()?)),
+            Some(b'{') => {
+                self.i += 1;
+                self.skip_container(b'}')?;
+                Ok(Val::Str(String::new()))
+            }
+            Some(b'[') => {
+                self.i += 1;
+                self.skip_container(b']')?;
+                Ok(Val::Str(String::new()))
+            }
             Some(b't') => {
                 self.consume_literal("true")?;
                 Ok(Val::Int(1))
@@ -170,6 +186,55 @@ impl<'a> Parser<'a> {
                 Ok(Val::Str(String::new()))
             }
             other => Err(format!("unexpected value byte {:?}", other)),
+        }
+    }
+
+    /// Skip one JSON value (scalar, object, or array) without materializing it. Used to
+    /// consume nested structures the flat request contract does not read.
+    fn skip_value(&mut self) -> Result<(), String> {
+        self.skip_ws();
+        match self.peek() {
+            Some(b'{') => {
+                self.i += 1;
+                self.skip_container(b'}')
+            }
+            Some(b'[') => {
+                self.i += 1;
+                self.skip_container(b']')
+            }
+            Some(b'"') => {
+                self.parse_string()?;
+                Ok(())
+            }
+            Some(c) if c == b'-' || c.is_ascii_digit() => {
+                self.parse_number()?;
+                Ok(())
+            }
+            Some(b't') => self.consume_literal("true"),
+            Some(b'f') => self.consume_literal("false"),
+            Some(b'n') => self.consume_literal("null"),
+            other => Err(format!("unexpected value byte {:?}", other)),
+        }
+    }
+
+    /// Skip the remainder of a JSON object or array (opening delimiter already consumed)
+    /// up to and including its matching `close`. Strings are consumed via `parse_string`
+    /// so a delimiter inside a string cannot unbalance the scan; nested containers are
+    /// handled by `skip_value`.
+    fn skip_container(&mut self, close: u8) -> Result<(), String> {
+        loop {
+            self.skip_ws();
+            match self.peek() {
+                None => return Err("unterminated container".into()),
+                Some(c) if c == close => {
+                    self.i += 1;
+                    return Ok(());
+                }
+                Some(b',') | Some(b':') => {
+                    self.i += 1;
+                }
+                Some(_) => self.skip_value()?,
+            }
         }
     }
     fn consume_literal(&mut self, lit: &str) -> Result<(), String> {
@@ -523,6 +588,28 @@ fn handle(req: &Request, break_mode: bool) -> String {
         //     rather than reimplementing the acceptance policy here. ---
         "profile.check" => serialize_skipped("profile.check not provided by impl/rust"),
 
+        // --- <chan>.body.decode: validate a channel body for the given frame type via the
+        //     npamp reference crate's structural validators (impl/rust/src/bodies.rs). A
+        //     reference rejection (non-deterministic CBOR, missing REQUIRED key, wrong CBOR
+        //     major type, frame_kind/header mismatch, unknown negative key) is an {"error"}
+        //     (the "invalid" verdict); a valid body returns its envelope frame_kind (0) and
+        //     corr (1) — or, for Stream, sub_stream_id (1), an unsigned int rather than a
+        //     byte string. The eight native channels share one validator dispatch
+        //     (validate_by_op); Memory and Stream each carry a distinct envelope. ---
+        "memory.body.decode" => body_decode_corr(req, |ft, body| npamp::bodies::validate_memory(ft, body)),
+        "stream.body.decode" => body_decode_stream(req),
+        "capability.body.decode"
+        | "immune.body.decode"
+        | "settlement.body.decode"
+        | "telemetry.body.decode"
+        | "commerce.body.decode"
+        | "interaction.body.decode"
+        | "workflow.body.decode"
+        | "knowledge.body.decode" => {
+            let op = req.op.as_str();
+            body_decode_corr(req, |ft, body| npamp::bodies::validate_by_op(op, ft, body))
+        }
+
         other => serialize_skipped(&format!("op not implemented: {}", other)),
     }
 }
@@ -543,6 +630,64 @@ fn decode_key(req: &Request) -> Result<[u8; 32], String> {
 fn decode_nonce(req: &Request) -> Result<[u8; 12], String> {
     let b = hex_field(req, "nonce")?;
     <[u8; 12]>::try_from(b.as_slice()).map_err(|_| format!("nonce must be 12 bytes, got {}", b.len()))
+}
+
+// ---------------------------------------------------------------------------
+// Channel body.decode helpers. Each routes a <chan>.body.decode op into the
+// npamp reference crate's structural validators and projects the graded fields
+// the conformance contract expects; the adapter makes no accept/reject decision
+// of its own — every verdict is the reference crate's.
+// ---------------------------------------------------------------------------
+
+/// Grade a Memory / native-channel body.decode op: on a valid body report frame_kind (0)
+/// and corr (1, hex); on a reference rejection report {"error"} (the "invalid" verdict).
+fn body_decode_corr<F>(req: &Request, validate: F) -> String
+where
+    F: Fn(u64, &[u8]) -> Result<npamp::bodies::CborMap, npamp::bodies::Malformed>,
+{
+    let body = match req.get_str("body") {
+        Some(h) => match hex_decode(h) {
+            Ok(b) => b,
+            Err(e) => return serialize_error(&e),
+        },
+        None => return serialize_error("missing body"),
+    };
+    let ft = req.get_int("frameType").unwrap_or(0) as u64;
+    match validate(ft, &body) {
+        Ok(m) => {
+            let fk = m.get_u64(0).unwrap_or(0);
+            let corr = m.get_bytes(1).unwrap_or(&[]);
+            serialize_out(&[
+                ("frame_kind", OutVal::Int(fk as i64)),
+                ("corr", OutVal::Str(hex_encode(corr))),
+            ])
+        }
+        Err(e) => serialize_error(&e.0),
+    }
+}
+
+/// Grade a Stream body.decode op: on a valid body report frame_kind (0) and sub_stream_id
+/// (1, an unsigned int); on a reference rejection report {"error"} (the "invalid" verdict).
+fn body_decode_stream(req: &Request) -> String {
+    let body = match req.get_str("body") {
+        Some(h) => match hex_decode(h) {
+            Ok(b) => b,
+            Err(e) => return serialize_error(&e),
+        },
+        None => return serialize_error("missing body"),
+    };
+    let ft = req.get_int("frameType").unwrap_or(0) as u64;
+    match npamp::bodies::validate_stream(ft, &body) {
+        Ok(m) => {
+            let fk = m.get_u64(0).unwrap_or(0);
+            let ssid = m.get_u64(1).unwrap_or(0);
+            serialize_out(&[
+                ("frame_kind", OutVal::Int(fk as i64)),
+                ("sub_stream_id", OutVal::Int(ssid as i64)),
+            ])
+        }
+        Err(e) => serialize_error(&e.0),
+    }
 }
 
 // ---------------------------------------------------------------------------
