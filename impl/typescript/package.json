@@ -1,11 +1,55 @@
 {
   "name": "npamp",
   "version": "0.1.0",
-  "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format.",
+  "description": "Open reference implementation of N-PAMP (draft-bubblefish-npamp-01) wire format — TypeScript port: framing, registries, AES-256-GCM record layer, HKDF key schedule, deterministic CBOR, and native-channel body validators.",
   "license": "Apache-2.0",
   "type": "module",
+  "author": "BubbleFish Technologies, Inc.",
+  "homepage": "https://github.com/bubblefish-tech/npamp_protocol",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bubblefish-tech/npamp_protocol.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bubblefish-tech/npamp_protocol/issues"
+  },
+  "keywords": [
+    "npamp",
+    "n-pamp",
+    "protocol",
+    "wire-format",
+    "post-quantum",
+    "cbor",
+    "aes-gcm",
+    "hkdf",
+    "ed25519"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "test": "node --test \"test/**/*.test.ts\"",
-    "vectors": "node bin/npamp-vectors.ts"
+    "vectors": "node bin/npamp-vectors.ts",
+    "kat": "node bin/npamp-kat.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
   }
 }

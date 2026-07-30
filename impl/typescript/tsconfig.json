@@ -1,0 +1,22 @@
+{
+  "// note": "Package build for the N-PAMP TypeScript SDK. The runtime source (src/*.ts) uses explicit .ts import extensions so Node can run it directly via native type-stripping; rewriteRelativeImportExtensions (TS 5.7+) rewrites those to .js in the emitted dist/ so the published package is standard Node ESM with .d.ts declarations. Run: npm run build",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["es2022"],
+    "types": ["node"],
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/**/*.ts"]
+}
