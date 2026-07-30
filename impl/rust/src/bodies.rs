@@ -913,3 +913,92 @@ pub fn validate_by_op(op: &str, ft: u64, payload: &[u8]) -> Result<CborMap, Malf
         _ => err(format!("unknown op {op}")),
     }
 }
+
+// ------------------------------------------------------------------------------------
+// Memory (companion 81) and Stream (companion 80)
+//
+// These two channels predate the eight native channels above and carry a distinct common
+// envelope. Memory shares the native corr(1) byte-string rule; Stream replaces corr with
+// sub_stream_id(1), an unsigned int. Both are validated with the same decode_map +
+// check_frame_kind + check_fields machinery as the native channels, so a Memory/Stream body
+// is graded byte-for-byte against the same conformance corpus the Go reference impl passes.
+// Schemas transcribed from spec/companion/81 §6-§8 and spec/companion/80 §5.1-§5.5.
+// ------------------------------------------------------------------------------------
+
+/// Body-field schema (keys 2+) per Memory frame type; the common envelope keys 0/1 are
+/// validated separately (spec/companion/81 §6-§8).
+fn memory_schema(ft: u64) -> Option<&'static [Field]> {
+    use Kind::*;
+    Some(match ft {
+        0x0100 => &[(2, Text, true), (3, Text, false), (4, Text, false), (5, Text, false), (6, Text, false), (7, Text, false), (8, Text, false), (9, Text, false), (10, Map, false), (11, Uint, true)],
+        0x0101 => &[(2, Text, true), (3, Text, true)],
+        0x0102 => &[(2, Text, true), (3, Uint, true)],
+        0x0103 => &[(2, Map, true)],
+        0x0104 => &[(2, Text, true), (3, Text, false), (4, Text, false), (5, Text, false), (6, Text, false), (7, Text, false), (8, Text, false), (9, Map, false), (10, Uint, true)],
+        0x0105 => &[(2, Text, true), (3, Text, true)],
+        0x0106 => &[(2, Text, true), (3, Uint, true)],
+        0x0107 => &[(2, Text, true), (3, Text, true)],
+        0x0108 => &[(2, Text, false), (3, Text, false), (4, Text, false), (5, Text, false), (6, Text, false), (7, Uint, false), (8, Text, false), (9, Bytes, false), (10, Uint, true)],
+        0x0109 => &[(2, Array, true), (3, Bool, true), (4, Bytes, false), (5, Uint, false), (6, Bool, false)],
+        0x010A => &[(2, Array, true)],
+        0x010B => &[(2, Array, false), (3, Bool, true)],
+        0x010C => &[],
+        0x010D => &[(2, Text, true), (3, Text, false), (4, Uint, false), (5, Map, false)],
+        0x010E => &[(2, Uint, true), (3, Text, true), (4, Uint, false), (5, Text, false)],
+        0x0035 => &[(2, Text, true), (3, Text, false), (4, Uint, true)],
+        0x0036 => &[(2, Text, true), (3, Uint, true)],
+        _ => return None,
+    })
+}
+
+/// sub_stream_id (1) MUST be present and an unsigned int — Stream's correlation key,
+/// unlike Memory's byte-string corr.
+fn check_sub_stream_id_required(m: &CborMap) -> Result<(), Malformed> {
+    match m.get(1) {
+        None => err("missing sub_stream_id (1)"),
+        Some(CborValue::Uint(_)) => Ok(()),
+        Some(_) => err("sub_stream_id (1) is not an unsigned int"),
+    }
+}
+
+/// Body-field schema (keys 2+) per Stream frame type; the common envelope keys 0/1 are
+/// validated separately (spec/companion/80 §5.1-§5.5).
+fn stream_schema(ft: u64) -> Option<&'static [Field]> {
+    use Kind::*;
+    Some(match ft {
+        0x0100 => &[(2, Uint, true), (3, Uint, true), (4, Text, false), (5, Uint, false)],
+        0x0101 => &[(2, Uint, true), (3, Bytes, true), (4, Uint, false)],
+        0x0102 => &[(2, Uint, true)],
+        0x0103 => &[(2, Uint, true), (3, Uint, true)],
+        0x0104 => &[(2, Uint, true)],
+        _ => return None,
+    })
+}
+
+/// Decodes and structurally validates a Memory (companion 81) frame body for `ft`, enforcing
+/// the common envelope (frame_kind(0)==ft, corr(1) a 1-64 byte string) and the per-frame
+/// required/typed fields (§6-§8). Returns the decoded map on success; the caller reads
+/// frame_kind (0) and corr (1).
+pub fn validate_memory(ft: u64, payload: &[u8]) -> Result<CborMap, Malformed> {
+    let schema = memory_schema(ft)
+        .ok_or_else(|| Malformed(format!("0x{ft:04X} is not a Memory frame type")))?;
+    let m = decode_map(payload)?;
+    check_frame_kind(&m, ft)?;
+    check_corr_required(&m)?;
+    check_fields(&m, schema)?;
+    Ok(m)
+}
+
+/// Decodes and structurally validates a Stream (companion 80) frame body for `ft`, enforcing
+/// the common envelope (frame_kind(0)==ft, sub_stream_id(1) an unsigned int) and the per-frame
+/// required/typed fields (§5). Returns the decoded map on success; the caller reads frame_kind
+/// (0) and sub_stream_id (1).
+pub fn validate_stream(ft: u64, payload: &[u8]) -> Result<CborMap, Malformed> {
+    let schema = stream_schema(ft)
+        .ok_or_else(|| Malformed(format!("0x{ft:04X} is not a Stream frame type")))?;
+    let m = decode_map(payload)?;
+    check_frame_kind(&m, ft)?;
+    check_sub_stream_id_required(&m)?;
+    check_fields(&m, schema)?;
+    Ok(m)
+}
