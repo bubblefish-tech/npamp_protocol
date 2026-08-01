@@ -1,0 +1,131 @@
+# Go <-> Rust two-implementation interop gate for the N-PAMP 1.5-RTT
+# mutually-authenticated handshake (spec/10) + record layer.
+#
+# This job builds BOTH reference implementations and runs the committed
+# bidirectional interop harness impl/go/cmd/npamp-interop/run-interop.sh, which
+# drives the live handshake + one AEAD application frame in BOTH directions over
+# TCP loopback with fresh random keys, cross-process, cross-language:
+#   A) Go server   (cmd/npamp-interop -role server) <-> Rust client (examples/interop_client)
+#   B) Rust server (examples/interop_server)         <-> Go client   (cmd/npamp-interop -role client)
+# The harness exits non-zero unless both directions complete the handshake and the
+# echoed Memory-channel frame byte-matches. This job additionally CAPTURES the
+# harness pass tokens into an evidence artifact so a green run leaves a durable,
+# grep-checkable record that the two-implementations interop actually passed.
+#
+# Two INDEPENDENT implementations agreeing on the wire is non-circular by
+# construction: neither side grades against the other's emitted vectors; a wire
+# disagreement fails the round-trip. The byte-pinned KATs (graded against NIST ACVP
+# ML-KEM-768 + RFC 7748 X25519 anchors) live in the conformance/rust jobs; this
+# gate is the complementary live cross-language check.
+#
+# Action majors mirror .github/workflows/conformance.yml (verified against their
+# GitHub READMEs on 2026-07-02): actions/checkout@v7, actions/setup-go@v6,
+# actions/upload-artifact@v7; dtolnay/rust-toolchain@stable is the same Rust
+# toolchain action the conformance workflow's `rust` job uses.
+name: interop
+
+# Match conformance.yml trigger scoping: `push` runs only for `main` (post-merge
+# verification); PR branches are covered by `pull_request`, avoiding a
+# push+pull_request double-run on branches with an open PR. workflow_dispatch lets a
+# maintainer re-run the live interop on demand.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One in-flight run per ref; a newer PR sync cancels the older in-progress run of the
+# same group. main-branch runs are never cancelled, so every merged commit is fully
+# verified (identical policy to conformance.yml).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  go-rust-interop:
+    name: go <-> rust live handshake interop (both directions)
+    runs-on: ubuntu-latest
+    # Live sockets + one-shot accepts should finish in seconds; bound the job so a
+    # hung direction fails loudly instead of burning the 6h default.
+    timeout-minutes: 15
+    env:
+      # Build the standalone impl/go module even if an ambient Go workspace is
+      # present (harmless when none is). run-interop.sh also exports GOWORK=off
+      # internally; setting it here too keeps the whole job workspace-independent.
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v7
+
+      # Go toolchain, pinned to the version impl/go declares (go-version-file reads
+      # impl/go/go.mod), same as the impl-go job in conformance.yml.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: impl/go/go.mod
+
+      # Rust toolchain, same action the conformance workflow's rust job uses.
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Build BOTH implementations and run the bidirectional interop. The committed
+      # harness echoes "== building Go interop harness ==" / "== building Rust interop
+      # examples ==" then runs each direction; it exits non-zero on any handshake,
+      # echo, or build failure. GitHub's default bash shell runs with `-eo pipefail`,
+      # so a non-zero harness exit propagates through `tee` and fails this step, while
+      # the full transcript is still captured to interop.log.
+      - name: Build both impls and run bidirectional 1.5-RTT interop
+        run: bash impl/go/cmd/npamp-interop/run-interop.sh 2>&1 | tee interop.log
+
+      # Capture the harness pass tokens into a durable evidence artifact and re-assert
+      # them: belt-and-suspenders over the harness exit code. All three tokens MUST be
+      # present or the gate fails — the per-direction "OK:" lines only print when both
+      # the client and server processes for that direction exited 0, and the final
+      # "ALL INTEROP DIRECTIONS PASSED" line only prints when both directions passed
+      # (the harness runs under `set -e`).
+      - name: Capture and verify interop pass token
+        run: |
+          fail=0
+          for tok in \
+            "OK: A) Go server <-> Rust client" \
+            "OK: B) Rust server <-> Go client" \
+            "ALL INTEROP DIRECTIONS PASSED"; do
+            if ! grep -qF -- "$tok" interop.log; then
+              echo "::error::missing interop pass token: ${tok}"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "interop pass token(s) missing from harness output — gate FAIL"
+            exit 1
+          fi
+          {
+            echo "npamp-interop: PASS (Go <-> Rust, both directions)"
+            echo "commit=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF}"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "captured_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            grep -F -- "OK: A) Go server <-> Rust client" interop.log
+            grep -F -- "OK: B) Rust server <-> Go client" interop.log
+            grep -F -- "ALL INTEROP DIRECTIONS PASSED" interop.log
+          } | tee interop-pass-token.txt
+          {
+            echo "### Go <-> Rust interop: PASS"
+            echo ""
+            echo '```'
+            cat interop-pass-token.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Upload the full transcript and the captured pass token even on failure, so a
+      # red run leaves the diagnostic log and a green run leaves durable pass evidence
+      # (mirrors conformance.yml's `if: always()` JUnit-report upload pattern).
+      - name: Upload interop transcript + pass token
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: interop-evidence
+          path: |
+            interop.log
+            interop-pass-token.txt
+          if-no-files-found: warn

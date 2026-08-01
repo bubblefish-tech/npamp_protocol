@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://npamp.bubblefish.tech/registries/frame_types_channel.schema.json",
+  "title": "N-PAMP Per-Channel Frame-Type Registry",
+  "description": "Schema for the JSON representation of registries/frame_types_channel.csv: an array of row objects, one per channel-specific frame-type assignment. UNLIKE registries/frame_types_reserved.csv (the flat all-channel view: system frames 0x0001-0x000A, coarse reserved ranges, and the Control-channel handshake), this registry enumerates the FINE-GRAINED per-channel frame-type namespace (core specification section 4.6): a frame_type value carries meaning ONLY on its channel_id, so the SAME numeric frame_type (e.g. 0x0100) legitimately recurs across channels. Uniqueness is therefore the COMPOSITE key (channel_id, frame_type), which JSON Schema cannot assert across rows -- the companion validate-frame-types-channel.py enforces it, and additionally cross-checks every row's go_const against the value in impl/go/<go_file> so the registry and the Go reference implementation stay in lockstep. This schema alone catches wrong-format code points, bad band tokens, malformed names/identifiers, and missing/empty columns. It does NOT accept range tokens: every row is one concrete assignment.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["channel_id", "channel_name", "frame_type", "name", "go_const", "go_file", "band", "description"],
+    "properties": {
+      "channel_id": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "16-bit channel identifier, hex-prefixed, exactly 4 hex digits (e.g. 0x0001). MUST resolve to a row in registries/channels.csv (checked by the companion validator)." },
+      "channel_name": { "type": "string", "minLength": 1, "description": "Channel name; MUST be non-empty and MUST match the channels.csv name for channel_id (checked by the companion validator)." },
+      "frame_type": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{4}$", "description": "16-bit channel-specific frame type, hex-prefixed, exactly 4 hex digits. A single concrete assignment (no ranges). Unique only in combination with channel_id." },
+      "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "Canonical UPPER_SNAKE frame-type name from the channel's companion specification section 3 (e.g. MEMORY_CREATE_REQ)." },
+      "go_const": { "type": "string", "pattern": "^Frame[A-Za-z0-9]+$", "description": "Identifier of the Go reference-implementation constant of type FrameType that declares this frame_type (e.g. FrameMemoryCreateReq). The companion validator reads impl/go/<go_file> and asserts the constant's value equals frame_type." },
+      "go_file": { "type": "string", "pattern": "^[a-z0-9_]+\\.go$", "description": "Base name of the impl/go source file that declares go_const (e.g. memory.go)." },
+      "band": { "type": "string", "enum": ["application", "companion-extension"], "description": "Frame-type namespace band (core specification section 4.6): 'application' for the channel-specific application band 0x0100-0xFFFF, 'companion-extension' for a per-channel extension frame in the reserved companion-extension band 0x0030-0x00FF." },
+      "description": { "type": "string", "minLength": 1, "description": "Human-readable purpose of the frame, drawn from the channel's companion specification section 3; MUST be non-empty." }
+    }
+  }
+}
