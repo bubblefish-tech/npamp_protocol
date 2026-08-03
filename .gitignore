@@ -18,6 +18,10 @@ __pycache__/
 # npm build/pack outputs (regenerate via `npm run build` / `npm pack`)
 impl/typescript/dist/
 *.tgz
+# Python build/pack residue (regenerate via `python -m build`); never commit.
+impl/python/build/
+impl/python/dist/
+*.egg-info/
 # xml2rfc reference cache (regenerated from the network on draft build) + local run log.
 .refcache/
 tracker.log
