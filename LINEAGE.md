@@ -4,7 +4,7 @@ This file is the **public** narrative of how N-PAMP's wire protocol reached
 `draft-bubblefish-npamp-00`. It records what is publishable and orients a reader in the
 version history; the authoritative rationale for each change lives in the linked ADRs under
 `decisions/`. It is descriptive, not normative — where it and the spec or ADRs differ, the
-spec (`ietf/draft-bubblefish-npamp-latest.md`, `spec/`) and the ADRs govern.
+spec (`schema/npamp-wire.cddl`, `spec/`, and the Internet-Draft) and the ADRs govern.
 
 ## What this file does NOT contain (non-scope)
 
@@ -43,7 +43,7 @@ The public draft is the latest of several protocol generations:
    (`formal/README.md`). Its material is maintained privately and is **excluded from this public
    repository by ADR-0004**; it is noted here only to place the public draft in sequence, not
    described.
-3. **draft-00 (`n-pamp/2`)** — the **first published** generation: `ietf/draft-bubblefish-npamp-latest.md`
+3. **draft-00 (`n-pamp/2`)** — the **first published** generation: the Internet-Draft
    + `spec/` + the reference implementations under `impl/`. Its public design decisions are
    indexed below.
 
@@ -114,4 +114,4 @@ take new ALPN identifiers (draft §IANA).
   process itself).
 - `README.md` — repository model, structure, and versioning.
 - `CONTRIBUTING.md` — the change / decision process.
-- `ietf/draft-bubblefish-npamp-latest.md`, `spec/` — the normative protocol text.
+- `spec/` (and the Internet-Draft) — the normative protocol text.

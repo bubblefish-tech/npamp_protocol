@@ -15,7 +15,7 @@
 #                 embedded corpus; any MUST failure exits non-zero. Invocation per
 #                 harness/CONFORMANCE-README.md / harness/INSTRUCTIONS.md.
 #   pins        - scripts/verify-pins.ps1: recompute-and-compare every SHA-256 in
-#                 PIN.json + MANIFEST.sha256 (the canonical draft, registries, spec,
+#                 PIN.json + MANIFEST.sha256 (registries, spec,
 #                 the conformance corpus, and all six KAT/schema vectors); exits 1 on
 #                 drift. The conformance job's `cmp` only guards the embedded runner
 #                 corpus == the pinned corpus; it does NOT catch drift in the KAT
@@ -142,7 +142,7 @@ jobs:
       # verify-pins.ps1 is self-contained in-slice (it resolves -Root to the repo
       # root that holds PIN.json + MANIFEST.sha256) and exits non-zero on any
       # missing/mismatched pinned hash. pwsh ships on ubuntu-latest.
-      - name: Verify pinned corpus, KAT vectors, schemas, and draft (recompute + compare)
+      - name: Verify pinned corpus, KAT vectors, and schemas (recompute + compare)
         shell: pwsh
         run: scripts/verify-pins.ps1
 

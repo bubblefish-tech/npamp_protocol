@@ -1,6 +1,6 @@
 # N-PAMP-01 — TLV Type Registry (reference)
 
-> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §9.4 "TLV Type Registry". The draft governs.
 > Machine-readable: `../registries/tlv_tags.csv`.
 

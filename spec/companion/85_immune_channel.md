@@ -687,8 +687,7 @@ and unknown-negative-key rejections. Its expected values are produced by that
 independent RFC 8949 byte constructor, not by the implementation under test, so the
 vectors are non-circular, and they are cross-validated by
 `impl/go/zz_immune_oracle_xval_test.go`. That payload-encoding and common-envelope
-surface is therefore graded, and `../../.shippable/spec-parity.json` records the
-Immune entry accordingly (impl status wired, conformance status graded).
+surface is therefore graded (impl status wired, conformance status graded).
 
 Beyond that payload surface, the §5–§9 behavioural clauses — the correlation and
 operation model (§5), the anomaly-report disposition flow (§6), the

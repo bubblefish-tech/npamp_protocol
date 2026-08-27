@@ -10,7 +10,7 @@
 > authentication flights, and one application frame exchange — with real numbers.
 > It defines no new wire behavior and consumes no code points. Requirement words
 > that appear here restate the cited sources; on any disagreement the core
-> specification (`../../ietf/draft-bubblefish-npamp-latest.md`), the handshake binding
+> specification (the Internet-Draft), the handshake binding
 > (`../10_handshake_binding.md`), and the pinned test-vector corpus
 > (`../../test-vectors/v1/`) govern.
 

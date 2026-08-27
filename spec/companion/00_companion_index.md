@@ -196,7 +196,7 @@ mapping document specifies which channel or channels a given protocol's traffic 
 
 ## How a developer carries a protocol over N-PAMP
 
-1. Read the **core specification** (`../ietf/draft-bubblefish-npamp-latest.md`) — the secure
+1. Read the **core specification** (the Internet-Draft) — the secure
    post-quantum wire.
 2. Read **NPAMP-BRIDGE** — the universal envelope/correlation/error/safety contract.
 3. Pick the **carriage class** for the protocol family (or **Class OPAQUE** to carry it

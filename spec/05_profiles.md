@@ -1,6 +1,6 @@
 # N-PAMP-01 — Profile Negotiation (reference)
 
-> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §6 "Profile Negotiation". The draft governs.
 > Machine-readable: `../registries/profiles.csv`.
 

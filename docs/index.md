@@ -45,7 +45,7 @@ subject of the companion specifications and bridge mappings shipped alongside it
 ## Start here
 
 - **Read the specification** — the Internet-Draft:
-  [`draft-bubblefish-npamp-01`](../ietf/draft-bubblefish-npamp-latest.md).
+  `draft-bubblefish-npamp-01` (IETF Independent Submission stream).
 - **Pick a language and go** — ten reference implementations, each with a copy-paste
   quickstart:
   [Go](../impl/go/QUICKSTART.md) ·

@@ -9,8 +9,8 @@ without opening the CSVs by hand.
 !!! note "Derived, machine-readable-backed extract"
     The authoritative machine-readable form of each registry is its CSV under
     `registries/` (validated against its JSON Schema in `registries/schemas/` by
-    `scripts/validate-registries.py`). The authoritative *normative* form is the
-    Internet-Draft `ietf/draft-bubblefish-npamp-latest.md`
+    `scripts/validate-registries.py`). The authoritative *normative* form is
+    the Internet-Draft
     (revision **draft-bubblefish-npamp-01**; integrity pinned in `PIN.json`) and
     the companion specifications it references. **The CSVs and the draft govern;**
     this page is a rendered mirror of them. Each table below cites the exact CSV
@@ -25,8 +25,8 @@ Submission** stream. Per the draft's IANA posture (core specification §8 /
 companion specifications and future revisions — they do **not** create
 IANA-hosted registries. The only IANA-registry actions the draft requests are the
 **ALPN identifier** `n-pamp/2` (Expert Review) and the provisional **`npamp://`
-URI scheme** (First Come First Served); both are written up in
-`IANA_ALPN_n-pamp-2_registration_request.md`.
+URI scheme** (First Come First Served); both are stated in the Internet-Draft's
+IANA Considerations.
 
 | Registry | Key column | Rows / ranges | Assignment governed by | Machine-readable | Authoritative section |
 |---|---|---|---|---|---|
@@ -253,8 +253,8 @@ matches the registry you want to touch, then use the
 | Bridge `protocol_id` `0x00`–`0x04` | **Not assignable / already assigned** | — MUST NOT be reassigned | — |
 | Core channel / frame-type / TLV registries | Maintained **in the specification** (Independent Submission) | An **NEP** (`process/NEP-0000`) + ADR + PR against the draft; additive registrations vs. major-version layout changes per `CONTRIBUTING.md` | Draft editor / IESG-independent review |
 | Core profile / KEM / AEAD / signature suites | Maintained **in the specification** | An **NEP** + ADR + PR (a new suite identifier is an additive registration) | Draft editor / IESG-independent review |
-| ALPN identifier (`n-pamp/2`) | **Expert Review** (RFC 7301 §6) | IANA registration request (see `IANA_ALPN_n-pamp-2_registration_request.md`) | IANA designated expert |
-| `npamp://` URI scheme | **First Come First Served / Provisional** (RFC 7595) | IANA registration request (see `IANA_ALPN_n-pamp-2_registration_request.md`) | IANA (provisional) |
+| ALPN identifier (`n-pamp/2`) | **Expert Review** (RFC 7301 §6) | IANA registration request (stated in the Internet-Draft's IANA Considerations) | IANA designated expert |
+| `npamp://` URI scheme | **First Come First Served / Provisional** (RFC 7595) | IANA registration request (stated in the Internet-Draft's IANA Considerations) | IANA (provisional) |
 
 !!! warning "Wire stability"
     Per `CONTRIBUTING.md` §"Code-point stability", changes to the 36-octet header

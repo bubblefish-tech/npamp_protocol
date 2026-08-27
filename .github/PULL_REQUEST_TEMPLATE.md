@@ -14,9 +14,9 @@ A one-line summary.
 - [ ] This change intentionally proposes a new wire major version (and a new
       ALPN identifier such as `n-pamp/3`), and says so explicitly.
 
-**Author-tool checks**
-- [ ] The draft renders with kramdown-rfc + xml2rfc without errors.
-- [ ] `idnits` reports 0 errors and 0 flaws.
+**Reference-material checks**
+- [ ] If this touches the wire grammar: `cddl schema/npamp-wire.cddl generate` parses
+      without error (RFC 8610).
 - [ ] The source remains ASCII-only.
 
 **Related issue**

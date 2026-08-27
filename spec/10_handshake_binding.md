@@ -1,7 +1,7 @@
 # N-PAMP-01 — Handshake Binding (normative)
 
 > **Authoritative for the N-PAMP 1.5-RTT handshake binding.** The published
-> `draft-bubblefish-npamp-latest.md` specifies the handshake *requirements* and the negotiation
+> the Internet-Draft specifies the handshake *requirements* and the negotiation
 > *vocabulary* (TLV tags, KEM/AEAD/Sig/profile code points, frame envelope, AAD/nonce, the
 > HKDF-Expand-Label primitive) but does not fix the handshake *wire bytes*. This document
 > fixes them. It is grounded in TLS 1.3 {{RFC8446}} where it reuses a construction and marks

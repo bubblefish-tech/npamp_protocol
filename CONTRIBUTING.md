@@ -2,7 +2,8 @@
 
 Thank you for your interest in N-PAMP. This repository hosts a protocol
 **specification** (an IETF Internet-Draft) plus its reference implementations,
-conformance corpus, and IANA registration material. Contributions are welcome
+conformance corpus, and the Architecture Decision Records that capture the design
+rationale. Contributions are welcome
 under the terms below.
 
 ## Ways to contribute
@@ -16,27 +17,23 @@ Please separate **normative** changes (anything that affects what an
 implementation must do on the wire) from **editorial** changes (wording,
 formatting, examples). Label them accordingly.
 
-## Editing the draft
+## Editing the reference material
 
-The specification source is the kramdown-rfc Markdown file
-`ietf/draft-bubblefish-npamp-latest.md` (the build emits the numbered revision
-`draft-bubblefish-npamp-01`). Before opening a pull request:
+The prose specification is the Internet-Draft, maintained through the IETF
+Independent Submission stream; contributions in this repository target the
+byte-level wire authority `schema/npamp-wire.cddl`, the reference implementations,
+the conformance corpus, and the docs. When you change the wire grammar:
 
-1. Keep the source **ASCII-only**. Non-ASCII characters cause author-tool
-   warnings; the only acceptable non-ASCII is what the renderer itself injects.
-2. Render and lint locally:
+1. Keep any prose source **ASCII-only**.
+2. Validate locally:
 
    ```sh
-   gem install kramdown-rfc
-   pip install xml2rfc
-   kramdown-rfc ietf/draft-bubblefish-npamp-latest.md > draft-bubblefish-npamp-01.xml
-   xml2rfc draft-bubblefish-npamp-01.xml --text --html
-   idnits draft-bubblefish-npamp-01.txt
+   gem install cddl
+   cddl schema/npamp-wire.cddl generate > /dev/null
    ```
 
-   or use the hosted tools at <https://author-tools.ietf.org/>.
-
-3. A pull request should leave the draft at **0 errors / 0 flaws** under idnits.
+   or use the hosted IETF author tools at <https://author-tools.ietf.org/> if your
+   change also proposes draft text.
 
 ## How normative changes are decided
 

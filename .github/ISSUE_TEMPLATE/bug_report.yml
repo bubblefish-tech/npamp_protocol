@@ -25,7 +25,7 @@ body:
     attributes:
       label: Affected document
       description: "Repository path of the defective document."
-      placeholder: "e.g. ietf/draft-bubblefish-npamp-latest.md, spec/02_frame_format.md, spec/companion/60_map_mcp.md, registries/tlv_tags.csv"
+      placeholder: "e.g. spec/02_frame_format.md, spec/companion/60_map_mcp.md, registries/tlv_tags.csv"
     validations:
       required: true
   - type: input

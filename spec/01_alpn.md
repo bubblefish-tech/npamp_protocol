@@ -1,6 +1,6 @@
 # N-PAMP-01 — ALPN Protocol Identifier (reference)
 
-> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json),
 > §9.1 "ALPN Protocol Identifier". This file is a structured restatement of that
 > section; if any value here disagrees with the draft, **the draft governs.**

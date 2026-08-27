@@ -1,6 +1,6 @@
 # N-PAMP-01 — URI Scheme `npamp://` (reference)
 
-> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §9.2 "URI Scheme Registration". The draft governs.
 
 Provisional registration of the **`npamp`** URI scheme in the "Uniform Resource

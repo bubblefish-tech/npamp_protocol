@@ -1,6 +1,6 @@
 # N-PAMP-01 — Extension Points & IANA Posture (reference)
 
-> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
+> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §8 "Extension Points" and §9.3/§9.5. The draft governs.
 
 The core protocol neither defines nor requires any extension; it only **reserves

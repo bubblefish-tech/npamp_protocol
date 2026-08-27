@@ -2,11 +2,11 @@
 
 > N-PAMP (Native Post-Quantum Agent Messaging Protocol) is a binary, multi-channel, wire-level protocol that sits beneath application-layer agent protocols and gives them a single fixed-size frame, a registry of multiplexed channels, and negotiated post-quantum security on the wire, before any application semantics.
 
-This is the public reference home of N-PAMP: the IETF Internet-Draft, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the per-decision record of how the protocol was designed. The current revision is `draft-bubblefish-npamp-01`. Every link below is a real file in this repository.
+This is the public reference home of N-PAMP: the byte-level CDDL wire authority, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the per-decision record of how the protocol was designed. The Internet-Draft itself is published through the IETF Independent Submission stream. The current revision is `draft-bubblefish-npamp-01`. Every link below is a real file in this repository.
 
 ## Specification
 
-- [Internet-Draft (draft-bubblefish-npamp-01)](ietf/draft-bubblefish-npamp-latest.md): the canonical wire-format specification, submitted to the IETF Independent Submission stream (Informational).
+- Internet-Draft `draft-bubblefish-npamp-01`: the canonical wire-format specification, published through the IETF Independent Submission stream (Informational) — see [`schema/npamp-wire.cddl`](schema/npamp-wire.cddl) for the byte-level wire authority maintained here.
 - [ALPN protocol identifier](spec/01_alpn.md): the `n-pamp/2` ALPN token and how it selects N-PAMP during TLS/QUIC negotiation.
 - [Wire format](spec/02_frame_format.md): the fixed frame header, CRC32C (Castagnoli) integrity field, and TLV body rules.
 - [Channel architecture](spec/03_channels.md): how one connection multiplexes independent semantic channels by 16-bit channel ID.
@@ -99,5 +99,4 @@ This is the public reference home of N-PAMP: the IETF Internet-Draft, the normat
 - [LINEAGE](LINEAGE.md): the lineage and provenance of the reference material.
 - [TRADEMARKS](TRADEMARKS.md): N-PAMP trademark usage terms.
 - [CITATION](CITATION.cff): machine-readable citation metadata for this repository.
-- [IANA ALPN registration request](IANA_ALPN_n-pamp-2_registration_request.md): the `n-pamp/2` ALPN registration request submitted to IANA.
-- [llms-full.txt](llms-full.txt): the core normative documents (Internet-Draft + spec/01–10) concatenated into a single file for LLM ingestion.
+- [llms-full.txt](llms-full.txt): the core normative reference documents (spec/01–10) concatenated into a single file for LLM ingestion.

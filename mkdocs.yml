@@ -1,7 +1,7 @@
 # MkDocs configuration for the N-PAMP reference documentation site.
 #
 # The spec surface is pure Markdown scattered across the repository root (spec/,
-# spec/channels/, spec/companion/, decisions/, ietf/, harness/, impl/, test-vectors/),
+# spec/channels/, spec/companion/, decisions/, harness/, impl/, test-vectors/),
 # not under a single docs/ tree. Rather than move or symlink those canonical files,
 # docs_dir is set to the repo root ('.') so every page is addressed at its real
 # repo-relative path and stays browsable on GitHub. A hand-authored docs/index.md is
@@ -73,7 +73,6 @@ exclude_docs: |
   /CODE_OF_CONDUCT.md
   /TRADEMARKS.md
   /LINEAGE.md
-  /IANA_ALPN_n-pamp-2_registration_request.md
   # Re-include the human-readable conformance corpus README (its sibling JSON data
   # stays excluded).
   !/test-vectors/README.md
@@ -166,7 +165,6 @@ markdown_extensions:
 
 nav:
   - Home: docs/index.md
-  - Internet-Draft: ietf/draft-bubblefish-npamp-latest.md
   - Core specification:
       - ALPN: spec/01_alpn.md
       - Frame format: spec/02_frame_format.md
