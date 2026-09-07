@@ -5,27 +5,38 @@ package sdk
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 )
 
-// Master ratchet (Hybrid Tree Ratchet, spec/10 section 5) control frames. These
+// errUnsolicitedReKEMAck marks a REKEM_ACK received with no outstanding re-KEM this endpoint
+// initiated — the unsolicited case. The receive path maps it to the total default
+// (unexpected_message), uniform with an unsolicited KEY_UPDATE_ACK / MASTER_RATCHET_ACK /
+// CLOSE_ACK. A SOLICITED-but-invalid ack (a wrong generation, or a decapsulation failure) is a
+// different class and stays a fail-closed plain drop handled inside the re-KEM sub-protocol.
+var errUnsolicitedReKEMAck = errors.New("npamp/sdk: unsolicited REKEM_ACK")
+
+// Master ratchet (Hybrid Tree Ratchet, spec/10 section 9) control frames. These
 // are Control-channel-specific frame types (>= 0x0100), interpreted only on the
 // Control channel (0x0000); the same numeric values carry a different meaning on
 // other channels' per-channel frame-type namespaces (draft-01 section 4.6), so
 // the SDK dispatches ratchet handling ONLY when a frame of this type arrives on
-// the Control channel.
+// the Control channel. The canonical code-point definitions live in the core
+// npamp package (impl/go/handshake.go, exported FrameMasterRatchet .. FrameReKEMAck)
+// and are registered in registries/frame_types_channel.csv + the CDDL; the
+// unexported aliases below keep the SDK dispatch code terse.
 //
 //	0x0104 MASTER_RATCHET      Tier-1 boundary: last frame at genSend; carries the target generation
-//	0x0105 MASTER_RATCHET_ACK  Tier-1 informational confirmation (like KEY_UPDATE_ACK)
+//	0x0105 MASTER_RATCHET_ACK  Tier-1 confirmation, correlated per generation (like KEY_UPDATE_ACK): solicited -> SILENT, unsolicited -> unexpected_message
 //	0x0106 REKEM               Tier-2 request: carries KEMShare + target generation
 //	0x0107 REKEM_ACK           Tier-2 boundary for the responder's send direction: carries KEMCiphertext + target generation
 const (
-	frameMasterRatchet    npamp.FrameType = 0x0104
-	frameMasterRatchetAck npamp.FrameType = 0x0105
-	frameReKEM            npamp.FrameType = 0x0106
-	frameReKEMAck         npamp.FrameType = 0x0107
+	frameMasterRatchet    = npamp.FrameMasterRatchet
+	frameMasterRatchetAck = npamp.FrameMasterRatchetAck
+	frameReKEM            = npamp.FrameReKEM
+	frameReKEMAck         = npamp.FrameReKEMAck
 )
 
 // pendingReKEM is the initiator-side state of an in-flight Tier-2 re-KEM: the
@@ -182,7 +193,12 @@ func (c *Conn) RatchetSend(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("npamp/sdk: seal MASTER_RATCHET: %w", err)
 	}
+	// Register the awaited MASTER_RATCHET_ACK BEFORE the write (register-before-write, as for
+	// KEY_UPDATE), rolling back on a write failure so a never-sent step leaves no phantom
+	// pending ACK.
+	c.addPendingRatchetAck(target)
 	if err := c.writeWire(ctx, wire); err != nil {
+		c.removePendingRatchetAck(target)
 		return err
 	}
 	st.seq++
@@ -223,12 +239,14 @@ func (c *Conn) handleMasterRatchet(channel npamp.ChannelID, plaintext []byte) er
 	return nil
 }
 
-// sendMasterRatchetAck seals + writes an informational MASTER_RATCHET_ACK on the
-// Control channel, off the receive path (its own goroutine taking wmu, bounded by
-// ackWriteTimeout), mirroring sendKeyUpdateAck. The ACK rides the send direction
-// (unaffected by the receive-direction ratchet that triggered it). A failed write
-// corrupts our send stream, so it tears the connection down; a seal/derive error
-// simply skips the informational ACK.
+// sendMasterRatchetAck seals + writes a MASTER_RATCHET_ACK on the Control channel,
+// off the receive path (its own goroutine taking wmu, bounded by ackWriteTimeout),
+// mirroring sendKeyUpdateAck. The ACK rides the send direction (unaffected by the
+// receive-direction ratchet that triggered it). The peer correlates it against the
+// MASTER_RATCHET it sent (an unsolicited one is rejected as unexpected_message). A
+// failed write corrupts our send stream, so it tears the connection down; a
+// seal/derive error simply skips the ACK (a lost ACK leaves the peer's solicited-ack
+// entry outstanding, which is harmless).
 func (c *Conn) sendMasterRatchetAck(gen uint64) {
 	ctx, cancel := context.WithTimeout(context.Background(), ackWriteTimeout)
 	defer cancel()
@@ -415,7 +433,7 @@ func (c *Conn) handleReKEMAck(plaintext []byte) error {
 	c.pendingReKEM = nil
 	c.pmu.Unlock()
 	if pend == nil {
-		return fmt.Errorf("npamp/sdk: REKEM_ACK with no pending re-KEM")
+		return errUnsolicitedReKEMAck
 	}
 	defer pend.zeroize()
 

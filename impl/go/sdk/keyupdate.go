@@ -5,11 +5,19 @@ package sdk
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 )
+
+// errKeyUpdateOutOfOrder marks a KEY_UPDATE (or its ACK) whose KeyUpdateMarker is malformed
+// (absent, not the sole TLV, or not 8 octets) or announces an epoch other than current+1. The
+// draft (error registry code 9 `key_update_out_of_order`, {#key-update}) makes this FATAL: the
+// receive path seals an ERROR carrying key_update_out_of_order and tears the association down —
+// it is NOT silently dropped (a receiver MUST NOT skip or reorder epochs).
+var errKeyUpdateOutOfOrder = errors.New("npamp/sdk: key_update_out_of_order")
 
 // ackWriteTimeout bounds how long a KEY_UPDATE_ACK write may block the receive
 // loop when a peer stalls its socket. Without it, a peer that sends KEY_UPDATE
@@ -40,11 +48,18 @@ func (c *Conn) KeyUpdate(ctx context.Context, channel npamp.ChannelID) error {
 	// The KEY_UPDATE frame is the last frame at the current epoch, so the peer —
 	// still at its current receive epoch — can open it; the marker announces the
 	// epoch both sides move to.
-	wire, err := sealWith(st, channel, npamp.FrameKeyUpdate, keyUpdateMarker(st.epoch+1))
+	announced := st.epoch + 1
+	wire, err := sealWith(st, channel, npamp.FrameKeyUpdate, keyUpdateMarker(announced))
 	if err != nil {
 		return fmt.Errorf("npamp/sdk: seal KEY_UPDATE: %w", err)
 	}
+	// Register the awaited KEY_UPDATE_ACK BEFORE the write, so a fast ACK the peer returns
+	// cannot race ahead of registration and be misread as unsolicited (the same
+	// register-before-write discipline as sendClose's CLOSING state). Roll back on a write
+	// failure — the peer never saw the KEY_UPDATE, so no ACK will come.
+	c.addPendingKeyUpdateAck(channel, announced)
 	if err := c.writeWire(ctx, wire); err != nil {
+		c.removePendingKeyUpdateAck(channel, announced)
 		return err
 	}
 	st.seq++
@@ -66,10 +81,13 @@ func (c *Conn) KeyUpdate(ctx context.Context, channel npamp.ChannelID) error {
 func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext []byte) error {
 	next, err := parseKeyUpdateMarker(plaintext)
 	if err != nil {
-		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d: %w", channel, err)
+		// A malformed KeyUpdateMarker is fatal key_update_out_of_order (draft row 9), not a drop.
+		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d marker: %w (%v)", channel, errKeyUpdateOutOfOrder, err)
 	}
 	if next != st.epoch+1 {
-		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d announced epoch %d, want %d", channel, next, st.epoch+1)
+		// An epoch other than current+1: a receiver MUST NOT skip or reorder epochs — fatal
+		// key_update_out_of_order (draft {#key-update}).
+		return fmt.Errorf("npamp/sdk: KEY_UPDATE on channel %d announced epoch %d, want %d: %w", channel, next, st.epoch+1, errKeyUpdateOutOfOrder)
 	}
 	if err := st.advance(c.masterRecv, c.recvDir, channel, c.profile); err != nil {
 		return fmt.Errorf("npamp/sdk: advance recv epoch: %w", err)
@@ -86,9 +104,11 @@ func (c *Conn) handleKeyUpdate(channel npamp.ChannelID, st *epochKeys, plaintext
 // sendKeyUpdateAck seals + writes a KEY_UPDATE_ACK on channel, off the receive
 // path. It takes wmu (serializing with Send/KeyUpdate so wire order matches
 // sequence order) and bounds the write by ackWriteTimeout. A failed or partial
-// write corrupts our send stream, so it closes the connection; the ACK is
-// informational (the peer ignores it), so a derivation/seal error simply skips
-// it without tearing the connection down.
+// write corrupts our send stream, so it closes the connection. The peer NOW
+// correlates this ACK against the KEY_UPDATE it sent (an unsolicited one is
+// rejected as unexpected_message), but a lost ACK is still harmless to it — its
+// solicited-ack entry simply stays outstanding and it does not block on the ACK —
+// so a derivation/seal error here simply skips the ACK without a teardown.
 func (c *Conn) sendKeyUpdateAck(channel npamp.ChannelID, epoch uint64) {
 	ctx, cancel := context.WithTimeout(context.Background(), ackWriteTimeout)
 	defer cancel()
@@ -117,9 +137,9 @@ func (c *Conn) sendKeyUpdateAck(channel npamp.ChannelID, epoch uint64) {
 	c.wmu.Unlock()
 
 	// A failed or partial ACK write corrupts our send stream; tear the connection
-	// down — now that wmu is released, Close's zeroize can acquire it. The ACK is
-	// informational (the peer ignores it), so a seal/derive error above simply skips
-	// the ACK without a teardown.
+	// down — now that wmu is released, Close's zeroize can acquire it. A lost ACK
+	// leaves the peer's solicited-ack entry outstanding but does not block it, so a
+	// seal/derive error above simply skips the ACK without a teardown.
 	if werr != nil {
 		_ = c.Close()
 	}

@@ -1,0 +1,59 @@
+[package]
+name = "nz-agent-extauthz"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP ext_authz gRPC service (R14-Unit-A): lets an agent gateway (agentgateway / any Envoy-ext_authz-v3-compatible proxy) delegate per-request authorization to nz-agent's fail-closed waypoint authorization core. Composes nz-agent::waypoint::authorize — does not reimplement the authorization decision."
+
+# INDEPENDENT crate, path-dependency only: never edits ../nz-agent or ../
+# (the npamp reference library / Part-1 core). Builds and tests standalone:
+# `cd impl/rust/nz-agent-extauthz && cargo build && cargo test`.
+#
+# New external dependencies this crate adds beyond the composed nz-agent/
+# npamp graph, and why each was chosen (Policy 5.2 vetting, this session):
+#   - tonic / tonic-prost / prost: the de-facto standard Rust gRPC stack
+#     (hyperium/tonic — Apache-2.0 OR MIT dual-licensed as of tonic 0.13+;
+#     verified via `cargo info` this session: tonic 0.14.6 license = MIT,
+#     prost 0.14.4 license = Apache-2.0). Both are widely used, actively
+#     maintained (tonic 0.14.6 and prost 0.14.4 are current-as-of-fetch
+#     releases per `cargo info`, not stale pins), and are the crates the
+#     ext_authz gRPC contract itself effectively mandates (Envoy's own
+#     reference ext_authz examples use tonic). No known-exploitable CVE
+#     against these exact pinned versions is asserted or checked further
+#     here (no CVE database was queried this session) — flagged as an
+#     UNVERIFIED sub-claim in the findings doc, not silently assumed clean.
+#   - tokio: required async runtime for tonic's server transport (Apache-2.0
+#     OR MIT, tokio-rs/tokio, industry-standard, already an indirect
+#     dependency of nothing in this tree previously — first direct pull).
+#
+# Build-time only (never linked into the shipped binary):
+#   - protox: a pure-Rust, protoc-binary-free `.proto` compiler
+#     (andrewhickman/protox, MIT OR Apache-2.0). Chosen because this build
+#     machine has no `protoc` binary on PATH (checked this session) — protox
+#     lets `build.rs` compile `proto/ext_authz.proto` into a
+#     `FileDescriptorSet` without needing to fetch/install a protoc binary,
+#     then hands that descriptor set to `tonic-prost-build::compile_fds`.
+[dependencies]
+nz-agent = { path = "../nz-agent" }
+# E2.7 reconciliation (2026-09-05): `src/extract.rs`'s header-extraction
+# logic (`extract_triple`/`TripleExtractError`) relocated to
+# `nz-waypoint-core` so it is shared with `../nz-waypoint-wasm`'s Envoy
+# proxy-wasm filter — `src/extract.rs` is now a thin re-export of it.
+# Already a transitive dependency via `nz-agent`; declared directly here so
+# this crate's own code can name it.
+nz-waypoint-core = { path = "../nz-waypoint-core" }
+tonic = { version = "0.14", default-features = false, features = ["codegen", "router", "server", "transport"] }
+tonic-prost = "0.14"
+prost = "0.14"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+
+[build-dependencies]
+tonic-prost-build = "0.14"
+protox = "0.9"
+
+[[bin]]
+name = "nz-agent-extauthz"
+path = "src/bin/server.rs"
+
+[dev-dependencies]
+tonic = { version = "0.14", default-features = false, features = ["codegen", "server", "transport"] }

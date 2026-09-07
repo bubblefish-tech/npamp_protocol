@@ -77,9 +77,9 @@ alter them.
   every N-PAMP channel, each peer maintains an independent send and receive
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously (core specification §5). The Commerce
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Memory channel
-  `0x0001` and the Stream channel `0x000C`). The registry purpose names
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Memory channel `0x0001` and the Stream channel `0x000C`). The registry purpose names
   **multi-party** commerce, but the channel's directionality is a two-peer
   bidirectional stream; the core specification defines no multi-party fan-out,
   party model, or coordination mechanism at the channel level (§4).

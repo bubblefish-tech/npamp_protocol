@@ -75,10 +75,13 @@ This document does NOT:
   reference `../channels/0005_immune.md` §6). No frame in this document
   encapsulates a foreign message, and this document defines and consumes no
   extension-TLV tag.
-* **Bind the AnomalyCharge TLV to this channel.** The core specification's TLV
-  `0x12` "AnomalyCharge" is a general per-frame integrity charge (Immune interface
-  reference §4); despite the thematic name it is not an Immune operation, and no
-  frame in this document uses it.
+* **Bind TLV `0x12` to this channel.** The core specification's TLV `0x12` is
+  currently assigned to **OpaqueContentType**, a general per-frame media-type
+  discriminator for the NPAMP-CC-OPAQUE carriage companion (Immune interface
+  reference §4; ADR 0015). `0x12` previously named an unspecified "AnomalyCharge"
+  TLV, retired to `(reserved)` before this reassignment (DECISIONS.md D11, task
+  T15.2, approved 2026-08-27). Neither the current nor the retired assignment is an
+  Immune operation, and no frame in this document uses it.
 * **Change the core wire format.** It alters no field of the core frame header, no
   reserved all-channel frame type, the extension-TLV encoding, or any code point
   the core specification assigns; it uses only code points the core specification
@@ -94,10 +97,10 @@ specification's channel architecture every channel is full-duplex: each peer
 maintains an independent per-direction sequence space and independent
 per-direction traffic keys, so both peers MAY transmit on the channel
 simultaneously. Either peer MAY originate an Immune operation. The Immune channel
-is **not** Multi-stream: it does not open multiple concurrent transport
-sub-streams within a stream family (Immune interface reference §2), so this
-document defines no multi-stream retrieval; a single advertise/pull exchange is
-carried on the one Immune stream in each direction.
+is **not** Multi-stream: it does not carry multiple concurrent payload-layer
+sub-streams multiplexed within its frame payloads (Immune interface reference
+§2), so this document defines no multi-stream retrieval; a single advertise/pull
+exchange is carried on the one Immune stream in each direction.
 
 **Minimum-profile gate.** A peer MUST enable the Immune channel only at the
 **Standard** profile or higher; once Standard is met the channel is available at
@@ -235,9 +238,10 @@ wrong CBOR major type.
 
 Immune operation bodies are carried in the frame **payload**, not in extension
 TLVs. This document defines and consumes no extension-TLV tag, and therefore
-claims none of the TLV code points the core specification reserves — including the
-AnomalyCharge TLV `0x12`, which is a general integrity mechanism and not an Immune
-operation (Immune interface reference `../channels/0005_immune.md` §4).
+claims none of the TLV code points the core specification reserves — including TLV
+`0x12` (currently OpaqueContentType, previously the retired "AnomalyCharge"; ADR
+0015), which is a general carriage mechanism and not an Immune operation (Immune
+interface reference `../channels/0005_immune.md` §4).
 
 ### 4.2 Common envelope fields
 
@@ -687,7 +691,8 @@ and unknown-negative-key rejections. Its expected values are produced by that
 independent RFC 8949 byte constructor, not by the implementation under test, so the
 vectors are non-circular, and they are cross-validated by
 `impl/go/zz_immune_oracle_xval_test.go`. That payload-encoding and common-envelope
-surface is therefore graded (impl status wired, conformance status graded).
+surface is therefore graded, and the conformance parity ledger records the
+Immune entry accordingly (impl status wired, conformance status graded).
 
 Beyond that payload surface, the §5–§9 behavioural clauses — the correlation and
 operation model (§5), the anomaly-report disposition flow (§6), the

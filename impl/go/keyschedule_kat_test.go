@@ -37,7 +37,7 @@ type keyScheduleKAT struct {
 	} `json:"npamp_inputs"`
 }
 
-// oracleExpandLabel is the test's own RFC 8446 section 7.1 HKDF-Expand-Label
+// oracleExpandLabel is the test's own RFC 9846 section 7.1 HKDF-Expand-Label
 // constructor, prefix-parameterized and independent of the implementation's
 // HkdfLabel assembly. It is proven against RFC 8448 (with "tls13 ") before
 // being trusted with "n-pamp ".

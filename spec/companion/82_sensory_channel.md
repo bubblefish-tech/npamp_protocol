@@ -77,9 +77,10 @@ consequences bind this companion:
   Standard profile. A peer that has not advertised the Sensory channel for the
   association during the handshake (core specification §5) MUST NOT accept frames on
   it, and any frame received on an unadvertised Sensory channel MUST be dropped.
-* **Multi-stream direction.** The Sensory channel is bidirectional and MAY open
-  multiple concurrent transport streams within its stream family; each peer
-  maintains an independent per-direction sequence space and independent
+* **Multi-stream direction.** The Sensory channel is bidirectional and MAY carry
+  multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads, all over the channel's single ordered per-direction sequence; each
+  peer maintains an independent per-direction sequence space and independent
   per-direction traffic keys (core specification §5). Either peer MAY originate a
   SENSORY_SUBSCRIBE or push a standalone SENSORY_OBSERVE.
 

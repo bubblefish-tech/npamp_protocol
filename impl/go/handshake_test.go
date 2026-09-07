@@ -12,7 +12,7 @@ import (
 func TestClientHelloRoundTrip(t *testing.T) {
 	in := &ClientHello{
 		ProfileOffer: []Profile{ProfileStandard, ProfileHigh, ProfileSovereign},
-		KEMOffer:     []KEMID{KEMX25519MLKEM768, KEMX25519MLKEM1024},
+		KEMOffer:     []KEMID{KEMX25519MLKEM768, KEMSecP384r1MLKEM1024},
 		SigOffer:     []SigID{SigEd25519},
 		AEADOffer:    []AEADID{AEADAES256GCM, AEADChaCha20Poly1305},
 		KEMShare:     bytes.Repeat([]byte{0xAB}, KEMShareSize768),
@@ -82,7 +82,7 @@ func TestHandshakeTLVLayoutEnforced(t *testing.T) {
 		t.Fatalf("missing Finished TLV not rejected (err=%v)", err)
 	}
 	// Extra TLV.
-	extra := append(append([]TLV{}, good...), TLV{Type: TLVPathChallenge, Value: make([]byte, 32)})
+	extra := append(append([]TLV{}, good...), TLV{Type: TLVType(0x12), Value: make([]byte, 32)})
 	if _, err := DecodeAuthMessage(encode(extra)); !errors.Is(err, ErrHandshakeTLVOrder) {
 		t.Fatalf("extra TLV not rejected (err=%v)", err)
 	}
@@ -90,6 +90,15 @@ func TestHandshakeTLVLayoutEnforced(t *testing.T) {
 	swapped := []TLV{good[1], good[0], good[2]}
 	if _, err := DecodeAuthMessage(encode(swapped)); !errors.Is(err, ErrHandshakeTLVOrder) {
 		t.Fatalf("out-of-order TLVs not rejected (err=%v)", err)
+	}
+	// Unknown CRITICAL (must-understand) TLV: high bit 0x8000 set and not in the
+	// recognized set -> ErrUnknownCriticalTLV, distinct from the ordering/count error
+	// (R6). Mutation-guard for CheckMustUnderstand: if the must-understand check is
+	// removed from requireTLVs, this 4th TLV instead trips the count check
+	// (ErrHandshakeTLVOrder) and this assertion fails.
+	critical := append(append([]TLV{}, good...), TLV{Type: TLVType(0x8001), Value: make([]byte, 4)})
+	if _, err := DecodeAuthMessage(encode(critical)); !errors.Is(err, ErrUnknownCriticalTLV) {
+		t.Fatalf("unknown critical (high-bit) TLV not rejected with ErrUnknownCriticalTLV (err=%v)", err)
 	}
 	// Truncated TLV stream.
 	if _, err := DecodeAuthMessage(encode(good)[:5]); !errors.Is(err, ErrTruncatedTLV) {

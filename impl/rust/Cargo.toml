@@ -12,19 +12,71 @@ aes-gcm = "0.10"
 hmac = "0.12"
 ed25519-dalek = "2.2"
 
-[dev-dependencies]
-# ML-KEM-768 (FIPS 203) for the handshake-flow KAT: it decapsulates the pinned
-# captured-once ciphertext under the pinned d||z seed and MUST recover the pinned
-# ML-KEM shared secret. Kept a dev-dependency so the OPEN wire-format library
-# proper adds no post-quantum KEM dependency.
-ml-kem = { version = "0.2", features = ["deterministic"] }
+# Optional: the `session` feature's live handshake + record-layer adoption API
+# (src/session.rs) needs the X25519MLKEM768 hybrid KEM operations. Kept optional,
+# behind a default-on feature (see [features] below), so a consumer who wants the
+# strict wire-only library — no post-quantum KEM dependency at all — can
+# `cargo build --no-default-features` and drop this module entirely.
+#
+# ML-KEM-768 (FIPS 203): session::Session::dial/accept encapsulate/decapsulate
+# against it; the handshake-flow KAT (tests/handshake_flow_kat.rs and the pinned-
+# vector unit test in src/session.rs) decapsulates the pinned captured-once
+# ciphertext under the pinned d||z seed and MUST recover the pinned shared secret.
+ml-kem = { version = "0.2", features = ["deterministic"], optional = true }
 # The Decapsulate trait ml-kem's DecapsulationKey implements lives in the `kem`
 # crate (ml-kem re-uses RustCrypto's KEM trait); import it to call decapsulate.
-kem = "=0.3.0-pre.0"
-x25519-dalek = { version = "2", features = ["static_secrets"] }
-# OS entropy for the live interop examples (interop_client / interop_server): the
-# ephemeral X25519 + ML-KEM-768 key material and the Ed25519 identity seeds are
-# filled from the OS CSPRNG, then fed to the deterministic keygen constructors so
-# no rand_core trait plumbing (or C-based provider) is pulled in. Dev-only: the
-# OPEN wire-format library proper takes no RNG dependency.
-getrandom = "0.2"
+kem = { version = "=0.3.0-pre.0", optional = true }
+x25519-dalek = { version = "2", features = ["static_secrets"], optional = true }
+# OS entropy for session::generate_identity and the ephemeral X25519 + ML-KEM-768
+# key material session::Session::dial/accept generate: filled from the OS CSPRNG,
+# then fed to the deterministic keygen constructors so no rand_core trait plumbing
+# (or C-based provider) is pulled in.
+getrandom = { version = "0.2", optional = true }
+# secp384r1 (P-384) ECDH for the SecP384r1MLKEM1024 hybrid KEM (kem1024.rs, KEM
+# 0x11ed, High/Sovereign minimum per spec/05_profiles.md). `ecdh` for
+# Diffie-Hellman; `arithmetic` (default) for the affine-point math it needs.
+p384 = { version = "0.14", features = ["ecdh"], optional = true }
+# ML-DSA-87 (FIPS 204, IANA TLS SignatureScheme 0x0906) for the High/Sovereign
+# CertVerify signature (mldsa87.rs, spec/10 section 6.1; suites.go SigMLDSA87).
+# RustCrypto's own `ml-dsa` crate, for ecosystem consistency with the `ml-kem`
+# dependency above (same maintainers, same API conventions). Grounded this
+# session (2026-09-03) against the crate's published source at version 0.1.1
+# (docs.rs / github.com/RustCrypto/signatures, tree ml-dsa/src): `MlDsa87`
+# implements the FIPS 204 category-5 parameter set; `SigningKey::from_seed`
+# implements FIPS 204 Algorithm 6 (ML-DSA.KeyGen_internal) directly from a
+# 32-octet seed — the deterministic seed-based keygen the Go reference's
+# `crypto/mldsa.NewPrivateKey` also uses; `sign_deterministic` implements FIPS
+# 204's "optional deterministic variant" of Algorithm 2 with the randomizer
+# `rnd` hardcoded to 32 zero octets (`B32::default()`) — the SAME rnd=0
+# deterministic mode the Go reference's `PrivateKey.SignDeterministic` uses, so
+# both languages sign the identical (input, context) pair to the identical
+# signature. `default-features = false` + only `alloc` (not `getrandom`, not
+# `pkcs8`): this module supplies its own OS-entropy seed via `getrandom`
+# directly (matching `session`'s/`kem1024.rs`'s own pattern) rather than the
+# ml-dsa crate's built-in `SigningKey::generate()`, and never uses ML-DSA's
+# PKCS#8 encoding, so both are left off to avoid an unused, unaudited surface
+# and a possible `getrandom` version clash with the workspace's own pinned
+# `getrandom = "0.2"` (ml-dsa's own `getrandom` feature would pull whatever its
+# own Cargo.lock resolves, which is not controlled here).
+ml-dsa = { version = "0.1", default-features = false, features = ["alloc"], optional = true }
+
+[features]
+default = ["session"]
+# The live handshake + record-layer adoption API (src/session.rs). Pulls in the
+# post-quantum ML-KEM dependency above; disable with --no-default-features for the
+# strict wire-format-only library (frame codec, key schedule, handshake-binding
+# primitives, no KEM operations, no network/transport code) this crate started as.
+# Also gates kem1024.rs (the SecP384r1MLKEM1024 High/Sovereign KEM) and
+# mldsa87.rs (the High/Sovereign ML-DSA-87 CertVerify), which share the same
+# post-quantum/PQ-adjacent dependency posture as the 768 KEM.
+session = ["dep:ml-kem", "dep:kem", "dep:x25519-dalek", "dep:getrandom", "dep:p384", "dep:ml-dsa"]
+
+# The two live-network interop examples use npamp::session, so Cargo must skip
+# building them (rather than error) under --no-default-features.
+[[example]]
+name = "interop_client"
+required-features = ["session"]
+
+[[example]]
+name = "interop_server"
+required-features = ["session"]

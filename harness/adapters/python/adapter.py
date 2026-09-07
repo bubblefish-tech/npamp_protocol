@@ -80,6 +80,11 @@ def handle(req):
             return {"error": "crc32c mismatch"}
         if any(x != 0 for x in b[25:36]):
             return {"error": "reserved octet non-zero"}
+        if (b[4] >> 4) != 2:
+            # ProtocolVersion is the WIRE-FORMAT version (0x2), frozen across the
+            # n-pamp/3 crypto-generation bump; a receiver MUST reject any Ver nibble
+            # != 0x2 (frame.go ProtocolVersion=0x2 / ErrBadVersion). R10/header/version.
+            return {"error": "unsupported wire version"}
         return {"out": {
             "magic": "NPAM", "ver": b[4] >> 4, "flags": b[4] & 0x0F,
             "frameType": int.from_bytes(b[5:7], "big"),

@@ -1,0 +1,39 @@
+# Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+#
+# R13-B: the eBPF program source (aya) + userspace loader for N-PAMP's
+# same-node sockmap splice fast path (EBPF-DATAPATH-DESIGN.md's
+# `sockops + sk_msg + sockmap` rung). Sibling to `../nz-agent` (R13-A, the
+# capability-probed selector + fail-closed authz gate this crate plugs into),
+# NOT part of that crate's build: `aya`/`aya-ebpf` are Linux-only, so keeping
+# them in this INDEPENDENT workspace preserves `nz-agent`'s Windows build
+# (see `loader/Cargo.toml`'s header for the dependency direction).
+#
+# Layout confirmed against this machine's own aya smoke test (WSL2, aya
+# 0.14.0 / aya-ebpf 0.2.1 / aya-build 0.2.0 / bpf-linker 0.11.0, cached in
+# `~/.cargo/registry`) — workspace shape, `[profile.release.package.*-ebpf]`
+# debug/strip settings, and `aya_build::build_ebpf` wiring reproduce that
+# confirmed-working recipe, not re-derived.
+[workspace]
+resolver = "2"
+members = ["common", "ebpf", "loader"]
+default-members = ["loader"]
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+aya = { version = "0.14.0", default-features = false }
+aya-build = { version = "0.2.0", default-features = false }
+aya-ebpf = { version = "0.2.1", default-features = false }
+anyhow = { version = "1", default-features = false }
+cargo_metadata = { version = "0.23.0", default-features = false }
+libc = "0.2"
+
+# eBPF-side binaries must never be built with debug assertions elided in a
+# way that changes their (already minimal) logic, but DO need debug=2 for
+# BTF-derived line info the verifier/bpftool use; strip=false keeps that
+# info in the object aya_build emits. Matches the confirmed smoke-test profile.
+[profile.release.package.nz-agent-ebpf-ebpf]
+debug = 2
+codegen-units = 1
+strip = false

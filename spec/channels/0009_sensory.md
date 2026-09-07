@@ -71,8 +71,9 @@ alter them.
   available at that profile and at every higher profile — so a High channel is
   available at **High and Sovereign** (core specification §5). See §5 for profile
   applicability and the publishing scope for this firewall-gated channel.
-- **Direction — Multi-stream.** Sensory is bidirectional, and the channel MAY open
-  multiple concurrent transport streams within its stream family (core
+- **Direction — Multi-stream.** Sensory is bidirectional, and the channel MAY carry
+  multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads, all over the channel's single ordered per-direction sequence (core
   specification §5, Channel directionality). Each peer maintains an independent
   per-direction sequence space and independent per-direction traffic keys for the
   channel (core specification §5).
@@ -159,7 +160,7 @@ defined by the core specification.
 |---|---|
 | Traffic class | High-volume observational data emitted in bulk. |
 | Priority | **Low priority.** The channel is one of the bulk channels; Control and Immune SHOULD be scheduled ahead of it during congestion (core specification §5). |
-| Direction | Multi-stream — bidirectional, with the OPTIONAL opening of multiple concurrent transport streams within the channel's stream family (§2). |
+| Direction | Multi-stream — bidirectional, with the OPTIONAL carrying of multiple concurrent payload-layer sub-streams multiplexed within its frame payloads, all over the channel's single ordered per-direction sequence (§2). |
 
 Notes and honest boundaries:
 
@@ -182,10 +183,10 @@ Notes and honest boundaries:
   (`../companion/82_sensory_channel.md`) is where such semantics are defined, not the
   core specification. This reference does not define them.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
-  deployment MAY carry concurrent bulk observation traffic over multiple transport
-  streams within the channel's stream family; the core specification permits this at
-  the channel level and does not constrain how traffic is distributed across those
-  streams.
+  deployment MAY carry concurrent bulk observation traffic as multiple
+  payload-layer sub-streams multiplexed within the channel's single ordered
+  per-direction sequence; the core specification permits this at the channel level
+  and does not constrain how traffic is distributed across those sub-streams.
 - **Firewall scope.** Because the channel is gated at the High profile, any
   operational or cryptographic internals specific to enabling and operating it under
   the High or Sovereign profile are out of scope for this public reference and are
@@ -291,8 +292,9 @@ if, for channel `0x0009`, it:
    schema, addressing scheme, value encoding, correlation scheme, or error model,
    none of which the core specification defines for this channel (§3.3, §4);
 7. Supports the channel's **Multi-stream** direction — bidirectional operation with
-   the OPTIONAL opening of multiple concurrent transport streams within the
-   channel's stream family, each peer maintaining independent per-direction sequence
+   the OPTIONAL carrying of multiple concurrent payload-layer sub-streams
+   multiplexed within its frame payloads, all over the channel's single ordered
+   per-direction sequence, each peer maintaining independent per-direction sequence
    spaces and traffic keys (§2, §4); and
 8. Defers all Sensory operation semantics beyond the registry-level interface of §4
    to the companion specification NPAMP-SENSORY (`../companion/82_sensory_channel.md`),

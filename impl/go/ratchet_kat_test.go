@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// This file holds the two NON-CIRCULAR master-ratchet KATs (spec/10 section 5,
+// This file holds the two NON-CIRCULAR master-ratchet KATs (spec/10 section 9.7,
 // Hybrid Tree Ratchet). Both follow the exact discipline of TestKeyScheduleKAT
 // (ADR-0008): the EXPECTED root is NOT produced by calling the implementation
 // under test (RatchetMasterTier1 / RatchetMasterTier2). It is produced by an

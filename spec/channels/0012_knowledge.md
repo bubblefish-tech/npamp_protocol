@@ -59,11 +59,13 @@ verbatim from the core channel registry (core specification §5; machine-readabl
   enabled; the channel is available at Standard and at every higher profile (High,
   Sovereign) (core specification §5). The Knowledge channel is therefore part of the
   public, Standard-profile channel surface and is not profile-gated (§5).
-- **Direction = Multi-stream** means the channel is bidirectional and MAY open
-  multiple concurrent transport streams within its stream family (core specification
-  §5). Like every N-PAMP channel it is full-duplex: each peer maintains an
-  independent per-direction sequence space and independent per-direction traffic
-  keys, so both peers MAY transmit simultaneously (core specification §5).
+- **Direction = Multi-stream** means the channel is bidirectional and MAY carry
+  multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads, all over the channel's single ordered per-direction sequence (core
+  specification §5). Like every N-PAMP channel it is full-duplex: each peer
+  maintains an independent per-direction sequence space and independent
+  per-direction traffic keys, so both peers MAY transmit simultaneously (core
+  specification §5).
 - A peer that has not advertised the Knowledge channel during the handshake MUST NOT
   receive frames on it; frames on an unadvertised channel MUST be dropped (core
   specification §5). Enabling and advertising this channel is a per-association
@@ -139,8 +141,9 @@ nothing more. Described only at that level:
 
 - A peer MAY issue a **retrieval query** on the channel. Because the channel is
   bidirectional and Multi-stream, either peer MAY originate a query, and multiple
-  queries MAY be in flight concurrently on separate streams within the channel's
-  stream family (§2; core specification §5).
+  queries MAY be in flight concurrently as separate payload-layer sub-streams
+  within the channel's single ordered per-direction sequence (§2; core
+  specification §5).
 - A **response** to a retrieval query conveys results that are **ranked** — returned
   in a relevance order — and that carry **provenance** — an attribution of the
   source of each result — consistent with the registered purpose (§1). The registry
@@ -230,7 +233,8 @@ if it conforms to the core specification and, for the channel `0x0012`, it:
    channel (§2; core specification §5);
 4. Maintains an independent per-direction sequence space and independent
    per-direction traffic keys for the channel, and, as a Multi-stream channel, MAY
-   open multiple concurrent transport streams within its stream family (§2; core
+   carry multiple concurrent payload-layer sub-streams multiplexed within its
+   frame payloads, all over that single ordered per-direction sequence (§2; core
    specification §5);
 5. Honors the reserved all-channel frame types (§3.1) with their unchanged core
    meaning on this channel and never reuses them for retrieval traffic (§3.1; core

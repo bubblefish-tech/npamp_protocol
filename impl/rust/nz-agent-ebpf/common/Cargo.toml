@@ -1,0 +1,21 @@
+# Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+[package]
+name = "nz-agent-ebpf-common"
+version = "0.1.0"
+edition.workspace = true
+license = "Apache-2.0"
+description = "ConnKey: the SockHash map key shared byte-for-byte between the no_std kernel-side sockmap-splice program and the std userspace loader."
+
+# `aya` is an OPTIONAL, feature-gated dependency: the kernel-side `ebpf`
+# crate depends on this package WITHOUT the "user" feature (so no `aya`
+# dependency, and no std, enters the bpfel-unknown-none build); the
+# userspace `loader` crate depends on it WITH "user" (see loader/Cargo.toml)
+# so it can `unsafe impl aya::Pod for ConnKey` here, in the ONE crate that
+# defines `ConnKey` — implementing a foreign trait (`aya::Pod`) for a
+# foreign type from a THIRD crate (`loader`) would violate Rust's orphan
+# rule; defining it here, where `ConnKey` is local, does not.
+[dependencies]
+aya = { workspace = true, optional = true }
+
+[features]
+user = ["dep:aya"]

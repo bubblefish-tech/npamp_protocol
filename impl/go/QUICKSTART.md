@@ -10,7 +10,7 @@
   payload: `Frame.MarshalBinary` / `Frame.UnmarshalBinary` / `Frame.HeaderPrefix`.
 - **AES-256-GCM record layer** — `SealAES256GCM` / `OpenAES256GCM` / `DeriveNonce`, using the
   21-octet header prefix as AEAD associated data.
-- **HKDF key schedule** — `HkdfExpandLabel` (RFC 8446 §7.1 with the `"n-pamp "` label prefix),
+- **HKDF key schedule** — `HkdfExpandLabel` (RFC 9846 §7.1 with the `"n-pamp "` label prefix),
   `DeriveTrafficSecret`, `DeriveKeyIV`, and the handshake ladder (`HandshakeSecret`,
   `DeriveHandshakeTrafficSecrets`, `DeriveMasterSecret`, `DeriveFinishedKey`).
 - **TLV codec + registries** — `TLV`, `DecodeTLVs`, and the channel / frame-type / TLV / profile /
@@ -27,7 +27,7 @@
 
 By design, the module is wire-format + crypto + handshake building blocks. It does **not** include:
 
-- A **TCP/TLS transport** (ALPN `n-pamp/2`), connection management, handshake session state
+- A **TCP/TLS transport** (ALPN `n-pamp/3`), connection management, handshake session state
   machines, or an RPC/MCP client.
 
 Those live in a **consuming product**, which vendors this module and composes the

@@ -28,7 +28,7 @@ object Npamp {
     @JvmField
     val MAGIC: ByteArray = byteArrayOf('N'.code.toByte(), 'P'.code.toByte(), 'A'.code.toByte(), 'M'.code.toByte()) // "NPAM" = 0x4E50414D
 
-    const val ALPN: String = "n-pamp/2"
+    const val ALPN: String = "n-pamp/3"
     const val LABEL_PREFIX: String = "n-pamp " // protocol-specific; NOT "tls13 "
 
     const val FLAG_URG: Int = 0x01
@@ -51,14 +51,13 @@ object Npamp {
 
     const val TLV_PROFILE_OFFER: Int = 0x01
     const val TLV_KEM_CIPHERTEXT: Int = 0x08
-    const val TLV_ANOMALY_CHARGE: Int = 0x12
 
     const val KEM_X25519_MLKEM768: Int = 0x11ec
     const val KEM_X25519_MLKEM1024: Int = 0x11ed
     const val AEAD_AES256_GCM: Int = 0x0001
     const val AEAD_CHACHA20_POLY1305: Int = 0x0002
     const val SIG_ED25519: Int = 0x0807
-    const val SIG_MLDSA87: Int = 0x0905
+    const val SIG_MLDSA87: Int = 0x0906
 
     // -- Errors ------------------------------------------------------------
 

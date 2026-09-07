@@ -1,0 +1,32 @@
+{
+  "tool": "LearnLib",
+  "version": "0.18.0",
+  "automatalib_version": "0.12.0",
+  "algorithm": "TTT",
+  "eq_oracle": "randomized-Wp-method",
+  "eq_oracle_class": "de.learnlib.oracle.equivalence.MealyRandomWpMethodEQOracle",
+  "eq_minimal_size": 1,
+  "eq_rnd_length": 4,
+  "eq_bound_tests_per_query": 2000,
+  "eq_seed": 474331835760,
+  "eq_note": "exhaustive Wp is exponential in the extra-state bound (Chow 1978; Fujiwara et al. 1991) -> ~145k episodes at depth 2, infeasible over the timeout-probed net.Pipe; randomized Wp samples the same test-word space to a fixed budget, the standard practice for real protocol SULs (de Ruiter & Poll USENIX'15; Fiterau-Brostean et al). Single-step divergences are caught deterministically by TTT membership queries, not this oracle.",
+  "alphabet": ["CLIENT_HELLO", "SERVER_HELLO", "SERVER_HELLO_BADSEL", "SERVER_AUTH", "SERVER_AUTH_BADAUTH", "CLIENT_AUTH", "CLIENT_AUTH_BADAUTH", "KEY_UPDATE", "KEY_UPDATE_ACK", "CLOSE", "CLOSE_ACK", "APP", "UNKNOWN", "INIT_CLOSE"],
+  "seed": "identities fixed (sul/identity.go: driver 0x11, SUT 0x22 byte-repeated Ed25519 seeds); ML-KEM-768/X25519 ephemeral material is UNSEEDED real crypto/mlkem/crypto/ecdh randomness -- see identity_determinism",
+  "identity_determinism": "fixed Ed25519 seeds for both the driver and the SUT identity (sul/identity.go); ML-KEM/X25519 ephemeral material is real crypto/mlkem and crypto/ecdh randomness (never overridden), which is safe because every SUL output is abstracted to a frame-type/error-code symbol, not raw bytes",
+  "roles": {
+    "initiator": {
+      "states": 5,
+      "transitions": 70,
+      "reset_count": 2554,
+      "membership_query_count": 17945,
+      "wallclock_ms": 518267
+    },
+    "responder": {
+      "states": 5,
+      "transitions": 70,
+      "reset_count": 2555,
+      "membership_query_count": 17935,
+      "wallclock_ms": 361094
+    }
+  }
+}

@@ -2,12 +2,12 @@
 
 > N-PAMP (Native Post-Quantum Agent Messaging Protocol) is a binary, multi-channel, wire-level protocol that sits beneath application-layer agent protocols and gives them a single fixed-size frame, a registry of multiplexed channels, and negotiated post-quantum security on the wire, before any application semantics.
 
-This is the public reference home of N-PAMP: the byte-level CDDL wire authority, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the per-decision record of how the protocol was designed. The Internet-Draft itself is published through the IETF Independent Submission stream. The current revision is `draft-bubblefish-npamp-01`. Every link below is a real file in this repository.
+This is the public reference home of N-PAMP: the IETF Internet-Draft, the normative companion specifications and code-point registries, ten reference implementations, a language-agnostic conformance corpus, a cross-implementation test harness, and the per-decision record of how the protocol was designed. The current revision is `draft-bubblefish-npamp-02`. Every link below is a real file in this repository.
 
 ## Specification
 
-- Internet-Draft `draft-bubblefish-npamp-01`: the canonical wire-format specification, published through the IETF Independent Submission stream (Informational) — see [`schema/npamp-wire.cddl`](schema/npamp-wire.cddl) for the byte-level wire authority maintained here.
-- [ALPN protocol identifier](spec/01_alpn.md): the `n-pamp/2` ALPN token and how it selects N-PAMP during TLS/QUIC negotiation.
+- [Internet-Draft (draft-bubblefish-npamp-02)](ietf/draft-bubblefish-npamp-latest.md): the canonical wire-format specification, submitted to the IETF Independent Submission stream (Informational).
+- [ALPN protocol identifier](spec/01_alpn.md): the `n-pamp/3` ALPN token (crypto generation 3; prior `n-pamp/2` deprecated) and how it selects N-PAMP during TLS/QUIC negotiation.
 - [Wire format](spec/02_frame_format.md): the fixed frame header, CRC32C (Castagnoli) integrity field, and TLV body rules.
 - [Channel architecture](spec/03_channels.md): how one connection multiplexes independent semantic channels by 16-bit channel ID.
 - [Frame types](spec/04_frame_types.md): the frame-type code points and their meaning on the wire.
@@ -39,7 +39,7 @@ This is the public reference home of N-PAMP: the byte-level CDDL wire authority,
 - [Hello bootstrap](spec/companion/45_hello_bootstrap.md): the pre-handshake hello/bootstrap exchange.
 - [Peer handle](spec/companion/50_peer_handle.md): stable peer-handle identifiers across sessions.
 - [Conformance requirements](spec/companion/55_conformance_requirements.md): the normative bridge/carriage conformance clauses.
-- [Worked handshake example](spec/companion/56_worked_example_handshake.md): a byte-level walkthrough of a full handshake.
+- [Worked handshake example](spec/companion/56_worked_example_handshake.md): a byte-level walkthrough of a full handshake, sourced from the pinned golden-interop vector, with the live interop capture preserved as an RFC 7942 Implementation Status record.
 - [Protocol mappings (17)](spec/companion/60_map_mcp.md): thin mappings from foreign agent protocols to N-PAMP carriage — [MCP](spec/companion/60_map_mcp.md), [A2A](spec/companion/61_map_a2a.md), [ACP](spec/companion/62_map_acp.md), [ANP](spec/companion/63_map_anp.md), [AG-UI](spec/companion/64_map_agui.md), [AP2](spec/companion/65_map_ap2.md), [UCP](spec/companion/66_map_ucp.md), [AITP](spec/companion/67_map_aitp.md), [LMOS](spec/companion/68_map_lmos.md), [OASF](spec/companion/69_map_oasf.md), [FIPA-ACL](spec/companion/6a_map_fipa_acl.md), [agents.json](spec/companion/6b_map_agents_json.md), [AgentSpec](spec/companion/6c_map_agentspec.md), [AgentScript](spec/companion/6d_map_agentscript.md), [MS Agent Framework](spec/companion/6e_map_msagentfw.md), [AGNTCY](spec/companion/6f_map_agntcy.md), [NLIP](spec/companion/70_map_nlip.md).
 
 ## Registries & schemas
@@ -83,12 +83,6 @@ This is the public reference home of N-PAMP: the byte-level CDDL wire authority,
 - [Go SDK quickstart](impl/go/sdk/QUICKSTART.md): the ergonomic transport + handshake SDK — the fastest path to a live connection.
 - [Contributing](CONTRIBUTING.md): how to propose changes to the protocol and its reference material.
 
-## Design decisions
-
-- [ADR index (0001)](decisions/0001-record-architecture-decisions.md): the MADR-format record of every architecture decision and why it was made.
-- [KEM combiner alignment (ADR-0005)](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md): the draft-00 → draft-01 change aligning the X25519MLKEM768 combiner to ML-KEM-first order.
-- [1.5-RTT handshake binding (ADR-0006)](decisions/0006-fix-the-1-5-rtt-handshake-binding.md): the decision fixing the handshake binding.
-
 ## Optional
 
 - [CHANGELOG](CHANGELOG.md): revision history across draft-00 and draft-01.
@@ -99,4 +93,5 @@ This is the public reference home of N-PAMP: the byte-level CDDL wire authority,
 - [LINEAGE](LINEAGE.md): the lineage and provenance of the reference material.
 - [TRADEMARKS](TRADEMARKS.md): N-PAMP trademark usage terms.
 - [CITATION](CITATION.cff): machine-readable citation metadata for this repository.
-- [llms-full.txt](llms-full.txt): the core normative reference documents (spec/01–10) concatenated into a single file for LLM ingestion.
+: the prior (deprecated) `n-pamp/2` ALPN registration request; the current identifier is `n-pamp/3`.
+- [llms-full.txt](llms-full.txt): the core normative documents (Internet-Draft + spec/01–10) concatenated into a single file for LLM ingestion.

@@ -1,0 +1,21 @@
+{
+  "init_close_extension_note": "INIT_CLOSE is a HARNESS EXTENSION, not a table-listed input: the table only models RECEIVE reactions (role,state,received-frame)->(output,next_state), but CLOSING is entered by the endpoint itself SENDING a CLOSE (CloseGraceful), which is an action, not a received frame. This diff adds one explicit rule on top of the table so CLOSING is still exercised: INIT_CLOSE -> (CLOSING, SILENT) ONLY from ESTABLISHED, the one state with a live *sdk.Conn the SUL can call CloseGraceful on. NOTE the earlier version keyed this on key_established[state], which is ALSO true at the handshake states WAIT_SA / WAIT_CA -- but no *Conn is returned to the caller until ESTABLISHED, so the SUL's stepInitClose is a no-op there (sutConn == nil): INIT_CLOSE from WAIT_SA/WAIT_CA is a SILENT self-loop, matching the learned model (this was a real diff bug, T18.2 Cat 3). A repeat INIT_CLOSE while already CLOSING or CLOSED is likewise a no-op self-loop (sul's stepInitClose deliberately does not exercise the SDK's own un-guarded concurrent-CloseGraceful race -- see sul/initiator.go); before ESTABLISHED, INIT_CLOSE is also a no-op self-loop (there is nothing to close yet).",
+  "roles": {
+    "initiator": {
+      "verdict": "PASS",
+      "learned_states": 5,
+      "learned_transitions": 70,
+      "reference_states": 6,
+      "mismatch_count": 0,
+      "mismatches": []
+    },
+    "responder": {
+      "verdict": "PASS",
+      "learned_states": 5,
+      "learned_transitions": 70,
+      "reference_states": 5,
+      "mismatch_count": 0,
+      "mismatches": []
+    }
+  }
+}

@@ -4,7 +4,7 @@ This file is the **public** narrative of how N-PAMP's wire protocol reached
 `draft-bubblefish-npamp-00`. It records what is publishable and orients a reader in the
 version history; the authoritative rationale for each change lives in the linked ADRs under
 `decisions/`. It is descriptive, not normative — where it and the spec or ADRs differ, the
-spec (`schema/npamp-wire.cddl`, `spec/`, and the Internet-Draft) and the ADRs govern.
+spec (`ietf/draft-bubblefish-npamp-latest.md`, `spec/`) and the ADRs govern.
 
 ## What this file does NOT contain (non-scope)
 
@@ -21,16 +21,18 @@ spec (`schema/npamp-wire.cddl`, `spec/`, and the Internet-Draft) and the ADRs go
 
 ## Public wire-version identifiers (ALPN)
 
-N-PAMP negotiates its application protocol with an ALPN identifier whose trailing digit equals
-the wire **major** version carried in the frame header `Ver` field
+N-PAMP negotiates its application protocol with an ALPN identifier whose trailing digit is the
+**crypto generation** — an axis independent of the wire-format version carried in the frame
+header `Ver` field, which is invariant across generations (see decision 0014)
 (draft §"Wire Format"; draft §"IANA Considerations"):
 
-| ALPN | Wire major (`Ver`) | Status |
+| ALPN | Wire-format `Ver` | Status |
 |---|---|---|
 | `n-pamp/1` | 1 | **Deprecated** — implementations SHOULD NOT negotiate it for new associations (draft §IANA, "Requested ALPN registration") |
-| `n-pamp/2` | 2 (`0x02`) | **Current** — defined by `draft-bubblefish-npamp-00` |
+| `n-pamp/2` | 2 (`0x02`) | **Deprecated** — prior crypto generation, defined by `draft-bubblefish-npamp-00` |
+| `n-pamp/3` | 2 (`0x02`) | **Current** — crypto generation 3; the wire-format `Ver` nibble is unchanged (the break is cryptographic, not a frame-layout change) |
 
-Future wire major versions will use distinct identifiers (for example `n-pamp/3`) (draft §IANA).
+The ALPN trailing digit is the crypto generation; the wire-format `Ver` nibble (`0x02`) is an independent axis, invariant across generations (see decision 0014). Each crypto generation uses a distinct identifier; a future generation would use `n-pamp/4` (draft §IANA).
 
 ## Protocol generations
 
@@ -43,7 +45,7 @@ The public draft is the latest of several protocol generations:
    (`formal/README.md`). Its material is maintained privately and is **excluded from this public
    repository by ADR-0004**; it is noted here only to place the public draft in sequence, not
    described.
-3. **draft-00 (`n-pamp/2`)** — the **first published** generation: the Internet-Draft
+3. **draft-00 (`n-pamp/2`)** — the **first published** generation: `ietf/draft-bubblefish-npamp-latest.md`
    + `spec/` + the reference implementations under `impl/`. Its public design decisions are
    indexed below.
 
@@ -73,12 +75,12 @@ Each item links to the ADR that records the full rationale:
   all handshake KAT golden vectors and "interop verified" runs produced before 2026-06-22.
   **ADR-0005**.
 - **A single normative 1.5-RTT handshake binding** (`spec/10_handshake_binding.md`). It reuses
-  RFC 8446 constructions (HKDF-Expand-Label with the `"n-pamp "` label prefix; the
+  RFC 9846 constructions (HKDF-Expand-Label with the `"n-pamp "` label prefix; the
   CertificateVerify signing input with N-PAMP context strings; Finished) and accepts three
   documented divergences from TLS 1.3 — a per-TLV transcript, a single HKDF-Extract key
   schedule, and the ML-KEM-first KEM. Targeted for draft-01 ratification. **ADR-0006**.
 - **Standards-derived, non-circular conformance KATs.** The handshake layer is graded against
-  published standards (FIPS 180-4, RFC 4231, RFC 8032, RFC 8446 / 8448 / 5869, FIPS 203,
+  published standards (FIPS 180-4, RFC 4231, RFC 8032, RFC 9846 / 8448 / 5869, FIPS 203,
   RFC 7748), not against self-interop: KEM-wire, key-schedule, transcript, Finished, and
   CertVerify, against SHA-256-pinned vectors (`MANIFEST.sha256`). The **transcript / Finished /
   CertVerify** KATs are now mirrored non-circularly across **all nine reference implementations** —
@@ -90,14 +92,14 @@ Each item links to the ADR that records the full rationale:
 
 ## Deprecations and supersessions (public)
 
-- **`n-pamp/1` is deprecated** (draft §IANA). New associations SHOULD negotiate `n-pamp/2`.
+- **`n-pamp/1` and `n-pamp/2` are deprecated** (draft §IANA). New associations SHOULD negotiate `n-pamp/3`.
 - **Pre-2026-06-22 handshake KAT goldens and "interop verified" runs are superseded** by the
   ML-KEM-first alignment (**ADR-0005**).
 - **The prior formal proofs (targeting the earlier generation) do not transfer to draft-00** and are not claimed
   here; re-targeting is gated on the draft-01 binding (`formal/README.md`, **ADR-0006**).
 - **v1-era external tooling is retired and is not part of draft-00.** An earlier (v1) Kotlin adapter
   and the v1-era conformance vectors were superseded by the draft-00 multi-language reference
-  implementations under `impl/` (which carry `n-pamp/2`) and the standards-anchored corpus under
+  implementations under `impl/` (which carry `n-pamp/3`) and the standards-anchored corpus under
   `test-vectors/`. The retired v1 artifacts are held externally/privately and are excluded from this
   public repository by **ADR-0004**; they are not referenced anywhere in this tree. This is distinct
   from the *current* `impl/kotlin/` draft-00 reference implementation, which is active.
@@ -114,4 +116,4 @@ take new ALPN identifiers (draft §IANA).
   process itself).
 - `README.md` — repository model, structure, and versioning.
 - `CONTRIBUTING.md` — the change / decision process.
-- `spec/` (and the Internet-Draft) — the normative protocol text.
+- `ietf/draft-bubblefish-npamp-latest.md`, `spec/` — the normative protocol text.

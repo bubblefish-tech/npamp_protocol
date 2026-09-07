@@ -70,9 +70,9 @@ alter them.
   every N-PAMP channel, each peer maintains an independent send and receive
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously (core specification §5). The Capability
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Memory channel
-  `0x0001` and the Stream channel `0x000C`).
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Memory channel `0x0001` and the Stream channel `0x000C`).
 - **Advertisement gate.** A peer that has not advertised the Capability channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Capability channel MUST be dropped (core specification §5, applied to `0x0002`).

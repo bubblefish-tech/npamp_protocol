@@ -35,7 +35,7 @@ final class Npamp
     public const HEADER_SIZE = 36;
     public const PROTOCOL_VERSION = 0x2;
     public const MAGIC = "NPAM";
-    public const ALPN = "n-pamp/2";
+    public const ALPN = "n-pamp/3";
     /** Protocol-specific HKDF label prefix; NOT "tls13 ". Note the trailing space. */
     public const LABEL_PREFIX = "n-pamp ";
 
@@ -59,7 +59,6 @@ final class Npamp
 
     public const TLV_PROFILE_OFFER = 0x01;
     public const TLV_KEM_CIPHERTEXT = 0x08;
-    public const TLV_ANOMALY_CHARGE = 0x12;
 
     public const KEM_X25519_MLKEM768 = 0x11ec;
     public const KEM_X25519_MLKEM1024 = 0x11ed;
@@ -68,7 +67,7 @@ final class Npamp
     public const AEAD_CHACHA20_POLY1305 = 0x0002;
 
     public const SIG_ED25519 = 0x0807;
-    public const SIG_MLDSA87 = 0x0905;
+    public const SIG_MLDSA87 = 0x0906;
 
     /**
      * CRC32C (Castagnoli, reflected) - identical to Go hash/crc32 Castagnoli.
@@ -476,8 +475,8 @@ final class Handshake
     public const FRAME_CLIENT_AUTH = 0x0103;
 
     /** CertVerify role context strings (spec section 6.1). */
-    public const CONTEXT_SERVER_CERTVERIFY = 'N-PAMP/2, server CertificateVerify';
-    public const CONTEXT_CLIENT_CERTVERIFY = 'N-PAMP/2, client CertificateVerify';
+    public const CONTEXT_SERVER_CERTVERIFY = 'N-PAMP/3, server CertificateVerify';
+    public const CONTEXT_CLIENT_CERTVERIFY = 'N-PAMP/3, client CertificateVerify';
 
     /**
      * Finished (binding spec/10 section 6.2; RFC 8446 section 4.4.4):

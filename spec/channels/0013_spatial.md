@@ -71,8 +71,9 @@ not alter them.
   a channel is available at that profile and at every higher profile). The channel
   is therefore available at **High and Sovereign** and is **not** available at the
   Standard profile. See §5 for profile applicability.
-- **Direction — Multi-stream.** Spatial is bidirectional, and the channel MAY open
-  multiple concurrent transport streams within its stream family
+- **Direction — Multi-stream.** Spatial is bidirectional, and the channel MAY
+  carry multiple concurrent payload-layer sub-streams multiplexed within its
+  frame payloads, all over the channel's single ordered per-direction sequence
   (core specification §5, Channel directionality). Each peer maintains an
   independent per-direction sequence space and independent per-direction traffic
   keys for the channel (core specification §5).
@@ -173,10 +174,10 @@ Honest boundaries at the public level:
   verbatim on its SPATIAL_SNAPSHOT/SPATIAL_ERROR reply). This reference does not
   define it.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
-  deployment MAY carry concurrent Spatial traffic over multiple transport streams
-  within the channel's stream family; the core specification permits this at the
-  channel level and does not constrain how traffic is distributed across those
-  streams.
+  deployment MAY carry concurrent Spatial traffic as multiple payload-layer
+  sub-streams multiplexed within the channel's single ordered per-direction
+  sequence; the core specification permits this at the channel level and does not
+  constrain how traffic is distributed across those sub-streams.
 - **Operational and cryptographic internals are out of scope of this reference.** The
   Spatial channel is firewall-gated at the High profile (§2, §5). The channel's
   application operation encoding is defined by the public companion NPAMP-SPATIAL
@@ -285,9 +286,10 @@ if, for channel `0x0013`, it:
    encoding, addressing scheme, correlation scheme, timing parameter, or error model,
    none of which the core specification defines for this channel (§3.3, §4);
 7. Supports the channel's **Multi-stream** direction — bidirectional operation with
-   the OPTIONAL opening of multiple concurrent transport streams within the channel's
-   stream family, each peer maintaining independent per-direction sequence spaces and
-   traffic keys (§2, §4); and
+   the OPTIONAL carrying of multiple concurrent payload-layer sub-streams
+   multiplexed within its frame payloads, all over the channel's single ordered
+   per-direction sequence, each peer maintaining independent per-direction sequence
+   spaces and traffic keys (§2, §4); and
 8. Treats the channel's High- and Sovereign-profile cryptographic material as governed
    by the core specification's profile negotiation and the controlled track, out of
    scope for this public reference; obtains any Spatial operation encoding it

@@ -101,9 +101,10 @@ peer MAY originate a Capability operation.
 
 **Bidirectional, not Multi-stream.** Unlike the Memory channel `0x0001` and the
 Stream channel `0x000C`, the Capability channel is **not** classified Multi-stream:
-it does not open multiple concurrent transport sub-streams within a stream family
-(Capability-channel interface reference, §2). Both peers send and receive on a
-single stream of the channel, each using its own sequence space and traffic keys.
+it does not carry multiple concurrent payload-layer sub-streams multiplexed within
+its frame payloads (Capability-channel interface reference, §2). Both peers send
+and receive on a single stream of the channel, each using its own sequence space
+and traffic keys.
 Consequently this document defines **no** streamed result: a lookup result larger
 than one frame is paginated across successive request/reply exchanges by an opaque
 `cursor` (§6.4), not carried as concurrent stream frames.

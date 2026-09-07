@@ -3,7 +3,7 @@
 // (spec/10). It drives the SAME handshake the reference SDK's runClientHandshake
 // / runServerHandshake drive (impl/go/sdk/handshake.go), but over a RAW TCP
 // stream — the N-PAMP handshake is transport-agnostic (four frames over the
-// Control channel), so this omits only the SDK's TLS 1.3 (ALPN "n-pamp/2")
+// Control channel), so this omits only the SDK's TLS 1.3 (ALPN "n-pamp/3")
 // transport binding. It interoperates frame-for-frame and byte-for-byte with the
 // Rust reference examples impl/rust/examples/interop_{client,server}.rs.
 //

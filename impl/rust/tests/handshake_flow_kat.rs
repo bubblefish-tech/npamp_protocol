@@ -1,3 +1,7 @@
+// Needs the ML-KEM/X25519 crates the `session` feature (default-on) enables; skip
+// cleanly under `--no-default-features` instead of failing to compile.
+#![cfg(feature = "session")]
+
 // Byte-pinned handshake-FLOW known-answer test (issue #60, class golden-interop).
 //
 // Unlike the standards-anchored primitive KATs in handshake_kat.rs (which each
@@ -287,7 +291,7 @@ fn load_pinned(file: &str, want_sha256: &str) -> Json {
 // ---------------------------------------------------------------------------
 
 const HANDSHAKE_FLOW_KAT_SHA256: &str =
-    "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9";
+    "d0df49ca9eca02969f782de9ab7ff394eab3313f84291a5aaa5ad1746e5441c3";
 
 // draft-01 handshake TLV code points (binding spec/10 §1.1; registry §9.4). The
 // OPEN wire-format library exposes only a subset as public constants, so the

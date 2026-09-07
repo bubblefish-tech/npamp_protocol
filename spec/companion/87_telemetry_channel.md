@@ -78,9 +78,10 @@ This document does NOT (each exclusion carries its reason):
   is not a Bridge carriage class and does not build on NPAMP-BRIDGE
   (`../channels/000A_telemetry.md` §6). No frame in this document encapsulates a
   foreign message, and this document defines and consumes no extension-TLV tag.
-* **Carry physical-sensor bulk observations, or open multiple concurrent transport
-  sub-streams** — reason: bulk sensor observation is the distinct **Sensory** channel
-  `0x0009` (High profile, Multi-stream) and its companion `82_sensory_channel.md`;
+* **Carry physical-sensor bulk observations, or carry multiple concurrent
+  payload-layer sub-streams** — reason: bulk sensor observation is the distinct
+  **Sensory** channel `0x0009` (High profile, Multi-stream) and its companion
+  `82_sensory_channel.md`;
   Telemetry `0x000A` is Standard-profile, **Bidirectional** (not Multi-stream), and
   reports a peer's own operational metrics and health, not external sensor readings
   (§2.3; `../channels/000A_telemetry.md` §1).
@@ -120,14 +121,14 @@ full-duplex: each peer maintains an independent per-direction send and receive
 sequence space and independent per-direction traffic keys, so both peers MAY
 transmit on the channel simultaneously and **either peer MAY originate** a report or
 a subscription (core specification §5; `../channels/000A_telemetry.md` §2). The
-Telemetry channel is **not** classified Multi-stream: it does not open multiple
-concurrent transport sub-streams within a stream family
+Telemetry channel is **not** classified Multi-stream: it does not carry multiple
+concurrent payload-layer sub-streams multiplexed within its frame payloads
 (`../channels/000A_telemetry.md` §2). Consequently, all Telemetry frames in a given
 direction share the **one** per-direction stream and its single sequence space, and
 multiple concurrent subscriptions are multiplexed **logically** by their in-body
-`corr` / `sub_id` (§4.1) over that one stream — not across separate transport
-sub-streams as on the Multi-stream Memory `0x0001`, Sensory `0x0009`, or Stream
-`0x000C` channels. A receiver MUST associate a report, acknowledgement, or error with
+`corr` / `sub_id` (§4.1) over that one stream — not via a defined payload-layer
+sub-stream construct as on the Multi-stream Memory `0x0001`, Sensory `0x0009`, or
+Stream `0x000C` channels. A receiver MUST associate a report, acknowledgement, or error with
 its subscription by `corr` / `sub_id`, never by the frame sequence number (§4.1).
 
 ### 2.3 Native operation companion; distinction from Sensory and from PING/PONG
@@ -544,8 +545,8 @@ core-conformant N-PAMP wire implementation and, on the Telemetry channel `0x000A
 
 2. Treats the channel as **Bidirectional but not Multi-stream** — carrying all frames
    of a direction over the one per-direction stream, multiplexing concurrent
-   subscriptions logically by `corr` / `sub_id`, and never opening multiple concurrent
-   transport sub-streams as though the channel were Multi-stream (§2.2);
+   subscriptions logically by `corr` / `sub_id`, and never carrying multiple
+   concurrent payload-layer sub-streams as though the channel were Multi-stream (§2.2);
 
 3. Uses only the `0x0100`-and-above channel-application frame types of §3
    (TELEMETRY_REPORT `0x0100` … TELEMETRY_ERROR `0x0105`), preserves the core meaning

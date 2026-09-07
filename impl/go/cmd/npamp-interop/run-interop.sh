@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
-# Go<->Rust N-PAMP handshake interop runner (serial, cross-process).
+# Go<->Rust<->Python N-PAMP handshake interop runner (serial, cross-process).
 #
 # Builds the Go interop harness (this cmd) and the Rust interop examples, then
 # runs the live 1.5-RTT mutually-authenticated N-PAMP handshake + one application
-# frame BOTH ways over TCP loopback:
-#   A) Go server   <-> Rust client
-#   B) Rust server <-> Go client
-# Exit 0 iff both directions complete the handshake and the echoed frame matches.
+# frame over TCP loopback across three independent, non-shared-codebase stacks
+# (Go's crypto/mlkem+crypto/ecdh+crypto/ed25519 stdlib, Rust's ml-kem crate,
+# Python's pure-Python kyber-py FIPS-203 ML-KEM + the `cryptography` package's
+# X25519/Ed25519):
+#   A) Go server     <-> Rust client
+#   B) Rust server   <-> Go client
+#   C) Go server     <-> Python client
+#   D) Python server <-> Go client
+# (Rust<->Python is not required: R4.3 needs only >=2 independent legs, already
+# satisfied by A/B; legs C/D close the Python leg's own deferred cross-process
+# clause -- a deferred cross-process interop item -- against the same Go anchor A/B already use.)
+# Exit 0 iff every direction completes the handshake and the echoed frame matches.
 #
 # All paths are repo-relative (resolved from this script's location); no absolute
-# build path is embedded. Requires a Go toolchain and a Rust toolchain on PATH.
+# build path is embedded. Requires a Go toolchain, a Rust toolchain, and a Python
+# 3.9+ toolchain (`python3` or `python` on PATH, or set PYTHON_BIN) with the
+# `session` extra installed (`pip install -e impl/python[session]` --
+# `cryptography` + `kyber-py`) on PATH.
 #
 #   ./run-interop.sh [PORT]     # PORT defaults to 47700
 set -euo pipefail
@@ -30,12 +41,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 GO_DIR="${REPO_ROOT}/impl/go"
 RUST_DIR="${REPO_ROOT}/impl/rust"
+PY_DIR="${REPO_ROOT}/impl/python"
 BIN_DIR="$(mktemp -d)"
 GO_BIN="${BIN_DIR}/npamp-interop"
 RUST_CLIENT="${RUST_DIR}/target/debug/examples/interop_client"
 RUST_SERVER="${RUST_DIR}/target/debug/examples/interop_server"
 [ -f "${RUST_CLIENT}.exe" ] && RUST_CLIENT="${RUST_CLIENT}.exe"
 [ -f "${RUST_SERVER}.exe" ] && RUST_SERVER="${RUST_SERVER}.exe"
+
+# Resolve the Python interpreter for legs C/D. PYTHON_BIN overrides; otherwise
+# prefer python3 (the interpreter name pyproject.toml's `requires-python`
+# targets), falling back to `python` (e.g. some Windows dev setups only expose
+# that name). Neither present is a hard failure only once legs C/D actually run.
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "${PYTHON_BIN}" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+  else
+    echo "run-interop.sh: no python3/python on PATH (needed for legs C/D); set PYTHON_BIN to override" >&2
+    exit 1
+  fi
+fi
 
 cleanup() { rm -rf "${BIN_DIR}" 2>/dev/null || true; }
 trap cleanup EXIT
@@ -95,6 +123,14 @@ run_pair "A) Go server <-> Rust client" \
 
 run_pair "B) Rust server <-> Go client" \
   "${RUST_SERVER} ${ADDR}" \
+  "${GO_BIN} -role client -addr ${ADDR}"
+
+run_pair "C) Go server <-> Python client" \
+  "${GO_BIN} -role server -addr ${ADDR}" \
+  "${PYTHON_BIN} ${PY_DIR}/examples/interop_client.py ${ADDR}"
+
+run_pair "D) Python server <-> Go client" \
+  "${PYTHON_BIN} ${PY_DIR}/examples/interop_server.py ${ADDR}" \
   "${GO_BIN} -role client -addr ${ADDR}"
 
 echo

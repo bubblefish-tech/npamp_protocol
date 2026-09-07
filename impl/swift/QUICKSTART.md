@@ -15,7 +15,7 @@ The `Npamp` library target (`Sources/Npamp/`):
   plus `crc32c`.
 - **AES-256-GCM record layer** — `sealAes256Gcm` / `openAes256Gcm` / `deriveNonce`, using the
   21-octet header prefix as AEAD associated data.
-- **HKDF key schedule** — `hkdfExtract`, `hkdfExpand`, `hkdfExpandLabel` (RFC 8446 §7.1 with the
+- **HKDF key schedule** — `hkdfExtract`, `hkdfExpand`, `hkdfExpandLabel` (RFC 9846 §7.1 with the
   `"n-pamp "` label prefix), `deriveTrafficSecret`, `deriveKeyIv`, and the key-schedule trunk
   `deriveHandshakeSecret` / `deriveClientHandshakeSecret` / `deriveServerHandshakeSecret` /
   `deriveMasterSecret` / `deriveFinishedKey` (binding `spec/10` §5).
@@ -32,7 +32,7 @@ The `Npamp` library target (`Sources/Npamp/`):
 - **ML-KEM operations** — swift-crypto's `Crypto` product exposes no ML-KEM API, so there is no
   X25519MLKEM768 encapsulation/decapsulation; the KEM-wire helpers handle the byte layout only,
   and the key-schedule trunk takes the two KEM shared secrets as inputs.
-- A **TCP/TLS transport** (ALPN `n-pamp/2`), connection management, or an RPC/MCP client. Those live
+- A **TCP/TLS transport** (ALPN `n-pamp/3`), connection management, or an RPC/MCP client. Those live
   in a consuming product, which composes primitives like these with its own
   handshake + transport.
 

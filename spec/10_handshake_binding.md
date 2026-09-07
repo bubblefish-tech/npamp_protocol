@@ -1,14 +1,15 @@
 # N-PAMP-01 — Handshake Binding (normative)
 
 > **Authoritative for the N-PAMP 1.5-RTT handshake binding.** The published
-> the Internet-Draft specifies the handshake *requirements* and the negotiation
+> `draft-bubblefish-npamp-latest.md` specifies the handshake *requirements* and the negotiation
 > *vocabulary* (TLV tags, KEM/AEAD/Sig/profile code points, frame envelope, AAD/nonce, the
 > HKDF-Expand-Label primitive) but does not fix the handshake *wire bytes*. This document
-> fixes them. It is grounded in TLS 1.3 {{RFC8446}} where it reuses a construction and marks
+> fixes them. It is grounded in TLS 1.3 {{RFC9846}} where it reuses a construction and marks
 > every N-PAMP-original choice. Targeted for ratification into draft-01.
 >
-> **Provenance legend** — **[STD]** reused from a cited standard (RFC 8446 / draft-ietf-tls-
-> ecdhe-mlkem / FIPS 203 / RFC 7748 / RFC 5869), the standard governs · **[D→RFC]** N-PAMP
+> **Provenance legend** — **[STD]** reused from a cited standard (RFC 9846 / RFC 10024
+> [formerly draft-ietf-tls-ecdhe-mlkem] / FIPS 203 / RFC 7748 / RFC 5869), the standard
+> governs · **[D→RFC]** N-PAMP
 > applies an RFC pattern with N-PAMP parameters · **[D→N-PAMP]** N-PAMP-original, this document
 > is the authority. Reference implementations live under `impl/`. Profiles are
 > parameterized, not duplicated (ADR-0003): one wire format, one construction, a parameter row.
@@ -17,7 +18,7 @@
 
 The handshake is **four frames** over the Control channel (`0x0000`), a 1.5-RTT exchange in
 which both peers authenticate. There is no separate Finished frame — the Finished MAC is a
-TLV inside each AUTH frame. **[D→N-PAMP]** (modeled on RFC 8446 §4 but with N-PAMP framing).
+TLV inside each AUTH frame. **[D→N-PAMP]** (modeled on RFC 9846 §4 but with N-PAMP framing).
 
 ```
 client ── CLIENT_HELLO (0x0100), cleartext ─────────────▶ server
@@ -58,7 +59,7 @@ One construction serves all three profiles (ADR-0003); a profile selects a param
 
 | Parameter | Standard | High | Sovereign |
 |-----------|----------|------|-----------|
-| KEM (min) | X25519MLKEM768 | X25519MLKEM1024 | X25519MLKEM1024 |
+| KEM (min) | X25519MLKEM768 | SecP384r1MLKEM1024 | SecP384r1MLKEM1024 |
 | Signature | Ed25519 | Ed25519, ML-DSA-87 | ML-DSA-87 |
 | KDF hash `H` | SHA-256 | SHA-384 | SHA-384 |
 | `HashLen` | 32 | 48 | 48 |
@@ -73,7 +74,7 @@ ML-DSA-87) are public code points, published as reference implementations become
 
 The transcript is a running byte buffer; a transcript-hash point is `H` over all bytes
 absorbed so far. The transcript absorbs, in handshake order: **[D→N-PAMP]** (deliberately
-diverges from RFC 8446 §4.4.1, which hashes whole handshake messages including their
+diverges from RFC 9846 §4.1, which hashes whole handshake messages including their
 type+length headers).
 
 - **AddFrameType(ft):** the **2-octet big-endian frame type only**. The remaining 34 octets of
@@ -82,7 +83,7 @@ type+length headers).
 - **AddTLV(t):** one TLV in canonical `Type(2) ‖ Length(2) ‖ Value` form.
 - A frame contributes `AddFrameType(ft)` then `AddTLV` for each of its TLVs in order.
 
-Granularity is **per-TLV** (finer than RFC 8446's per-message), so the bundled AUTH frame can
+Granularity is **per-TLV** (finer than RFC 9846's per-message), so the bundled AUTH frame can
 be hashed up to sub-frame boundaries. The five transcript points:
 
 | Symbol | Absorbed through | Used by |
@@ -98,7 +99,7 @@ Both peers absorb the identical decoded on-wire TLV bytes, so transcripts are by
 ## 4. Hybrid key encapsulation — X25519MLKEM768
 
 KEM `0x11ec` (Standard/High). **ML-KEM-first** in both the shared secret and the wire layout,
-per {{I-D.ietf-tls-ecdhe-mlkem}} + NIST SP 800-56C Rev. 2 (the FIPS-approved secret leads the
+per {{RFC10024}} + NIST SP 800-56C Rev. 2 (the FIPS-approved secret leads the
 HKDF input). **The suite name lists X25519 first; the bytes are ML-KEM-first** (ADR-0005). **[STD]**
 
 - **KEMShare (TLV `0x07`):** `ML-KEM-768 encapsulation key (1184) ‖ X25519 public key (32)` =
@@ -112,15 +113,32 @@ HKDF input). **The suite name lists X25519 first; the bytes are ML-KEM-first** (
   ciphertext yields a pseudorandom secret that fails the Finished MAC, not an error). X25519
   per RFC 7748; an all-zero (low-order) X25519 output is rejected. **[STD]**
 
-Sovereign MUST NOT accept X25519MLKEM768 (it requires X25519MLKEM1024, `0x11ed`). **[STD/P]**
+Sovereign MUST NOT accept X25519MLKEM768 (it requires SecP384r1MLKEM1024, `0x11ed`). **[STD/P]**
+
+## 4a. Hybrid key encapsulation — SecP384r1MLKEM1024
+
+KEM `0x11ed` (High/Sovereign). **ECDHE-first (P-384 first)** in both the shared secret and the
+wire layout, per {{RFC10024}} + NIST SP 800-56C Rev. 2. Unlike X25519MLKEM768,
+the SecP* groups place the secp384r1 (ECDHE) component first; RFC 10024 records
+X25519MLKEM768's ML-KEM-first order as historical, while the SecP groups keep ECDHE-first. **[P]**
+
+- **KEMShare (TLV `0x07`):** `secp384r1 public key (97) ‖ ML-KEM-1024 encapsulation key (1568)` =
+  **1665** octets. **[P]** The secp384r1 share is the uncompressed point encoding of RFC 9846
+  §4.3.8.2; ML-KEM-1024 sizes per FIPS 203.
+- **KEMCiphertext (TLV `0x08`):** `server secp384r1 public key (97) ‖ ML-KEM-1024 ciphertext
+  (1568)` = **1665** octets. **[P]**
+- **Shared secret (KEM output, IKM to §5):** `ECDHE SS (48) ‖ ML-KEM-1024 SS (32)` = **80** octets,
+  fed raw to HKDF-Extract. The ECDHE SS is the secp384r1 shared-point x-coordinate. **[P]**
+- Component KEMs: ML-KEM-1024 `Encaps/Decaps` per FIPS 203 (implicit rejection as in §4); secp384r1
+  ECDH per SEC 1 / NIST SP 800-186; an invalid or identity secp384r1 result is rejected. **[P]**
 
 ## 5. Key schedule (§6 secrets)
 
 A **single** HKDF-Extract followed by sibling HKDF-Expand-Label derivations. **[D→N-PAMP]**
-(deliberately simpler than RFC 8446 §7.1's three-stage Early/Handshake/Master Extract chain;
+(deliberately simpler than RFC 9846 §7.1's three-stage Early/Handshake/Master Extract chain;
 N-PAMP has no PSK/0-RTT in this binding).
 
-HKDF-Expand-Label is RFC 8446 §7.1 with the N-PAMP label prefix `"n-pamp "` (note the trailing
+HKDF-Expand-Label is RFC 9846 §7.1 with the N-PAMP label prefix `"n-pamp "` (note the trailing
 space) replacing `"tls13 "`: **[D→RFC]**
 
 ```
@@ -129,10 +147,10 @@ HKDF-Expand-Label(Secret, Label, Context, Length) =
 HkdfLabel = uint16(Length) ‖ opaque label<7..255> = ("n-pamp " ‖ Label) ‖ opaque context<0..255> = Context
 ```
 
-Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM order **[STD]**, ADR-0005)
+Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM = the per-group combined KEM shared secret of §4/§4a — ML-KEM-first for X25519MLKEM768, ECDHE-first for SecP384r1MLKEM1024 — per D2 / {{RFC10024}}, superseding the ADR-0005 universal order)
 
 ```
-handshake_secret = HKDF-Extract(salt = HashLen·0x00, IKM = ML-KEM_SS ‖ X25519_SS)
+handshake_secret = HKDF-Extract(salt = HashLen·0x00, IKM = per-group KEM shared secret §4/§4a)
 c_hs_secret      = HKDF-Expand-Label(handshake_secret, "c hs",   TH_kem, HashLen)
 s_hs_secret      = HKDF-Expand-Label(handshake_secret, "s hs",   TH_kem, HashLen)
 master           = HKDF-Expand-Label(handshake_secret, "master", TH_cCV, HashLen)
@@ -161,12 +179,12 @@ is shared across phases. **[D→N-PAMP]**
 
 ### 6.1 CertVerify (TLV `0x0A`)
 
-A signature over the transcript, structured per RFC 8446 §4.4.3 with N-PAMP context strings: **[D→RFC]**
+A signature over the transcript, structured per RFC 9846 §4.5.2 with N-PAMP context strings: **[D→RFC]**
 
 ```
 signing_input = 0x20 × 64  ‖  context  ‖  0x00  ‖  transcript_hash
-context (server) = "N-PAMP/2, server CertificateVerify"   // [D→N-PAMP]
-context (client) = "N-PAMP/2, client CertificateVerify"
+context (server) = "N-PAMP/3, server CertificateVerify"   // [D→N-PAMP]
+context (client) = "N-PAMP/3, client CertificateVerify"
 ```
 
 The signed `transcript_hash` is `TH_sId` (server) / `TH_cId` (client) — the transcript through
@@ -178,7 +196,7 @@ unusable as a client one. **[D→N-PAMP]** (carriage), **[STD]** Ed25519 = RFC 8
 
 ### 6.2 Finished (TLV `0x0B`)
 
-Per RFC 8446 §4.4.4, keyed by the sender's handshake traffic secret: **[D→RFC]**
+Per RFC 9846 §4.5.3, keyed by the sender's handshake traffic secret: **[D→RFC]**
 
 ```
 finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)   // BaseKey = c_hs/s_hs per direction
@@ -208,7 +226,7 @@ nonce = `iv XOR seq` (§4 of `06_cryptographic_suites.md`). On open, exactly thr
 
 ## 7. Security considerations (summary of divergences from TLS 1.3)
 
-This binding deliberately diverges from RFC 8446 in three documented ways; each is an
+This binding deliberately diverges from RFC 9846 in three documented ways; each is an
 N-PAMP design decision, not a TLS conformance claim, and is in scope for the formal-methods
 re-targeting (`formal/`):
 
@@ -220,11 +238,12 @@ re-targeting (`formal/`):
 2. **Single-Extract key schedule** (§5) rather than TLS's three-stage derive-secret chain.
    Sound because there is no PSK/0-RTT stage to separate; the master/handshake separation is by
    label and by the transcript context bound into each Expand-Label.
-3. **Hybrid KEM ordering** is ML-KEM-first (§4, ADR-0005), satisfying SP 800-56C Rev. 2 and
-   matching {{I-D.ietf-tls-ecdhe-mlkem}}.
+3. **Hybrid KEM ordering** is per-group (§4/§4a): X25519MLKEM768 is ML-KEM-first (ADR-0005),
+   SecP384r1MLKEM1024 is ECDHE-first (P-384 first); each places the FIPS-approved component first,
+   satisfying SP 800-56C Rev. 2 and matching {{RFC10024}}.
 
-Confidentiality holds as long as at least one KEM component (X25519 or ML-KEM-768) is unbroken
-(the concatenation-into-HKDF-Extract dual-PRF combiner). **[STD]**
+Confidentiality holds as long as at least one KEM component (the ECDH half or the ML-KEM half)
+is unbroken (the concatenation-into-HKDF-Extract dual-PRF combiner). **[STD]**
 
 **Forward secrecy and key erasure.** Session confidentiality is forward-secure against
 compromise of the long-term *identity* keys: every session secret derives from the *ephemeral*
@@ -267,7 +286,7 @@ non-circular vectors are required and are tracked as corpus growth:
 - **Key-schedule KAT** — **DELIVERED** (`test-vectors/v1/key-schedule-kat.json`, ADR-0008). Fixed
   KEM secrets + fixed transcript points → the `handshake_secret` ladder (`c hs`/`s hs`/`master`),
   the handshake/application traffic (key, iv), and `finished_key`. Non-circular by EXTERNAL ANCHOR:
-  N-PAMP's HKDF-Expand-Label is RFC 8446 §7.1 with the `"n-pamp "` prefix, so the KAT proves an
+  N-PAMP's HKDF-Expand-Label is RFC 9846 §7.1 with the `"n-pamp "` prefix, so the KAT proves an
   independent Expand-Label oracle against **RFC 8448** (TLS 1.3, `"tls13 "` prefix) and **RFC 5869**
   (raw HKDF), then applies that proven oracle with `"n-pamp "` to check the schedule. The file
   carries the RFC anchors + fixed inputs (not implementation-produced output bytes). Now mirrored
@@ -284,13 +303,13 @@ non-circular vectors are required and are tracked as corpus growth:
   (frame-type as 2-octet BE; each TLV as `Type(2)‖Length(2)‖Value`) + SHA-256, with the SHA-256
   primitive itself anchored to **FIPS 180-4** (`SHA-256("abc")`); the consuming test re-derives every
   point via its own manual oracle AND via the implementation's `Transcript`, which must agree. This
-  pins the §3/§7.1 divergence from RFC 8446 §4.4.1 (only the 2-octet frame type is absorbed, at
+  pins the §3/§7.1 divergence from RFC 9846 §4.1 (only the 2-octet frame type is absorbed, at
   per-TLV granularity): a header-creep or per-message regression fails the impl leg only.
   Delivered + mutation-proven, and now mirrored non-circularly across all reference impls — Go as the
   reference implementation; TypeScript / Python / Java / Kotlin / Ruby / PHP / Rust / C# under `impl/` — gated by
   `impl/_conformance-harness/kat-handshake-all-langs.sh`.
 - **Finished KAT** — **DELIVERED** (`test-vectors/v1/finished-kat.json`, ADR-0010). `verify_data` =
-  HMAC-SHA256(`finished_key`, `transcript_hash`) (§6.2 / RFC 8446 §4.4.4). Non-circular: the expected
+  HMAC-SHA256(`finished_key`, `transcript_hash`) (§6.2 / RFC 9846 §4.5.3). Non-circular: the expected
   `verify_data` are produced with an independent `crypto/hmac`, with the HMAC-SHA-256 primitive
   anchored to **RFC 4231** TC1/TC2; the `finished_key` is a fixture (its derivation is anchored by the
   key-schedule KAT) and the `transcript_hash` inputs are the Transcript KAT's `TH_sCV`/`TH_cCV` (the
@@ -299,7 +318,7 @@ non-circular vectors are required and are tracked as corpus growth:
   non-circularly across all reference impls (gated by `kat-handshake-all-langs.sh`).
 - **CertVerify KAT** — **DELIVERED** (`test-vectors/v1/certverify-kat.json`, ADR-0011). CertVerify
   value = `u16(0x0807) ‖ Ed25519(priv, signing_input)`, `signing_input = 0x20×64 ‖ context ‖ 0x00 ‖
-  transcript_hash` (§6.1 / RFC 8446 §4.4.3). Non-circular: the expected signatures are produced with
+  transcript_hash` (§6.1 / RFC 9846 §4.5.2). Non-circular: the expected signatures are produced with
   an independent `crypto/ed25519`, with the Ed25519 primitive anchored to **RFC 8032** §7.1 TEST 1/2
   (published public keys + signatures); the `transcript_hash` inputs are the Transcript KAT's
   `TH_sId`/`TH_cId` (the points each role signs); Ed25519 is deterministic so any conforming signer
@@ -352,7 +371,7 @@ two directions' traffic keys separated exactly as today.
 ### 9.1 Tier 1 — symmetric forward step (forward secrecy)
 
 For a direction at generation `G`, the Tier-1 step advances the root by one HKDF-Expand-Label
-(the §5 primitive), then zeroizes the retired root in place: **[D→RFC]** (RFC 8446 §7.1
+(the §5 primitive), then zeroizes the retired root in place: **[D→RFC]** (RFC 9846 §7.1
 Expand-Label with the `"n-pamp "` prefix)
 
 ```
@@ -376,7 +395,7 @@ boundary marker (§9.3) and so needs no transcript point.
 The Tier-2 step mixes fresh entropy from a new ephemeral `X25519MLKEM768` exchange — the **same**
 construction, TLVs, and 64-octet combined secret as the handshake KEM (§4), with no new primitive —
 through an Extract-then-Expand step that mirrors the §5 `handshake_secret`→`master` shape: **[STD]**
-(KEM per §4), **[D→RFC]** (RFC 5869 §2.2 Extract; RFC 8446 §7.1 Expand-Label)
+(KEM per §4), **[D→RFC]** (RFC 5869 §2.2 Extract; RFC 9846 §7.1 Expand-Label)
 
 ```
 new_ss       = ML-KEM_SS ‖ X25519_SS                                          // 64 octets, exactly as §4
@@ -421,7 +440,7 @@ TLV code points: **[D→N-PAMP]**
 
 | TLV | Status | Value |
 |-----|--------|-------|
-| `TLVRatchetGeneration 0x19` | **NEW** (next free after `0x18`) | 8-octet big-endian generation, mirroring `TLVKeyUpdateMarker 0x17` |
+| `TLVRatchetGeneration 0x19` | **registered** (registries/tlv_tags.csv + CDDL; next free after `0x18`) | 8-octet big-endian generation, mirroring `TLVKeyUpdateMarker 0x17` |
 | `TLVKEMShare 0x07` | reused (§4) | ML-KEM-768 ek (1184) ‖ X25519 pub (32) = **1216** octets |
 | `TLVKEMCiphertext 0x08` | reused (§4) | ML-KEM-768 ct (1088) ‖ server X25519 pub (32) = **1120** octets |
 
@@ -513,7 +532,7 @@ identity re-authentication (the peers are already authenticated). **[D→N-PAMP]
 
 The master ratchet is graded by two standards-derived, **non-circular** KATs that extend the §8
 key-schedule KAT (ADR-0008) discipline and reuse its EXACT external anchor — no new anchor family:
-N-PAMP's HKDF-Expand-Label is RFC 8446 §7.1 with the `"n-pamp "` prefix and its HKDF-Extract is
+N-PAMP's HKDF-Expand-Label is RFC 9846 §7.1 with the `"n-pamp "` prefix and its HKDF-Extract is
 RFC 5869 §2.2, so the KATs first re-prove an independent Expand-Label/Extract oracle against **RFC
 8448** (TLS 1.3) and **RFC 5869** (raw HKDF), then apply that proven oracle with the `"n-pamp "`
 prefix to compute the expected roots. The expected values are NOT produced by the implementation

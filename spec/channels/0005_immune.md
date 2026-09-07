@@ -70,9 +70,9 @@ does not alter them.
   every N-PAMP channel, each peer maintains an independent send and receive
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously (core specification §5). The Immune
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Multi-stream channels
-  such as Memory `0x0001` or Sensory `0x0009`).
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Multi-stream channels such as Memory `0x0001` or Sensory `0x0009`).
 - **Advertisement gate.** A peer that has not advertised the Immune channel during
   the handshake MUST NOT receive frames on it; frames on an unadvertised Immune
   channel MUST be dropped (core specification §5, applied to `0x0005`).
@@ -187,13 +187,16 @@ Notes and honest boundaries:
   to a report (unlike the Bridge channel, where NPAMP-BRIDGE §5 defines a
   `correlation_id`); an Immune operation encoding, when specified by a companion,
   is where such correlation would be defined. This reference does not define it.
-- **AnomalyCharge TLV is not part of this channel's interface.** The core
-  specification defines a TLV `0x12` "AnomalyCharge" in its TLV type registry as a
-  general **per-frame integrity charge** (core specification §9, TLV Type
-  Registry). Despite the thematic overlap in name, the core specification does
-  **not** bind that TLV to the Immune channel or make it an Immune operation; it
-  is a general wire-level mechanism, not an Immune-channel report frame. This
-  reference does not claim any relationship the core specification does not state.
+- **TLV `0x12` is not part of this channel's interface.** The core specification's
+  TLV type registry currently assigns `0x12` to **OpaqueContentType**, a general
+  **per-frame media-type discriminator** used by the NPAMP-CC-OPAQUE carriage
+  companion (core specification §9, TLV Type Registry; ADR 0015). `0x12` previously
+  named an unspecified "AnomalyCharge" TLV, which was retired to `(reserved)`
+  before this reassignment (DECISIONS.md D11, task T15.2, approved 2026-08-27) —
+  neither the current nor the retired assignment was ever bound to the Immune
+  channel or made an Immune operation; it is a general wire-level mechanism, not an
+  Immune-channel report frame. This reference does not claim any relationship the
+  core specification does not state.
 
 ## 5. Profile applicability
 

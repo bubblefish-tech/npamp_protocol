@@ -17,7 +17,7 @@ require "openssl"
 require_relative "../lib/npamp"
 
 VEC = File.expand_path("../../../test-vectors/v1", __dir__)
-CERTVERIFY_KAT_SHA256 = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f"
+CERTVERIFY_KAT_SHA256 = "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67"
 
 $failures = 0
 

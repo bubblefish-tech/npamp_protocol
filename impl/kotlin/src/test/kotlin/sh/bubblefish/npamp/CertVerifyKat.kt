@@ -22,7 +22,7 @@ import kotlin.system.exitProcess
 
 object CertVerifyKat {
 
-    private const val PIN = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f"
+    private const val PIN = "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67"
 
     private var failures = 0
 

@@ -34,7 +34,7 @@ A Signed Discovery Record is a deterministically encoded CBOR map (core specific
 | `record` (0) | Map | Yes | The Discovery Record exactly as defined by NPAMP-DISC §5. |
 | `signer` (1) | Byte string | Yes | The signer's PeerHandle (NPAMP-PEERHANDLE). |
 | `not_after` (2) | Unsigned int | Yes | Expiry, in seconds since the Unix epoch. A verifier MUST reject a record whose `not_after` is in the past. |
-| `sig_suite` (3) | Unsigned int | Yes | The signature suite: `0x0905` ML-DSA-87, or `0x0807` Ed25519 (core specification signature registry). |
+| `sig_suite` (3) | Unsigned int | Yes | The signature suite: `0x0906` ML-DSA-87, or `0x0807` Ed25519 (core specification signature registry). |
 | `signature` (4) | Byte string | Yes | The detached signature (see §3). |
 
 ## 3. Signing

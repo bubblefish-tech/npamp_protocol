@@ -68,8 +68,10 @@ func TestSendRefusesSequenceExhaustion(t *testing.T) {
 // TestRecvRejectsOutOfSequenceReplayAndPerChannelSeq pins the receive-side replay/reorder guard
 // (f.Seq must equal the expected per-(channel,epoch) seq) and per-channel sequence independence. A
 // client and server Conn share a master over net.Pipe. A replayed frame (send seq reset to 0 after
-// one accepted frame) must be rejected out-of-sequence; a fresh channel starts its own seq at 0 and
-// is accepted. Mutation-surviving: dropping the f.Seq!=st.seq check accepts the replay.
+// one accepted frame) must be DROPPED-and-counted with the association SURVIVING (not surfaced as an
+// error, which would let one replayed capture end the session); a fresh channel starts its own seq
+// at 0 and is accepted. Mutation-surviving: dropping the f.Seq!=st.seq check opens+delivers the
+// replay, so the delivered payload would be the replayed "replay" and the drop counter would stay 0.
 func TestRecvRejectsOutOfSequenceReplayAndPerChannelSeq(t *testing.T) {
 	a, b := net.Pipe()
 	defer func() { _ = a.Close(); _ = b.Close() }()
@@ -105,18 +107,44 @@ func TestRecvRejectsOutOfSequenceReplayAndPerChannelSeq(t *testing.T) {
 		t.Fatalf("client.Send Knowledge: %v", err)
 	}
 
-	// Replay on Memory: reset the client's Memory send seq to 0 and resend — the server now expects
-	// seq 1, so it must reject the replayed seq-0 frame out-of-sequence.
+	// Replay on Memory: reset the client's Memory send seq to 0. The server now expects seq 1, so the
+	// replayed seq-0 frame is DROPPED and counted, and the association SURVIVES — a following in-order
+	// frame still delivers and the replayed payload is NOT delivered. (Before the drop-and-survive
+	// hardening the server surfaced an out-of-sequence error, letting one replayed capture end the
+	// session.)
+	_, beforeOOS := server.SecurityDrops()
 	client.sendKeys[npamp.ChanMemory].seq = 0
-	go func() { sendErr <- client.Send(ctx, npamp.ChanMemory, ft, []byte("replay")) }()
-	_, _, _, err := server.Recv(ctx)
-	if err == nil {
-		t.Fatal("server accepted a replayed (out-of-sequence) frame — the replay guard was bypassed")
+
+	type recvOut struct {
+		ch  npamp.ChannelID
+		pt  []byte
+		err error
 	}
-	if !strings.Contains(err.Error(), "out-of-sequence") {
-		t.Fatalf("wrong error (want out-of-sequence): %v", err)
+	out := make(chan recvOut, 1)
+	go func() { ch, _, pt, e := server.Recv(ctx); out <- recvOut{ch, pt, e} }()
+	// Writer: the replayed Memory frame (dropped), then a fresh in-order Knowledge frame (delivered).
+	writeErr := make(chan error, 2)
+	go func() {
+		writeErr <- client.Send(ctx, npamp.ChanMemory, ft, []byte("replay"))
+		writeErr <- client.Send(ctx, npamp.ChanKnowledge, ft, []byte("k1"))
+	}()
+
+	r := <-out
+	if r.err != nil {
+		t.Fatalf("association did not survive a replayed frame: %v", r.err)
 	}
-	<-sendErr // the replayed frame was written + read before rejection; drain the sender
+	if r.ch != npamp.ChanKnowledge || string(r.pt) != "k1" {
+		t.Fatalf("delivered ch %#x payload %q, want Knowledge/k1 — the replay must be dropped, not delivered", uint16(r.ch), r.pt)
+	}
+	if e := <-writeErr; e != nil {
+		t.Fatalf("client.Send replay: %v", e)
+	}
+	if e := <-writeErr; e != nil {
+		t.Fatalf("client.Send k1: %v", e)
+	}
+	if _, afterOOS := server.SecurityDrops(); afterOOS != beforeOOS+1 {
+		t.Fatalf("out-of-sequence drop counter = %d, want %d — the replay was not counted", afterOOS, beforeOOS+1)
+	}
 }
 
 // TestReadFrameRejectsHostilePayloadLength pins the unauthenticated-peer byte-path hardening: a

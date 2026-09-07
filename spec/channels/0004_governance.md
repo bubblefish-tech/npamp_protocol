@@ -76,9 +76,9 @@ alter them.
   every N-PAMP channel, each peer maintains an independent send and receive
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously (core specification §5). The Governance
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Stream channel
-  `0x000C`).
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Stream channel `0x000C`).
 - **Advertisement gate.** A peer that has not advertised the Governance channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Governance channel MUST be dropped (core specification §5, applied to `0x0004`).
@@ -190,9 +190,9 @@ Notes and honest boundaries:
   This reference does not define it.
 - **Single-stream bidirectional operation.** The channel is Bidirectional, not
   Multi-stream (§2): both peers send and receive on a single stream, each with an
-  independent per-direction sequence space and traffic keys, and it does not open
-  multiple concurrent transport sub-streams within a stream family (core
-  specification §5). Either peer MAY originate a proposal, a vote, or a
+  independent per-direction sequence space and traffic keys, and it does not carry
+  multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads (core specification §5). Either peer MAY originate a proposal, a vote, or a
   quorum-closure exchange, subject to whatever operation contract the controlled
   track defines; this reference assigns no roles the core specification does not
   state.
@@ -307,8 +307,8 @@ only if, for channel `0x0004`, it:
    channel (§3.3, §4);
 7. Supports the channel's **Bidirectional** direction — both peers sending and
    receiving on a single stream, each maintaining independent per-direction sequence
-   spaces and traffic keys, without opening multiple concurrent transport
-   sub-streams within a stream family (§2, §4); and
+   spaces and traffic keys, without carrying multiple concurrent payload-layer
+   sub-streams multiplexed within its frame payloads (§2, §4); and
 8. Defers all Governance operation semantics beyond the registry-level interface of
    §4 — and every High/Sovereign operational and cryptographic internal — to the
    controlled track and any future specification, adding no Governance behavior of

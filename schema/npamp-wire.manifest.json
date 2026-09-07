@@ -1,0 +1,23 @@
+{
+  "artifact": "npamp-wire.cddl",
+  "artifactPath": "schema/npamp-wire.cddl",
+  "cddlArtifactVersion": "1.1.1",
+  "wireFormatVersion": 2,
+  "cryptoGeneration": 3,
+  "alpn": "n-pamp/3",
+  "specRevision": "draft-bubblefish-npamp-02",
+  "cddlGrammar": "RFC 8610 + RFC 9682",
+  "rootRule": "npamp-frame",
+  "sha256": "c2b7f0bf3f6ae728020db06ab014b4751e44b37dbd35274f3bfa24ef89a85111",
+  "changeNote_1_1_1": "P2.10 (2026-09-02): corrected the ml-dsa-87 sig-scheme code point from an erroneous 0x0905 (reserved for ML-DSA-65, unused by any profile) to the registry-correct 0x0906 (registries/signatures.csv:5; impl/go/suites.go:31), in the sigs group and the CertVerify Value comment. No grammar/structure change -- a value correction only.",
+  "sha256Note": "SHA-256 over the raw bytes of schema/npamp-wire.cddl, the same algorithm and value scripts/verify-pins.ps1 checks via MANIFEST.sha256. This manifest's sha256 field is a second, independent recording of that same content hash (recomputed with Get-FileHash -Algorithm SHA256 during authoring and confirmed to match MANIFEST.sha256's schema/npamp-wire.cddl entry) so a consumer of ONLY this manifest -- without cloning the whole repository or parsing MANIFEST.sha256 -- can still detect drift between the CDDL artifact it fetched and the version this manifest describes.",
+  "scopeNote": "This CDDL constrains ONLY lengths and permitted bit-sets/values for the N-PAMP wire-format-version-2 binary frame layout; it cannot express big-endianness, octet concatenation order, or the octet-4 Ver/Flags nibble split (RFC 8610 has no such primitives -- see the file's own header comment, 'HONEST SCOPE CAVEAT'). Byte-exact wire properties are graded separately by the conformance corpus (test-vectors/v1/conformance-corpus.json) and by impl/go/wirevalidator (registry-driven structural + registry validation, not a CDDL interpreter).",
+  "referenceValidator": {
+    "tool": "cddl (Ruby gem, Carsten Bormann's RFC 8610 reference implementation)",
+    "install": "gem install cddl --no-document",
+    "invocation": "cddl schema/npamp-wire.cddl generate > /dev/null",
+    "checks": "grammar well-formedness only (RFC 8610 syntax); does NOT validate any concrete frame's bytes",
+    "ciJob": ".github/workflows/conformance.yml job 'cddl'"
+  },
+  "versioningPolicy": "cddlArtifactVersion follows semver and is bumped on every change to schema/npamp-wire.cddl's content (i.e. whenever its sha256 changes). A consumer pins {artifactPath, cddlArtifactVersion, sha256} together; impl/go/schemaversion.VerifyManifest recomputes the sha256 from the on-disk file and fails closed on any mismatch, so this manifest and the CDDL file cannot silently drift apart."
+}

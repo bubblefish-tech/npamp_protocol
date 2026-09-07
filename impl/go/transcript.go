@@ -7,7 +7,7 @@ import (
 
 // Transcript is the handshake transcript of spec/10 section 3: a running byte
 // buffer whose hash points are H over all bytes absorbed so far. It
-// deliberately diverges from RFC 8446 section 4.4.1 — a frame contributes only
+// deliberately diverges from RFC 9846 section 4.4.1 — a frame contributes only
 // its 2-octet big-endian frame type followed by each TLV in canonical
 // Type(2) || Length(2) || Value form; the remaining 34 octets of the frame
 // header (magic, flags, channel, seq, payload length, CRC, reserved) and the

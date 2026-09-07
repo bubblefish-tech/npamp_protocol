@@ -288,7 +288,7 @@ func TestAcceptConnHandshakeTimeout(t *testing.T) {
 	// Client: complete TLS with the required ALPN, then stall — never send the
 	// N-PAMP CLIENT_HELLO frame.
 	cliCfg := tlsCfg.Clone()
-	cliCfg.NextProtos = []string{"n-pamp/2"}
+	cliCfg.NextProtos = []string{"n-pamp/3"}
 	cliCfg.MinVersion = tls.VersionTLS13
 	tc := tls.Client(rawClient, cliCfg)
 	hctx, hcancel := context.WithTimeout(context.Background(), 3*time.Second)

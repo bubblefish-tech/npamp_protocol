@@ -1,8 +1,10 @@
 package npamp
 
-// FrameType is a 16-bit frame type. The reserved system frame types below have the
-// same meaning on every channel (draft-00 section 4.6); channel-specific frame
-// types begin at 0x0100. Frame type 0x0000 is reserved and MUST NOT be used.
+// FrameType is a 16-bit frame type. The reserved all-channel system frame types
+// below (0x0000-0x000A) have the same meaning on every channel; channel-specific
+// application frame types begin at 0x0100 (the four-band partition of spec/04 /
+// the draft Reserved Frame Types section). Frame type 0x0000 is reserved and MUST
+// NOT be used.
 type FrameType uint16
 
 const (
@@ -18,5 +20,5 @@ const (
 	FrameFlowUpdate    FrameType = 0x000A
 )
 
-// ChannelSpecificBase is the first channel-local frame type (draft-00 section 4.6).
+// ChannelSpecificBase is the first channel-local frame type (spec/04 four-band partition).
 const ChannelSpecificBase FrameType = 0x0100

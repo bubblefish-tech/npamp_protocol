@@ -49,7 +49,7 @@ public final class HandshakeFlowKat {
     }
 
     static final String HANDSHAKE_FLOW_KAT_SHA256 =
-            "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9";
+            "d0df49ca9eca02969f782de9ab7ff394eab3313f84291a5aaa5ad1746e5441c3";
 
     // Standard profile (SHA-256, 32-octet secrets). The vector's "profile" is "Standard".
     static final boolean STANDARD = true;

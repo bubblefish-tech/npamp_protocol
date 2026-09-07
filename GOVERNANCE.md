@@ -111,7 +111,7 @@ weighed on its merits, not on the contributor's status ([§3](#3-how-decisions-a
 ### 2.4 Designated experts
 
 Two IANA registrations tied to N-PAMP are governed **outside** this project by
-IANA's own process: the ALPN identifier `n-pamp/2` (Expert Review, RFC 7301) and
+IANA's own process: the ALPN identifier `n-pamp/3` (Expert Review, RFC 7301; `n-pamp/2` deprecated) and
 the provisional `npamp` URI scheme (First Come First Served, RFC 7595). The
 project does not appoint those experts and cannot assign those values itself; it
 supplies the registration templates and the citing draft. This is stated so no
@@ -150,14 +150,14 @@ bearing:
 Every `design`-labeled issue that reaches consensus produces the **three
 artifacts** `CONTRIBUTING.md` already requires: (1) a closing comment recording
 the resolution, (2) a numbered **MADR 4.0 Architecture Decision Record** in
-[`decisions/`](decisions/), and (3) a change-log bullet in the draft's change
+`decisions/`, and (3) a change-log bullet in the draft's change
 appendix and in [`CHANGELOG.md`](CHANGELOG.md). Governance adds no fourth
 artifact and changes none of these three — it only states *who* has the authority
 to declare that consensus was reached (the Author/Editor, for normative content).
 
 > **Why an ADR, not just a merge.** The project's stated value is that every spec
 > decision is *traceable* — what was decided, why, which alternatives were weighed,
-> and how the decision is verified ([ADR-0001](decisions/0001-record-architecture-decisions.md)).
+> and how the decision is verified (ADR-0001).
 > A merge without an ADR loses the "why." The ADR is the durable record; the merge
 > is just the mechanics.
 
@@ -183,7 +183,7 @@ the wire* or *at a security boundary*. This includes, at minimum:
 - the profile parameter rows (KEM, signatures, KDF hash, diversification,
   downgrade rules);
 - any cryptographic-suite code point or its construction (for example the
-  ML-KEM-first combiner order, [ADR-0005](decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md));
+  ML-KEM-first combiner order, ADR-0005);
 - a companion specification's `MUST` / `MUST NOT` / `SHALL` behavior; and
 - any code-point **assignment** or policy change in [`registries/`](registries/).
 
@@ -226,13 +226,14 @@ A normative change carries a **compatibility class**, per `CONTRIBUTING.md`
 
 - **Additive** — registering a new value in an existing number space (for
   example a new AEAD or signature suite) is a value addition. It does not change
-  the wire layout and does not bump the wire major version.
+  the wire layout and does not bump the wire-format version.
 - **Major** — any change to the 36-octet header geometry, the magic value, the
   header CRC, the channel registry, the frame-type number space, or the TLV
-  number space is a wire-incompatible change. It requires a new wire major
-  version and therefore a **new ALPN identifier** (for example `n-pamp/3`), since
-  the digit in the ALPN label equals the value carried in the frame header's
-  `Ver` field.
+  number space is a wire-incompatible change. It requires a new wire-format
+  version and a **new ALPN identifier** (for example `n-pamp/4`). The ALPN
+  identifier and the frame-header `Ver` nibble are independent axes (see decision
+  0014): a wire-incompatible change is negotiated by a distinct ALPN identifier,
+  while the `Ver` nibble is the wire-format version.
 
 The Author/Editor MUST state the compatibility class in the ADR for any normative
 change, so a downstream implementer can tell an additive registration from a
@@ -283,8 +284,8 @@ things are true at once and must not be confused:
 - The **project-internal** registries (channels, frame types, TLV tags, profiles,
   KEM, AEAD, signatures, bridge protocol IDs) are managed *here*, by the
   Author/Editor, under the policies each registry states.
-- The **IANA-managed** identifiers tied to N-PAMP (the ALPN `n-pamp/2` under
-  Expert Review; the `npamp` URI scheme under First Come First Served) are
+- The **IANA-managed** identifiers tied to N-PAMP (the ALPN `n-pamp/3` under
+  Expert Review, with the prior `n-pamp/2` deprecated; the `npamp` URI scheme under First Come First Served) are
   managed by **IANA**, not by this project ([§2.4](#24-designated-experts)).
 
 ### 6.1 The three assignment bands

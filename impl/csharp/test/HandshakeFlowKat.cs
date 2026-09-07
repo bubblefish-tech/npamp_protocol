@@ -47,7 +47,7 @@ namespace Sh.Bubblefish.Npamp;
 
 public static class HandshakeFlowKat
 {
-    private const string HandshakeFlowKatSha256 = "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9";
+    private const string HandshakeFlowKatSha256 = "d0df49ca9eca02969f782de9ab7ff394eab3313f84291a5aaa5ad1746e5441c3";
 
     // Frame types (binding spec/10 section 1), carried on the Control channel, seq 0.
     private const int FrameClientHello = Handshake.FrameClientHello; // 0x0100

@@ -77,8 +77,9 @@ alter them.
   relationship in which an agent emits user-interface events toward the human's
   client and the human's client returns interaction events toward the agent
   (core specification §5). The Interaction channel is **not** classified
-  Multi-stream: it does not open multiple concurrent transport sub-streams within a
-  stream family (contrast the Multi-stream Stream channel `0x000C`).
+  Multi-stream: it does not carry multiple concurrent payload-layer sub-streams
+  multiplexed within its frame payloads (contrast the Multi-stream Stream channel
+  `0x000C`).
 - **Advertisement gate.** A peer that has not advertised the Interaction channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Interaction channel MUST be dropped (core specification §5, applied to `0x000F`).
@@ -340,8 +341,8 @@ only if, for channel `0x000F`, it:
    none of which the core specification defines for this channel (§3.3, §4);
 7. Supports the channel's **Bidirectional** direction — both peers sending and
    receiving on a single stream, each maintaining independent per-direction sequence
-   spaces and traffic keys — and does not open multiple concurrent transport streams
-   within the channel as though it were Multi-stream (§2); and
+   spaces and traffic keys — and does not carry multiple concurrent payload-layer
+   sub-streams within the channel as though it were Multi-stream (§2); and
 8. Where it OPTIONALLY carries foreign agent-to-human interaction traffic on this
    channel (§6), does so only under NPAMP-BRIDGE and the relevant carriage class or
    mapping, treating the foreign message as opaque and octet-exact, and does not rely

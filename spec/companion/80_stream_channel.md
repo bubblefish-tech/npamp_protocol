@@ -93,8 +93,9 @@ exception to it:
 * **Full-duplex, Multi-stream.** Under the core specification's channel architecture the
   channel is full-duplex — each peer maintains an independent send and receive sequence
   space and independent per-direction traffic keys — and Multi-stream, meaning it MAY
-  carry multiple concurrent transport sub-streams (core specification §5). NPAMP-STREAM
-  is the framing that realizes those sub-streams.
+  carry multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads, all over the channel's single ordered per-direction sequence (core
+  specification §5). NPAMP-STREAM is the framing that realizes those sub-streams.
 
 ### 2.2 Frame-type namespace and the reserved Stream range
 

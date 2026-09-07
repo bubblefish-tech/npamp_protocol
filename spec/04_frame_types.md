@@ -1,6 +1,6 @@
 # N-PAMP-01 — Frame Types (reference)
 
-> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §4.6 "Reserved Frame Types" and §8.1 "Reserved
 > Frame-Type Ranges". The draft governs. Machine-readable:
 > `../registries/frame_types_reserved.csv`.

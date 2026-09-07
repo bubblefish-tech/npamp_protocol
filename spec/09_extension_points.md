@@ -1,6 +1,6 @@
 # N-PAMP-01 — Extension Points & IANA Posture (reference)
 
-> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §8 "Extension Points" and §9.3/§9.5. The draft governs.
 
 The core protocol neither defines nor requires any extension; it only **reserves
@@ -21,9 +21,13 @@ core wire format.
 
 ## Reserved TLV tags (companion specs)
 
-TLV types **`0x0010`, `0x0013`, and `0x0014`** are reserved for extension TLVs
-defined in companion specifications. TLV types `0x8000`–`0xFFFF` remain reserved
-as forward-incompatible extension points (Type high bit set).
+TLV types **`0x0010`, `0x0012`, and `0x0013`** are reserved for extension TLVs
+defined in companion specifications; all three are assigned (`0x0010`
+BridgeEnvelope, `0x0012` OpaqueContentType, `0x0013` SafetyLabel —
+[`07_tlv_registry.md`](07_tlv_registry.md)). TLV type `0x0014` remains reserved
+for a companion specification but is fixed at 32 octets and handshake-only, so
+it cannot carry a variable-length extension value. TLV types `0x8000`–`0xFFFF`
+remain reserved as forward-incompatible extension points (Type high bit set).
 
 ## Reserved channel-ID range
 
@@ -39,7 +43,7 @@ published through the Independent Submission stream, it does **not** request the
 creation of new IANA-hosted registries for these code points; they are normative
 within the document and extended by companion specs and future revisions, **not**
 by IANA registration actions. The only IANA-registry actions -00 requests are the
-**ALPN identifier** (`n-pamp/2`, Expert Review) and the **`npamp://` URI scheme**
+**ALPN identifier** (`n-pamp/3`, Expert Review) and the **`npamp://` URI scheme**
 (provisional, FCFS).
 
 > **Companion specifications.** The semantics that occupy the reserved ranges above

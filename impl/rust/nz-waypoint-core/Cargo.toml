@@ -1,0 +1,30 @@
+[package]
+name = "nz-waypoint-core"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Pure, target-agnostic core of the N-PAMP R12/E2.7 L7 waypoint: N-AALP effect-class/audience authorization + R10 carriage-class dispatch. No I/O, no async runtime, no OS dependency -- compiles for wasm32-unknown-unknown (the nz-waypoint-wasm Envoy proxy-wasm hosting shape) exactly as it compiles for the native host (nz-agent's own waypoint module, which re-exports this crate rather than reimplementing it, so the two hosting shapes never drift apart on the authorization decision)."
+
+# INDEPENDENT crate, path-dependency only. Builds and tests standalone:
+# `cd impl/rust/nz-waypoint-core && cargo build && cargo test`. Extracted
+# 2026-09-05 from nz-agent/src/waypoint.rs's pure logic (E2.7 R12 AC3: "an
+# optional per-namespace L7 waypoint ... implementable as an Envoy
+# proxy-wasm N-PAMP filter and/or an agentgateway backend") so BOTH hosting
+# shapes compose the SAME authorization code instead of maintaining two
+# independently-drifting copies of a security-relevant decision -- the
+# exact anti-duplication discipline this module's own `resolved_max_grant`
+# helper already documents for `authorize` vs `resolve_grant_for_export`.
+#
+# Deliberately depends on nothing but `serde`/`serde_json` (both pure-Rust,
+# no OS/libc dependency, already wasm32-unknown-unknown targets in wide
+# production use — e.g. every wasm-bindgen JSON-serializing crate). Neither
+# nz-agent's tonic/tokio(rt-multi-thread)/hyper-util/opentelemetry graph
+# (spire_client.rs's gRPC client, telemetry.rs's OTel/Prometheus exporter)
+# NOR any OS-specific eBPF/WFP code lives here or is reachable from here —
+# that is precisely why this crate, and not the whole nz-agent crate, is
+# what nz-waypoint-wasm depends on: nz-agent's own dependency graph does not
+# cross-compile to wasm32-unknown-unknown (tokio's rt-multi-thread feature
+# needs OS threads a wasm32-unknown-unknown module does not have).
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

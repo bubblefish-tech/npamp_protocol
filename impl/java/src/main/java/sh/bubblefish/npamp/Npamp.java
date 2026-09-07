@@ -25,7 +25,7 @@ public final class Npamp {
     public static final int HEADER_SIZE = 36;
     public static final int PROTOCOL_VERSION = 0x2;
     public static final byte[] MAGIC = {'N', 'P', 'A', 'M'}; // ASCII "NPAM" = 0x4E50414D
-    public static final String ALPN = "n-pamp/2";
+    public static final String ALPN = "n-pamp/3";
     public static final String LABEL_PREFIX = "n-pamp "; // protocol-specific; NOT "tls13 "
 
     public static final int FLAG_URG = 0x01, FLAG_ENC = 0x02, FLAG_COMP = 0x04, FLAG_FRAG = 0x08;
@@ -34,10 +34,10 @@ public final class Npamp {
             CHAN_AUDIT = 0x000B, CHAN_BRIDGE = 0x000D, CHAN_SPATIAL = 0x0013;
     public static final int FRAME_PING = 0x0001, FRAME_PONG = 0x0002, FRAME_CLOSE = 0x0003,
             FRAME_FLOW_UPDATE = 0x000A, CHANNEL_SPECIFIC_BASE = 0x0100;
-    public static final int TLV_PROFILE_OFFER = 0x01, TLV_KEM_CIPHERTEXT = 0x08, TLV_ANOMALY_CHARGE = 0x12;
+    public static final int TLV_PROFILE_OFFER = 0x01, TLV_KEM_CIPHERTEXT = 0x08;
     public static final int KEM_X25519_MLKEM768 = 0x11ec, KEM_X25519_MLKEM1024 = 0x11ed;
     public static final int AEAD_AES256_GCM = 0x0001, AEAD_CHACHA20_POLY1305 = 0x0002;
-    public static final int SIG_ED25519 = 0x0807, SIG_MLDSA87 = 0x0905;
+    public static final int SIG_ED25519 = 0x0807, SIG_MLDSA87 = 0x0906;
 
     // -- Errors ------------------------------------------------------------
 

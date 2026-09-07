@@ -1,3 +1,7 @@
+// Needs the ML-KEM/X25519 crates the `session` feature (default-on) enables; skip
+// cleanly under `--no-default-features` instead of failing to compile.
+#![cfg(feature = "session")]
+
 // Standards-anchored X25519MLKEM768 KEM-wire known-answer test (spec/10 §4;
 // ADR-0005 ML-KEM-first). Mirrors the Go reference verifier
 // impl/go/kemwire_kat_test.go against test-vectors/v1/kem-wire-kat.json.

@@ -24,7 +24,7 @@ import {
 } from "../src/npamp.ts";
 
 const VECTORS = join(import.meta.dirname, "..", "..", "..", "test-vectors", "v1");
-const CERTVERIFY_KAT_SHA256 = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f";
+const CERTVERIFY_KAT_SHA256 = "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67";
 
 const hx = (s) => Buffer.from(s, "hex");
 
@@ -107,7 +107,7 @@ test("certverify_kat_impl", () => {
     assert.ok(!verifyCertVerify(pub, role.isServer, wrongTH, val), `[${role.name}] verifyCertVerify accepted a wrong transcript hash`);
     // Scheme guard: a non-Ed25519 scheme code point must FAIL.
     const wrongScheme = Buffer.from(val);
-    wrongScheme.writeUInt16BE(0x0905, 0); // ML-DSA-87 code point, not Ed25519 (0x0807)
+    wrongScheme.writeUInt16BE(0x0906, 0); // ML-DSA-87 code point, not Ed25519 (0x0807)
     assert.ok(!verifyCertVerify(pub, role.isServer, th, wrongScheme), `[${role.name}] verifyCertVerify accepted a non-Ed25519 scheme`);
     // Length guard: an Ed25519 signature is exactly 64 octets; a truncated value must FAIL.
     assert.ok(!verifyCertVerify(pub, role.isServer, th, val.subarray(0, val.length - 1)), `[${role.name}] verifyCertVerify accepted a truncated signature`);

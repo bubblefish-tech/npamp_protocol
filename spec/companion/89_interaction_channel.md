@@ -107,11 +107,11 @@ operation.
 
 **Not Multi-stream.** Unlike the Memory channel `0x0001` and the Stream channel
 `0x000C`, the Interaction channel is **not** classified Multi-stream: it does not
-open multiple concurrent transport sub-streams within a stream family
-(`../channels/000F_interaction.md` §2). Concurrent outstanding interactions (for
-example two prompts awaiting answers) are therefore multiplexed on the single
-bidirectional stream and disambiguated by the in-body correlation token (§5), not
-by distinct transport sub-streams.
+carry multiple concurrent payload-layer sub-streams multiplexed within its frame
+payloads (`../channels/000F_interaction.md` §2). Concurrent outstanding
+interactions (for example two prompts awaiting answers) are therefore multiplexed
+on the single bidirectional stream and disambiguated by the in-body correlation
+token (§5), not by distinct payload-layer sub-streams.
 
 **Minimum-profile gate.** A peer MUST enable the Interaction channel only at the
 **Standard** profile or higher; once Standard is met the channel is available at

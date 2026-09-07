@@ -495,7 +495,7 @@ fn finished_impl() {
 // ---------------------------------------------------------------------------
 
 const CERTVERIFY_KAT_SHA256: &str =
-    "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f";
+    "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67";
 
 /// Oracle signing input, built by hand independently of cert_verify_signing_input.
 fn oracle_signing_input(ctx: &str, th: &[u8]) -> Vec<u8> {

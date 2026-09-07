@@ -40,7 +40,7 @@ func TestAcceptHandshakeTimeout(t *testing.T) {
 	// Client: complete TCP + TLS with the required ALPN, then stall — never send the
 	// N-PAMP CLIENT_HELLO frame.
 	cliCfg := tlsCfg.Clone()
-	cliCfg.NextProtos = []string{"n-pamp/2"}
+	cliCfg.NextProtos = []string{"n-pamp/3"}
 	cliCfg.MinVersion = tls.VersionTLS13
 	conn, err := tls.Dial("tcp", ln.Addr().String(), cliCfg)
 	if err != nil {

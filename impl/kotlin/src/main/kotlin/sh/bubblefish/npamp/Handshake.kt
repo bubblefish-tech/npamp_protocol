@@ -38,8 +38,8 @@ object Handshake {
     const val FRAME_CLIENT_AUTH: Int = 0x0103
 
     // CertVerify context strings (spec §6.1).
-    const val CONTEXT_SERVER_CERTVERIFY: String = "N-PAMP/2, server CertificateVerify"
-    const val CONTEXT_CLIENT_CERTVERIFY: String = "N-PAMP/2, client CertificateVerify"
+    const val CONTEXT_SERVER_CERTVERIFY: String = "N-PAMP/3, server CertificateVerify"
+    const val CONTEXT_CLIENT_CERTVERIFY: String = "N-PAMP/3, client CertificateVerify"
 
     // -- Transcript --------------------------------------------------------
 

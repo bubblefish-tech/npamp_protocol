@@ -1,0 +1,11 @@
+# Compiled Java classes (build output, never committed).
+classes/
+__pycache__/
+diff_model.cpython-*.pyc
+
+# Working logs from a local run.sh / manual invocation (learn.log, learn-m1.log, ...).
+learn*.log
+
+# The LearnLib 0.18.0 uber-jar (7.87 MB) is fetched + SHA-verified by fetch-jar.sh, not
+# committed. See README.md.
+lib/*.jar

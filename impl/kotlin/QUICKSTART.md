@@ -27,7 +27,7 @@
 
 - **KEM operations** — no X25519MLKEM768 encapsulation/decapsulation; the key-schedule trunk takes
   the two KEM shared secrets as inputs.
-- A **TCP/TLS transport** (ALPN `n-pamp/2`), connection management, or an RPC/MCP client. Those live
+- A **TCP/TLS transport** (ALPN `n-pamp/3`), connection management, or an RPC/MCP client. Those live
   in a consuming product, which composes primitives like these with its own
   handshake + transport.
 

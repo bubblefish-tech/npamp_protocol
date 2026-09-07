@@ -9,8 +9,8 @@ without opening the CSVs by hand.
 !!! note "Derived, machine-readable-backed extract"
     The authoritative machine-readable form of each registry is its CSV under
     `registries/` (validated against its JSON Schema in `registries/schemas/` by
-    `scripts/validate-registries.py`). The authoritative *normative* form is
-    the Internet-Draft
+    `scripts/validate-registries.py`). The authoritative *normative* form is the
+    Internet-Draft `ietf/draft-bubblefish-npamp-latest.md`
     (revision **draft-bubblefish-npamp-01**; integrity pinned in `PIN.json`) and
     the companion specifications it references. **The CSVs and the draft govern;**
     this page is a rendered mirror of them. Each table below cites the exact CSV
@@ -24,9 +24,10 @@ Submission** stream. Per the draft's IANA posture (core specification §8 /
 **defined and maintained within the specification itself** and extended by
 companion specifications and future revisions — they do **not** create
 IANA-hosted registries. The only IANA-registry actions the draft requests are the
-**ALPN identifier** `n-pamp/2` (Expert Review) and the provisional **`npamp://`
-URI scheme** (First Come First Served); both are stated in the Internet-Draft's
-IANA Considerations.
+**ALPN identifier** `n-pamp/3` (Expert Review; `n-pamp/2` is the deprecated prior
+generation) and the provisional **`npamp://` URI scheme** (First Come First Served);
+the prior `n-pamp/2` request is written up in
+`IANA_ALPN_n-pamp-2_registration_request.md`.
 
 | Registry | Key column | Rows / ranges | Assignment governed by | Machine-readable | Authoritative section |
 |---|---|---|---|---|---|
@@ -148,15 +149,16 @@ Machine-readable: `../registries/tlv_tags.csv` · Authoritative:
 | 0x0A | CertVerify | var | SignatureScheme (u16) + signature over the transcript (handshake AUTH). |
 | 0x0B | Finished | var | Finished MAC, length = negotiated KDF-hash output (handshake AUTH). |
 | 0x0C | AEADOffer | var | AEAD suites offered by the client (handshake only). |
-| 0x0D | AEADSelect | 2 | AEAD suite selected by the server (handshake only). |
+| 0x0D | AEADSelect | var (2*N) | Ordered list of the server-selected AEAD suites, primary first (2 octets per suite; N=1 at Standard, N=2 at High/Sovereign). Handshake only. |
 | 0x10 | (reserved) | var | Reserved for a companion specification. |
-| 0x12 | AnomalyCharge | 32 | Per-frame integrity charge. |
+| 0x12 | OpaqueContentType | var | Full IANA media-type string for opaque carriage, when the payload's media type is not one of the BridgeEnvelope content_type enumerated values (companion specification NPAMP-CC-OPAQUE). |
 | 0x13 | (reserved) | var | Reserved for a companion specification. |
 | 0x14 | (reserved) | 32 | Reserved for a companion specification (handshake only). |
-| 0x15 | PathChallenge | 32 | Path-migration challenge nonce. |
-| 0x16 | PathResponse | 64 | Path-migration response. |
+| 0x15 | (reserved) | -- | Reserved; path validation uses the PATH_CHALLENGE / PATH_RESPONSE frames (0x0008 / 0x0009), not a TLV. |
+| 0x16 | (reserved) | -- | Reserved; see 0x15. |
 | 0x17 | KeyUpdateMarker | 8 | Key-update epoch marker. |
-| 0x18 | ProtectionMode | 1 | Protection-mode selector. |
+| 0x18 | ProtectionMode | 1 | Reserved; no defined values (header protection provided by the secure transport). |
+| 0x19 | RatchetGeneration | 8 | Master-ratchet generation index (8-octet big-endian), mirroring KeyUpdateMarker 0x17; carried in the MASTER_RATCHET/REKEM control frames (spec/10 section 9). |
 | 0x8000–0xFFFF | (reserved) | -- | Forward-incompatible extension points (Type high bit set). |
 
 ## Profile registry
@@ -171,15 +173,17 @@ Machine-readable: `../registries/profiles.csv` · Authoritative:
 | Profile | Code | Min KEM | Allowed signatures | KDF hash | Per-frame AEAD diversification | Downgrade refusal | Mandatory key update | Summary |
 |---|---|---|---|---|---|---|---|---|
 | Standard | 0x01 | X25519MLKEM768 | Ed25519 | SHA-256 | Off | Off | Yes | Baseline hybrid post-quantum security. |
-| High | 0x02 | X25519MLKEM1024 | Ed25519, ML-DSA-87 | SHA-384 | On | Refuses Standard | Yes (tighter bounds) | Stronger KEM parameters and stronger hash; downgrade refusal to Standard. |
-| Sovereign | 0x03 | X25519MLKEM1024 | ML-DSA-87 | SHA-384 | On | Refuses below Sovereign | Yes (tightest bounds) | Highest standard-crypto strength; downgrade refusal below Sovereign. |
+| High | 0x02 | SecP384r1MLKEM1024 | Ed25519, ML-DSA-87 | SHA-384 | On | Refuses Standard | Yes (tighter bounds) | Stronger KEM parameters and stronger hash; downgrade refusal to Standard. |
+| Sovereign | 0x03 | SecP384r1MLKEM1024 | ML-DSA-87 | SHA-384 | On | Refuses below Sovereign | Yes (tightest bounds) | Highest standard-crypto strength; downgrade refusal below Sovereign. |
 
 ## KEM-suite registry
 
-Hybrid post-quantum key establishment combining X25519 with ML-KEM (FIPS 203).
-The suite name lists X25519 first, but the shared secrets are concatenated
-**ML-KEM-first** as HKDF-Extract input keying material (ADR-0005; NIST SP 800-56C
-Rev. 2).
+Hybrid post-quantum key establishment combining an elliptic-curve ECDH with ML-KEM
+(FIPS 203), per RFC 10024 (formerly `draft-ietf-tls-ecdhe-mlkem`, published August
+2026). The concatenation order is **per-group**:
+X25519MLKEM768 is **ML-KEM-first**, and SecP384r1MLKEM1024 is **ECDHE-first (P-384
+first)** — each places the FIPS-approved component first (ADR-0005 for the 768 group;
+NIST SP 800-56C Rev. 2).
 
 Machine-readable: `../registries/kem.csv` · Authoritative:
 [core specification §Cryptographic suites](../spec/06_cryptographic_suites.md).
@@ -187,7 +191,7 @@ Machine-readable: `../registries/kem.csv` · Authoritative:
 | Code point | Name | Profiles | Construction |
 |---|---|---|---|
 | 0x11ec | X25519MLKEM768 | Standard, High | Hybrid X25519MLKEM768 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-768_SS \|\| X25519_SS (ML-KEM-first; ADR-0005 / NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. |
-| 0x11ed | X25519MLKEM1024 | High, Sovereign | Hybrid X25519MLKEM1024 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-1024_SS \|\| X25519_SS (ML-KEM-first; ADR-0005 / NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. Sovereign MUST NOT accept X25519MLKEM768. |
+| 0x11ed | SecP384r1MLKEM1024 | High, Sovereign | Hybrid SecP384r1MLKEM1024 (secp384r1 + FIPS 203 ML-KEM-1024) per RFC 10024 (formerly draft-ietf-tls-ecdhe-mlkem): the SecP* groups are ECDHE-first. KEMShare = secp384r1 public key (97) \|\| ML-KEM-1024 encapsulation key (1568) = 1665; KEMCiphertext = server secp384r1 public key (97) \|\| ML-KEM-1024 ciphertext (1568) = 1665; shared secrets concatenated ECDHE_SS (48, secp384r1 x-coordinate) \|\| ML-KEM-1024_SS (32) = 80 (P-384-first; NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. Sovereign MUST NOT accept X25519MLKEM768. |
 
 ## AEAD-suite registry
 
@@ -213,7 +217,34 @@ Machine-readable: `../registries/signatures.csv` · Authoritative:
 | Code point | Name | Usage | Profiles | Reference |
 |---|---|---|---|---|
 | 0x0807 | Ed25519 | Identity, capability tokens | All | RFC 8032 |
-| 0x0905 | ML-DSA-87 | Identity, audit epoch | High, Sovereign | FIPS 204 |
+| 0x0904 | ML-DSA-44 | Reserved (IANA TLS SignatureScheme); unused by any N-PAMP profile | — | FIPS 204 / draft-ietf-tls-mldsa |
+| 0x0905 | ML-DSA-65 | Reserved (IANA TLS SignatureScheme); unused by any N-PAMP profile | — | FIPS 204 / draft-ietf-tls-mldsa |
+| 0x0906 | ML-DSA-87 | Identity, audit epoch | High, Sovereign | FIPS 204 / draft-ietf-tls-mldsa |
+
+## Error/alert code registry
+
+Every "MUST reject" / "MUST abort" condition in the core specification maps to
+exactly one of these codes, carried in the ERROR frame (`0x0005`) so the failing
+condition is decidable from the wire. Code 0 is reserved; codes 10–255 are reserved
+to this specification for future core conditions.
+
+Machine-readable: `../registries/error_codes.csv` · Authoritative:
+[core specification §ERROR Frame](../ietf/draft-bubblefish-npamp-latest.md).
+
+| Code | Name | Reaction | Condition |
+|---|---|---|---|
+| 0 | (reserved) | — | Reserved; MUST NOT be sent. |
+| 1 | unexpected_message | fatal | A frame not legal for the current state (state-machine total default): out-of-order, wrong-flight, repeated, an application frame before ESTABLISHED, or an effecting frame in ESTABLISHED_READONLY. |
+| 2 | decrypt_failed | fatal | An AEAD open failed, or a handshake CertVerify signature or Finished MAC verification failed. |
+| 3 | replay_detected | discard | A frame's sequence number was below the replay window or already recorded within it; the frame is dropped and counted, the connection survives. |
+| 4 | unknown_channel | discard | A frame arrived on a channel the peer did not advertise during the handshake; the frame is dropped and counted. |
+| 5 | unknown_critical_tlv | fatal | A frame carried an unknown extension TLV with the high bit (0x8000) set. |
+| 6 | handshake_timeout | fatal | The handshake did not complete within the handshake-completion timer. |
+| 7 | downgrade_detected | fatal | A profile or algorithm selection was not covered by the transcript the handshake MAC and CertVerify authenticate. |
+| 8 | close_incomplete | fatal | A CLOSE was not acknowledged within the CLOSE_ACK-wait timer. |
+| 9 | key_update_out_of_order | fatal | A KeyUpdateMarker announced an epoch other than current + 1, or was malformed. |
+| 10 | flow_control_error | fatal | A peer's cumulative sent-payload total exceeded the connection-level receive limit the receiver advertised via FLOW_UPDATE (Connection-Level Flow Control). |
+| 0x000B–0x00FF | (reserved) | — | Unassigned; reserved to this specification for future core conditions. |
 
 ## Bridge protocol-ID registry
 
@@ -235,7 +266,8 @@ Machine-readable: `../registries/bridge_protocol_ids.csv` · Authoritative:
 | 0x02 | A2A — Agent2Agent | JSONRPC (with DOC for the AgentCard) | NPAMP-MAP-A2A | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
 | 0x03 | HTTP/2 generic carriage | HTTP | NPAMP-CC-HTTP | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
 | 0x04 | WebSocket generic carriage | STREAM | NPAMP-CC-STREAM | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
-| 0x05–0x0F | (unassigned) | -- | -- | Specification Required | Unassigned standards range; available under the Specification Required policy of RFC 8126 via the registration procedure of NPAMP-REG Section 8. |
+| 0x05 | gRPC generic carriage | STREAM | NPAMP-CC-STREAM | Specification Required | Standards-assigned via NPAMP-REG Section 8 registration procedure; recorded in NPAMP-REG Section 6; the next available code point after 0x01-0x04, mirroring the 0x04 WebSocket row's own generic-carriage pattern; MUST NOT be reassigned. |
+| 0x06–0x0F | (unassigned) | -- | -- | Specification Required | Unassigned standards range; available under the Specification Required policy of RFC 8126 via the registration procedure of NPAMP-REG Section 8. |
 | 0x10–0x7F | (experimental) | -- | -- | No registration | Experimental range; usable without registration; carries no guaranteed cross-domain meaning; a sender MUST NOT use it without out-of-band agreement with the peer. NPAMP-REG Section 7.1. |
 | 0x80–0xFF | (private use) | -- | -- | No registration | Private-use range; usable within a single administrative domain without registration; never assigned by this registry; MUST NOT be emitted toward a peer outside that domain. NPAMP-REG Section 7.2. |
 
@@ -251,14 +283,14 @@ matches the registry you want to touch, then use the
 | Bridge `protocol_id` `0x10`–`0x7F` (experimental) | **No registration** | Use directly under out-of-band peer agreement (NPAMP-REG §7.1) | Nobody — unregistered |
 | Bridge `protocol_id` `0x80`–`0xFF` (private use) | **No registration** | Use within one administrative domain (NPAMP-REG §7.2) | The controlling domain |
 | Bridge `protocol_id` `0x00`–`0x04` | **Not assignable / already assigned** | — MUST NOT be reassigned | — |
-| Core channel / frame-type / TLV registries | Maintained **in the specification** (Independent Submission) | An **NEP** (`process/NEP-0000`) + ADR + PR against the draft; additive registrations vs. major-version layout changes per `CONTRIBUTING.md` | Draft editor / IESG-independent review |
+| Core channel / frame-type / TLV / error-code registries | Maintained **in the specification** (Independent Submission) | An **NEP** (`process/NEP-0000`) + ADR + PR against the draft; additive registrations vs. major-version layout changes per `CONTRIBUTING.md` | Draft editor / IESG-independent review |
 | Core profile / KEM / AEAD / signature suites | Maintained **in the specification** | An **NEP** + ADR + PR (a new suite identifier is an additive registration) | Draft editor / IESG-independent review |
-| ALPN identifier (`n-pamp/2`) | **Expert Review** (RFC 7301 §6) | IANA registration request (stated in the Internet-Draft's IANA Considerations) | IANA designated expert |
-| `npamp://` URI scheme | **First Come First Served / Provisional** (RFC 7595) | IANA registration request (stated in the Internet-Draft's IANA Considerations) | IANA (provisional) |
+| ALPN identifier (`n-pamp/3`; prior `n-pamp/2` deprecated) | **Expert Review** (RFC 7301 §6) | IANA registration request (see `IANA_ALPN_n-pamp-2_registration_request.md` for the prior `n-pamp/2` request) | IANA designated expert |
+| `npamp://` URI scheme | **First Come First Served / Provisional** (RFC 7595) | IANA registration request (see `IANA_ALPN_n-pamp-2_registration_request.md`) | IANA (provisional) |
 
 !!! warning "Wire stability"
     Per `CONTRIBUTING.md` §"Code-point stability", changes to the 36-octet header
     geometry, the magic value, the header CRC, the channel registry, the
     frame-type number space, or the TLV number space are **major-version** changes
-    (a new ALPN identifier, e.g. `n-pamp/3`), not additive registrations. Additive
+    (a new ALPN identifier, e.g. `n-pamp/4`), not additive registrations. Additive
     suite/identifier registrations do not change the wire layout.

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
+	"errors"
 	"hash"
 )
 
@@ -61,12 +62,45 @@ func DeriveTrafficSecret(master []byte, dir Direction, epoch uint64, suite AEADI
 // HandshakeSecret is the single HKDF-Extract at the root of the handshake key
 // schedule (spec/10 section 5):
 //
-//	handshake_secret = HKDF-Extract(salt = HashLen x 0x00, IKM = ML-KEM_SS || X25519_SS)
+//	handshake_secret = HKDF-Extract(salt = HashLen x 0x00, IKM = ss.Combined())
 //
-// The salt is HashLen zero octets (the RFC 5869 section 2.2 default); the IKM
-// is the ML-KEM-first combined KEM output (ADR-0005) — the Extract is the
-// hybrid combiner (a dual-PRF), with no hybrid-layer KDF before it.
+// The salt is HashLen zero octets (the RFC 5869 section 2.2 default); the IKM is the
+// per-group combined KEM shared secret (ss.Combined()) — the Extract is itself the
+// hybrid combiner (a dual-PRF), with no hybrid-layer KDF before it. The concatenation
+// order is per-group per RFC 10024 (formerly draft-ietf-tls-ecdhe-mlkem; decision D2, superseding the
+// ADR-0005 universal ML-KEM-first): this SharedSecrets value is the X25519MLKEM768
+// group, whose Combined() is ML-KEM_SS || X25519_SS; SecP384r1MLKEM1024 uses
+// SharedSecrets1024.Combined() (ECDHE_SS || ML-KEM_SS). The public KEM material is
+// bound via the transcript (TH_kem), not folded into this Extract input.
 func HandshakeSecret(ss SharedSecrets, p Profile) ([]byte, error) {
+	h := hashForProfile(p)
+	return hkdf.Extract(h, ss.Combined(), make([]byte, h().Size()))
+}
+
+// ErrHandshakeSecret1024StandardProfile is returned by HandshakeSecret1024
+// when called with ProfileStandard. SecP384r1MLKEM1024 (kem1024.go) is the
+// High/Sovereign minimum KEM (spec/05_profiles.md "Minimum KEM"); Standard
+// uses X25519MLKEM768 and HandshakeSecret, never this function — a Standard
+// session that reached this call would be a protocol-layer bug upstream
+// (the SDK's KEM-group selection is profile-derived), so this is fail-closed
+// rather than a silent fallback to the wrong combiner/hash.
+var ErrHandshakeSecret1024StandardProfile = errors.New("npamp: HandshakeSecret1024 called with ProfileStandard (SecP384r1MLKEM1024 is High/Sovereign only, spec/05_profiles.md)")
+
+// HandshakeSecret1024 is HandshakeSecret for the SecP384r1MLKEM1024 KEM
+// (High, Sovereign), identical construction over the wider 1024 shared-secret
+// type (spec/10 section 5, spec/10 section 4a):
+//
+//	handshake_secret = HKDF-Extract(salt = HashLen x 0x00, IKM = ss.Combined())
+//
+// ss.Combined() is ECDHE_SS || ML-KEM_SS (kem1024.go: SecP384r1MLKEM1024 is
+// ECDHE-first, the reverse of X25519MLKEM768's ML-KEM-first order). p selects
+// H/HashLen exactly as HandshakeSecret does (SHA-384/48 at High and Sovereign,
+// the only profiles p may be here). Fail-closed for ProfileStandard: see
+// ErrHandshakeSecret1024StandardProfile.
+func HandshakeSecret1024(ss SharedSecrets1024, p Profile) ([]byte, error) {
+	if p == ProfileStandard {
+		return nil, ErrHandshakeSecret1024StandardProfile
+	}
 	h := hashForProfile(p)
 	return hkdf.Extract(h, ss.Combined(), make([]byte, h().Size()))
 }
@@ -105,7 +139,7 @@ func DeriveMasterSecret(handshakeSecret, thCCV []byte, p Profile) ([]byte, error
 }
 
 // DeriveFinishedKey derives the Finished MAC key from a per-direction
-// handshake traffic secret (spec/10 section 6.2, per RFC 8446 section 4.4.4):
+// handshake traffic secret (spec/10 section 6.2, per RFC 9846 section 4.4.4):
 //
 //	finished_key = HKDF-Expand-Label(BaseKey, "finished", "", HashLen)
 //
@@ -116,7 +150,7 @@ func DeriveFinishedKey(handshakeTrafficSecret []byte, p Profile) ([]byte, error)
 }
 
 // RatchetMasterTier1 performs the cheap symmetric forward step of the master
-// ratchet (spec/10 section 5, Hybrid Tree Ratchet Tier 1):
+// ratchet (spec/10 section 9.1, Hybrid Tree Ratchet Tier 1):
 //
 //	master_{G+1} = HKDF-Expand-Label(master_G, "master ratchet", gen(8 BE, value targetGen), HashLen)
 //
@@ -134,7 +168,7 @@ func RatchetMasterTier1(master []byte, targetGen uint64, p Profile) ([]byte, err
 }
 
 // RatchetMasterTier2 performs the periodic asymmetric re-KEM step of the master
-// ratchet (spec/10 section 5, Hybrid Tree Ratchet Tier 2):
+// ratchet (spec/10 section 9.2, Hybrid Tree Ratchet Tier 2):
 //
 //	rekem_secret = HKDF-Extract(salt = master_G, IKM = new_ss)
 //	master_{G+1} = HKDF-Expand-Label(rekem_secret, "master ratchet rekem", TH_rekem, HashLen)

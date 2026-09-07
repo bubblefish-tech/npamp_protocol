@@ -103,8 +103,9 @@ reference `../channels/0012_knowledge.md`). Under the core specification's chann
 architecture every channel is full-duplex: each peer maintains an independent
 per-direction sequence space and independent per-direction traffic keys, and —
 because Knowledge is **Multi-stream** — a deployment MAY carry concurrent retrieval
-exchanges over multiple transport streams within the channel's stream family, so
-that one long-running or large-result query does not head-of-line block another.
+exchanges as multiple payload-layer sub-streams multiplexed within the channel's
+single ordered per-direction sequence, so that one long-running or large-result
+query does not head-of-line block another.
 Either peer MAY originate a Knowledge operation.
 
 **Minimum-profile gate.** A peer MUST enable the Knowledge channel only at the
@@ -279,8 +280,9 @@ body (§2).
 * A receiver MUST match a reply, a streamed page, or a subscribed update to its
   originating request by `corr`, **not** by the per-(channel, direction) frame
   sequence number. Because the Knowledge channel is Multi-stream, concurrent
-  operations may be carried across multiple transport streams, where sequence order
-  within any one stream does not identify the originating exchange.
+  operations may be interleaved as multiple payload-layer sub-streams within the
+  channel's single ordered per-direction sequence, where the sequence number alone
+  does not identify the originating exchange.
 
 ### 5.2 Correlation and subscription lifetime
 
@@ -318,7 +320,8 @@ rather than encoding a null placeholder; a producer that does encode an explicit
 
 Issue a retrieval query. Because the channel is bidirectional and Multi-stream,
 either peer MAY originate a query, and multiple queries MAY be in flight
-concurrently on separate streams within the channel's stream family.
+concurrently as separate payload-layer sub-streams within the channel's single
+ordered per-direction sequence.
 
 | Field (key) | CBOR type | Req | Meaning |
 |---|---|---|---|

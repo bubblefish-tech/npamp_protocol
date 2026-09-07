@@ -1,8 +1,9 @@
 ; ============================================================================
-; N-PAMP/2 BINARY WIRE FORMAT — CDDL DATA MODEL (RFC 8610)
+; N-PAMP BINARY WIRE FORMAT (wire-format version 2) — CDDL DATA MODEL (RFC 8610)
 ; ============================================================================
 ;
-; Protocol : N-PAMP/2 (draft-bubblefish-npamp-01), ALPN "n-pamp/2".
+; Protocol : N-PAMP — wire-format version 2 (frame layout, the Ver nibble 0x2);
+;            crypto generation 3, ALPN "n-pamp/3".
 ; Source of truth : this repository — spec/*.md + registries/*.csv, cross-verified
 ;                   against the Go reference impl (impl/go/*.go). Both agree
 ;                   byte-for-byte.
@@ -12,7 +13,7 @@
 ; ---------------------------------------------------------------------------
 ; RFC 8610 CDDL is a notation for CBOR/JSON data structures. It has NO
 ; octet-concatenation operator, NO field-endianness annotation, and NO
-; bit-order / sub-byte-integer primitive. N-PAMP/2 is a byte-exact binary
+; bit-order / sub-byte-integer primitive. N-PAMP (wire-format version 2) is a byte-exact binary
 ; wire, NOT CBOR/JSON. Therefore this file constrains ONLY lengths and
 ; permitted bit-sets/values; the sequential octet layout, big-endianness of
 ; integer fields, and the nibble split of octet 4 are carried in the PROSE
@@ -75,17 +76,19 @@
 ;   Header (36 B) || Extension TLVs (var) || Payload (var, AEAD-sealed) || Tag (16 B)
 ;
 ; - The 36-octet header is fixed-size (spec/02:15).
-; - Zero or more extension TLVs MAY accompany a frame (spec/02:16).
-; - The payload is AEAD-sealed (spec/02:17).
-; - The 16-octet AEAD Tag is the MANDATORY final component of every frame
-;   (spec/02:18).
+; - Everything after the 36-octet header is a single Payload region (spec/02
+;   §Frame structure). Extension TLVs, where a frame type uses them, are
+;   frame-type-specific payload content (§3 below), NOT a separate wire region.
+; - The payload is AEAD-sealed and ends with the 16-octet AEAD Tag, which is the
+;   mandatory final 16 octets of the payload and is counted in Payload Length
+;   (spec/02:17-18).
 ; - AEAD associated data (AD) = the 21-octet header prefix, octets 0-20 — the
 ;   same octets the header CRC32C covers (spec/02:19-20; impl/go/frame.go:50-64).
 ;
-; ENFORCED by CDDL below: header is exactly 36 octets, tag is exactly 16 octets,
-;   each TLV is well-formed, payload is an opaque byte run.
-; NOT ENFORCED (prose only): the end-to-end octet concatenation order; that the
-;   payload is actually sealed under the tag; the AD binding of header<->tag.
+; ENFORCED by CDDL below: header is exactly 36 octets; payload is an opaque byte
+;   run (its internal TLV/tag structure is frame-type-specific, per §3/§7).
+; NOT ENFORCED (prose only): the trailing-16-octet-tag position; that the payload
+;   is actually sealed under the tag; the AD binding of header<->tag.
 ; ENFORCED ELSEWHERE (complementary): the byte-exact header properties (magic,
 ;   Ver==0x2 nibble, CRC32C, reserved-zero) are checked executably by the
 ;   conformance corpus (test-vectors/v1/conformance-corpus.json, groups
@@ -94,9 +97,12 @@
 ;   "WHERE THE BYTE-EXACT PROPERTIES ARE ENFORCED" note in the file header above.
 npamp-frame = [
   header:      npamp-header,      ; 36 octets, fixed (§2 below)
-  ext-tlvs:    tlv-sequence,      ; 0..* extension TLVs (§3 below)
-  payload:     bstr,              ; var, AEAD-sealed ciphertext (opaque here)
-  aead-tag:    aead-tag,          ; 16 octets, mandatory (§7 below)
+  payload:     bstr,              ; var; the frame-type body (including any
+                                  ;   extension TLVs, §3) followed by the trailing
+                                  ;   16-octet AEAD tag (§7) — opaque here,
+                                  ;   AEAD-sealed, exactly Payload-Length octets
+                                  ;   (spec/02 §Frame structure; the reference
+                                  ;   impl/go/frame.go is header || payload).
 ]
 
 ; A run of zero or more TLVs. CDDL models this as an array of TLV groups; on the
@@ -298,12 +304,21 @@ frame-type-forbidden = 0x0000
 
 ; Control-channel handshake frame types (Control channel 0x0000) —
 ; frame_types_reserved.csv:20-23; impl/go/handshake.go:16-21.
-handshake-frame-type-value = &handshake-frame-types
+handshake-frame-type-value = &handshake-frame-types / &control-ratchet-frame-types
 handshake-frame-types = (
   client-hello: 0x0100,   ; CLIENT_HELLO (cleartext)
   server-hello: 0x0101,   ; SERVER_HELLO (cleartext)
   server-auth:  0x0102,   ; SERVER_AUTH  (AEAD-encrypted)
   client-auth:  0x0103,   ; CLIENT_AUTH  (AEAD-encrypted)
+)
+; Control-channel master-ratchet frame types (Hybrid Tree Ratchet, spec/10 section 9;
+; impl/go/handshake.go FrameMasterRatchet..FrameReKEMAck, SDK dispatch in sdk/ratchet.go).
+; Control channel 0x0000, sealed under the current generation's Control-channel key.
+control-ratchet-frame-types = (
+  master-ratchet:     0x0104,   ; MASTER_RATCHET     (Tier-1 boundary)
+  master-ratchet-ack: 0x0105,   ; MASTER_RATCHET_ACK (Tier-1 confirmation)
+  rekem:              0x0106,   ; REKEM              (Tier-2 request)
+  rekem-ack:          0x0107,   ; REKEM_ACK          (Tier-2 boundary)
 )
 ; Channel-specific frame types begin at 0x0100 (impl/go/frametypes.go:22,
 ; ChannelSpecificBase). Companion-reserved ranges (spec/04:37-45, spec/09:11-20,
@@ -340,15 +355,16 @@ tlv-tags = (
   finished:          0x0B,   ; Finished       (var = HashLen; AUTH)
   aead-offer:        0x0C,   ; AEADOffer      (var; handshake)
   aead-select:       0x0D,   ; AEADSelect     (2 octets; handshake)
-  anomaly-charge:    0x12,   ; AnomalyCharge  (32 octets)
-  path-challenge:    0x15,   ; PathChallenge  (32 octets)
-  path-response:     0x16,   ; PathResponse   (64 octets)
   key-update-marker: 0x17,   ; KeyUpdateMarker (8 octets)
   protection-mode:   0x18,   ; ProtectionMode (1 octet)
+  ratchet-generation: 0x19,  ; RatchetGeneration (8 octets; MASTER_RATCHET/REKEM control frames)
+  opaque-content-type: 0x12, ; OpaqueContentType (var; media-type string; NPAMP-CC-OPAQUE spec/companion/25_carriage_opaque.md)
 )
-; Companion-reserved TLV tags (spec/07:24-27; spec/09:22-26): 0x10 (var), 0x13
-; (var), 0x14 (32 octets, handshake only). 0x8000 .. 0xFFFF forward-incompatible.
-tlv-tag-companion-reserved   = 0x10 / 0x13 / 0x14
+; Reserved TLV tags: 0x10 (var), 0x13 (var), 0x14 (32 octets, handshake only), and
+; 0x15 / 0x16 (formerly path-migration; path validation uses the PATH_CHALLENGE /
+; PATH_RESPONSE frames 0x0008 / 0x0009, not a TLV). 0x8000 .. 0xFFFF forward-incompatible.
+; 0x12 (OpaqueContentType) is now assigned above -- see tlv-tags.
+tlv-tag-companion-reserved   = 0x10 / 0x13 / 0x14 / 0x15 / 0x16
 tlv-tag-forward-incompatible = 0x8000 .. 0xFFFF
 
 
@@ -366,11 +382,12 @@ profiles = (
 )
 ; Reserved profiles: 0x00 and 0x04 .. 0xFF (impl/go/profiles.go:5).
 
-; KEM (u16) — kem.csv:2-3; impl/go/suites.go:9-12. Wire secret order ML-KEM-first.
+; KEM (u16) — kem.csv:2-3; impl/go/suites.go:9-12. Per-group secret/wire order:
+; x25519-mlkem768 is ML-KEM-first; secp384r1-mlkem1024 is ECDHE-first (P-384 first).
 kem-value = &kems
 kems = (
-  x25519-mlkem768:  0x11EC,   ; Standard, High
-  x25519-mlkem1024: 0x11ED,   ; High, Sovereign
+  x25519-mlkem768:     0x11EC,   ; Standard, High  (ML-KEM-first)
+  secp384r1-mlkem1024: 0x11ED,   ; High, Sovereign (ECDHE-first / P-384 first)
 )
 
 ; AEAD (u16) — aead.csv:2-3; impl/go/suites.go:17-20. Both: key 32, nonce 12, tag 16.
@@ -384,7 +401,11 @@ aeads = (
 sig-value = &sigs
 sigs = (
   ed25519:   0x0807,   ; all profiles
-  ml-dsa-87: 0x0905,   ; High, Sovereign
+  ml-dsa-87: 0x0906,   ; High, Sovereign (corrected 2026-09-02, P2.10: was
+                        ; erroneously 0x0905 here and in impl/rust/src/lib.rs
+                        ; SIG_MLDSA87 -- 0x0905 is reserved for ML-DSA-65,
+                        ; unused by any profile; registries/signatures.csv:5
+                        ; and impl/go/suites.go:31 were already correct)
 )
 
 ; Bridge Protocol ID (u8; Bridge channel 0x000D BridgeEnvelope) —
@@ -467,7 +488,7 @@ client-hello-payload = [
 ;   1 ProfileSelect 0x02 : 1 octet  (fixed; handshake.go:222-224)
 ;   2 KEMSelect     0x04 : 2 octets (fixed; BE u16 KEM code)
 ;   3 SigSelect     0x06 : 2 octets (fixed; BE u16 Sig code)
-;   4 AEADSelect    0x0D : 2 octets (fixed; BE u16 AEAD code)
+;   4 AEADSelect    0x0D : var, 2*N octets (N>=1 BE u16 AEAD codes, primary first)
 ;   5 KEMCiphertext 0x08 : var, >=1 (@X25519MLKEM768 = ML-KEM-768 ct(1088) ||
 ;                          server X25519 pk(32) = 1120 octets, spec/10:106-107)
 server-hello-payload = [
@@ -513,7 +534,7 @@ hs-tlv-kem-share     = [ type: 0x0007, length: u16, value: bstr ]   ; 0x07 var >
 hs-tlv-profile-select  = [ type: 0x0002, length: u16, value: bstr .size 1 ] ; 0x02
 hs-tlv-kem-select      = [ type: 0x0004, length: u16, value: bstr .size 2 ] ; 0x04 BE u16
 hs-tlv-sig-select      = [ type: 0x0006, length: u16, value: bstr .size 2 ] ; 0x06 BE u16
-hs-tlv-aead-select     = [ type: 0x000D, length: u16, value: bstr .size 2 ] ; 0x0D BE u16
+hs-tlv-aead-select     = [ type: 0x000D, length: u16, value: bstr ] ; 0x0D 2*N octets: N>=1 BE u16 AEAD codes, primary first (spec/06 per-frame AEAD selection)
 hs-tlv-kem-ciphertext  = [ type: 0x0008, length: u16, value: bstr ]         ; 0x08 var >=1
 
 ; AUTH TLVs
@@ -524,7 +545,7 @@ hs-tlv-finished     = [ type: 0x000B, length: u16, value: bstr ]   ; 0x0B var = 
 ; --- 8d. CertVerify Value (TLV 0x0A) — spec/10:166-176; handshake.go:294-320 ---
 ; value = SignatureScheme (BE u16) || signature. The inner signature has NO
 ; length prefix; the TLV Length delimits it. @Ed25519 = 2 + 64 = 66 octets.
-; scheme is one of the negotiated signature code points (Ed25519 0x0807 / ML-DSA-87 0x0905).
+; scheme is one of the negotiated signature code points (Ed25519 0x0807 / ML-DSA-87 0x0906).
 ; HONEST LIMITATION: the u16-scheme and signature are shown as an annotative
 ; [ ] pair; on the wire they are concatenated octets, and the signature length
 ; is implied by (TLV Length - 2), which CDDL cannot compute across fields.
@@ -534,8 +555,8 @@ cert-verify-value = [
 ]
 ; signing_input (prose; spec/10:166-170; handshake.go:294-306):
 ;   0x20 x 64 || context || 0x00 || transcript_hash
-;   context(server) = "N-PAMP/2, server CertificateVerify"
-;   context(client) = "N-PAMP/2, client CertificateVerify"
+;   context(server) = "N-PAMP/3, server CertificateVerify"
+;   context(client) = "N-PAMP/3, client CertificateVerify"
 ;   signed transcript_hash = TH_sId (server) / TH_cId (client) (spec/10:172-173)
 
 ; --- 8e. Finished Value (TLV 0x0B) — spec/10:183-189; handshake.go:355-359 ---
@@ -553,6 +574,24 @@ cert-verify-value = [
 ;   AddTLV(t) absorbs one TLV as Type(2) || Length(2) || Value (spec/10:82).
 ;   Five transcript points: TH_kem, TH_sId, TH_sCV, TH_cId, TH_cCV (spec/10:88-94).
 ; This is a hashing procedure, not a wire structure; CDDL models none of it.
+
+; --- 8f. ERROR frame body (0x0005, AEAD-protected) — draft "ERROR Frame";
+;         a deterministic-CBOR map, NOT a TLV sequence ------------------------
+; The ERROR payload is a deterministic CBOR map (RFC 8949 §4.2.1) with two integer
+; keys: 1 => code (uint from the Error/Alert Code Registry; 0 reserved, 1..10 defined),
+; 2 => context (bstr, OPTIONAL diagnostic, MAY be zero-length). Sent on Control
+; 0x0000 to report an abort reason; advisory only — the receiver verifies the AEAD
+; tag before reading it and makes no security decision on its contents.
+error-body = {
+  1 => 0..255,   ; code: Error/Alert Code Registry value (one octet; 0 reserved, 1..10 defined)
+  2 => bstr,     ; context: diagnostic, always present, MAY be zero-length
+}
+
+; FLOW_UPDATE (0x000A) body: the sender's new connection-level receive limit, an
+; 8-octet big-endian unsigned integer (cumulative frame-payload octets the recipient
+; MAY have sent since connection start). Only-increases; the limit comparison and the
+; flow_control_error reaction are normative in spec prose, not expressible in CDDL.
+flow-update-body = bstr .size 8
 
 
 ; ===========================================================================

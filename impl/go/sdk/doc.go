@@ -11,7 +11,7 @@
 // two missing pieces so a developer can open a mutually-authenticated,
 // post-quantum session in a few lines:
 //
-//   - Dial / Listen: a TCP + TLS 1.3 transport that negotiates ALPN "n-pamp/2".
+//   - Dial / Listen: a TCP + TLS 1.3 transport that negotiates ALPN "n-pamp/3".
 //   - The full 1.5-RTT, mutually-authenticated draft-01 handshake
 //     (CLIENT_HELLO, SERVER_HELLO, SERVER_AUTH, CLIENT_AUTH) driving the
 //     impl/go primitives, ending in a Conn whose Send/Recv apply the

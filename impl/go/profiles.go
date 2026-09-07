@@ -28,7 +28,7 @@ func (p Profile) MinKEM() KEMID {
 	if p == ProfileStandard {
 		return KEMX25519MLKEM768
 	}
-	return KEMX25519MLKEM1024
+	return KEMSecP384r1MLKEM1024
 }
 
 func (p Profile) String() string {

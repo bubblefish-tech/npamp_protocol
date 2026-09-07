@@ -67,7 +67,7 @@ define required behavior and make no statement about any implementation.
 
 | File | Short name | Defines | Status |
 |---|---|---|---|
-| `56_worked_example_handshake.md` | NPAMP-EX-HANDSHAKE | Developer walk-through of one complete Standard-profile association: the four handshake flights (CLIENT_HELLO → SERVER_HELLO + SERVER_AUTH → CLIENT_AUTH), the five transcript points, every key-schedule stage, both CertVerify/Finished authentications, and one application frame exchange — every byte grounded in the pinned `test-vectors/v1` KATs, the conformance corpus, and the 2026-06-23 live interop capture, with per-value provenance tags. Informative; defines no wire behavior, consumes no code points. | **DRAFT** |
+| `56_worked_example_handshake.md` | NPAMP-EX-HANDSHAKE | Developer walk-through of one complete Standard-profile association: the four handshake flights (CLIENT_HELLO → SERVER_HELLO + SERVER_AUTH → CLIENT_AUTH), the five transcript points, every key-schedule stage, both CertVerify/Finished authentications, and one application frame exchange — every byte in the golden-interop `handshake-flow-kat.json` vector, independently re-derived and verified in producing this revision, with per-value provenance tags. The 2026-06-23 live interop capture is preserved as an RFC 7942 Implementation Status record. Informative; defines no wire behavior, consumes no code points. | **DRAFT** |
 
 ### Native channel operations
 
@@ -133,6 +133,18 @@ marked DRAFT.
 > by out-of-band agreement) pending assignment by NPAMP-REG; no mapping fabricates a
 > standards code point.
 
+### Provider ecosystem adapters (normative to the library; no new wire behavior)
+
+Library-level companions produced by the Part-2 ecosystem build. Distinct from the
+carriage classes and native channel operations above: these define no new wire bytes,
+channel, or code point — they specify the contract for a small piece of
+provider-agnostic glue code every language binding needs, so the same rule is
+implemented once per language instead of re-derived.
+
+| File | Short name | Defines | Status |
+|---|---|---|---|
+| `90_hybrid_kem_adapter.md` | NPAMP-HYBRIDKEM | The provider-agnostic hybrid-KEM combiner adapter: raw ML-KEM + classical (X25519/P-384) component shared secrets in, per-group-ordered concatenated `HKDF-Extract` IKM out (spec/06's per-group order — `X25519MLKEM768` ML-KEM-first, `SecP384r1MLKEM1024` classical-first — is NOT universal). Go reference `impl/go/hybridkem`, graded against NIST ACVP/RFC 7748/RFC 5903 vectors and cross-checked byte-identical against `impl/go/kem.go`/`kem1024.go`. | **DRAFT** |
+
 ### Per-channel interface references
 
 One public interface reference page per core channel (draft §5 Channel Architecture), under
@@ -173,6 +185,7 @@ High/Sovereign profile and are out of scope for this public set.
 | Channel `0x000D` (Bridge) | "Encapsulation of external agent protocols" (§5) | NPAMP-BRIDGE frame types (from `0x0100`). |
 | Channel `0x0010` (Discovery) | "Agent, tool, and service discovery" (§5) | NPAMP-DISC frame types (from `0x0100`). |
 | TLV `0x0010` | "Reserved for a companion specification" (§9.4) | NPAMP-BRIDGE: BridgeEnvelope TLV (includes `protocol_id`). |
+| TLV `0x0012` | "Reserved for a companion specification" (§9.4) | NPAMP-CC-OPAQUE: OpaqueContentType TLV. |
 | TLV `0x0013` | "Reserved for a companion specification" (§9.4) | NPAMP-BRIDGE: SafetyLabel TLV. |
 
 ## Channel selection for carriage
@@ -196,7 +209,7 @@ mapping document specifies which channel or channels a given protocol's traffic 
 
 ## How a developer carries a protocol over N-PAMP
 
-1. Read the **core specification** (the Internet-Draft) — the secure
+1. Read the **core specification** (`../ietf/draft-bubblefish-npamp-latest.md`) — the secure
    post-quantum wire.
 2. Read **NPAMP-BRIDGE** — the universal envelope/correlation/error/safety contract.
 3. Pick the **carriage class** for the protocol family (or **Class OPAQUE** to carry it

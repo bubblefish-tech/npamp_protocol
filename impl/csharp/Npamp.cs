@@ -26,7 +26,7 @@ public static class Npamp
     public const int HeaderSize = 36;
     public const int ProtocolVersion = 0x2;
     public static readonly byte[] Magic = { (byte)'N', (byte)'P', (byte)'A', (byte)'M' }; // 0x4E50414D
-    public const string Alpn = "n-pamp/2";
+    public const string Alpn = "n-pamp/3";
     public const string LabelPrefix = "n-pamp "; // protocol-specific; NOT "tls13 "
 
     public const int FlagUrg = 0x01, FlagEnc = 0x02, FlagComp = 0x04, FlagFrag = 0x08;
@@ -35,10 +35,10 @@ public static class Npamp
         ChanAudit = 0x000B, ChanBridge = 0x000D, ChanSpatial = 0x0013;
     public const int FramePing = 0x0001, FramePong = 0x0002, FrameClose = 0x0003,
         FrameFlowUpdate = 0x000A, ChannelSpecificBase = 0x0100;
-    public const int TlvProfileOffer = 0x01, TlvKemCiphertext = 0x08, TlvAnomalyCharge = 0x12;
+    public const int TlvProfileOffer = 0x01, TlvKemCiphertext = 0x08;
     public const int KemX25519Mlkem768 = 0x11ec, KemX25519Mlkem1024 = 0x11ed;
     public const int AeadAes256Gcm = 0x0001, AeadChacha20Poly1305 = 0x0002;
-    public const int SigEd25519 = 0x0807, SigMldsa87 = 0x0905;
+    public const int SigEd25519 = 0x0807, SigMldsa87 = 0x0906;
 
     // -- CRC32C (Castagnoli, reflected) ------------------------------------
 

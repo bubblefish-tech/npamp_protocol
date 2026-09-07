@@ -1,0 +1,22 @@
+// Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+//
+// Vendored from `spiffe/spire-api-sdk`, `proto/spire/api/types/spiffeid.proto`,
+// fetched 2026-09-02:
+// https://raw.githubusercontent.com/spiffe/spire-api-sdk/main/proto/spire/api/types/spiffeid.proto
+// Field names/numbers are byte-identical to the upstream source.
+
+syntax = "proto3";
+
+package spire.api.types;
+
+option go_package = "github.com/spiffe/spire-api-sdk/proto/spire/api/types";
+
+// Represents a SPIFFE ID.
+message SPIFFEID {
+    // Trust domain portion the SPIFFE ID (e.g. "example.org").
+    string trust_domain = 1;
+
+    // Path component of the SPIFFE ID. This value has a leading slash and
+    // requires normalization before comparing SPIFFE IDs.
+    string path = 2;
+}

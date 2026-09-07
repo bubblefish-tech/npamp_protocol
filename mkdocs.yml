@@ -1,7 +1,7 @@
 # MkDocs configuration for the N-PAMP reference documentation site.
 #
 # The spec surface is pure Markdown scattered across the repository root (spec/,
-# spec/channels/, spec/companion/, decisions/, harness/, impl/, test-vectors/),
+# spec/channels/, spec/companion/, ietf/, harness/, impl/, test-vectors/),
 # not under a single docs/ tree. Rather than move or symlink those canonical files,
 # docs_dir is set to the repo root ('.') so every page is addressed at its real
 # repo-relative path and stays browsable on GitHub. A hand-authored docs/index.md is
@@ -18,7 +18,7 @@ site_name: N-PAMP Protocol
 site_description: >-
   Native Post-Quantum Agent Messaging Protocol — the public reference: Internet-Draft,
   core and companion specifications, code-point registries, ten reference
-  implementations, conformance corpus and harness, and design decision records.
+  implementations, and conformance corpus and harness.
 site_author: BubbleFish Technologies, Inc.
 site_url: https://bubblefish-tech.github.io/npamp_protocol/
 
@@ -53,6 +53,11 @@ exclude_docs: |
   /scripts/
   /registries/
   /schema/
+  # Private author-reference guide — MUST NOT reach the public site. MkDocs does not
+  # consult the folder's own .gitignore, so without this exclusion `mkdocs build`
+  # re-copies _guides/npamp-guide.html into site/_guides/ as an orphan page (no nav
+  # entry, but still deployed and directly reachable by URL).
+  /_guides/
   # The test-vector data (JSON vectors + their JSON Schemas) is not documentation; the
   # human-readable corpus README is re-included below for the Conformance section.
   /test-vectors/**
@@ -73,6 +78,7 @@ exclude_docs: |
   /CODE_OF_CONDUCT.md
   /TRADEMARKS.md
   /LINEAGE.md
+  /IANA_ALPN_n-pamp-2_registration_request.md
   # Re-include the human-readable conformance corpus README (its sibling JSON data
   # stays excluded).
   !/test-vectors/README.md
@@ -101,7 +107,8 @@ validation:
   links:
     # Governance/process docs (GOVERNANCE.md, MAINTAINERS.md, process/NEP-0000) intentionally link
     # to repo files that are NOT part of the doc site (CITATION.cff, MANIFEST.sha256, PIN.json,
-    # decisions/, registries/, impl/, test-vectors/). These two categories are `info` (not `warn`)
+    # registries/, impl/, test-vectors/), and some link to the project's internal decision log
+    # (not part of this repository). These two categories are `info` (not `warn`)
     # so `mkdocs build --strict` stays green; nav validation + anchors remain strict. (CI fix 2026-07-30)
     not_found: info
     anchors: info
@@ -165,6 +172,7 @@ markdown_extensions:
 
 nav:
   - Home: docs/index.md
+  - Internet-Draft: ietf/draft-bubblefish-npamp-latest.md
   - Core specification:
       - ALPN: spec/01_alpn.md
       - Frame format: spec/02_frame_format.md
@@ -266,16 +274,3 @@ nav:
       - Kotlin: impl/kotlin/QUICKSTART.md
       - PHP: impl/php/QUICKSTART.md
       - Ruby: impl/ruby/QUICKSTART.md
-  - Design decisions:
-      - Record ADRs: decisions/0001-record-architecture-decisions.md
-      - "ADR-0003: One wire format": decisions/0003-profiles-share-one-wire-format-and-construction.md
-      - "ADR-0004: Public-primitives-only editions": decisions/0004-open-editions-publish-only-public-draft-primitives.md
-      - "ADR-0005: ML-KEM-first combiner": decisions/0005-align-x25519mlkem768-combiner-to-ml-kem-first.md
-      - "ADR-0006: 1.5-RTT handshake binding": decisions/0006-fix-the-1-5-rtt-handshake-binding.md
-      - "ADR-0007: KEM wire KAT anchor": decisions/0007-kem-wire-kat-anchor-keygen-x25519-order-defer-decaps-ss.md
-      - "ADR-0008: Key-schedule KAT": decisions/0008-key-schedule-kat-via-rfc8448-validated-oracle.md
-      - "ADR-0009: Transcript KAT": decisions/0009-transcript-kat-independent-byte-constructor-fips180-anchor.md
-      - "ADR-0010: Finished KAT": decisions/0010-finished-kat-via-rfc4231-anchored-hmac.md
-      - "ADR-0011: CertVerify KAT": decisions/0011-certverify-kat-via-rfc8032-anchored-ed25519.md
-      - "ADR-0012: CertVerify context string": decisions/0012-certverify-context-string-uses-wire-version-npamp2.md
-      - ADR template: decisions/template.md

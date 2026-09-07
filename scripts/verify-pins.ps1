@@ -2,8 +2,8 @@
 # verify-pins.ps1  (in-slice copy)
 #
 # Recompute and compare every pinned hash for the N-PAMP open-bytes set, then fail loud on drift.
-# Covers: the conformance corpus named in PIN.json, and every entry listed in
-# MANIFEST.sha256 (registries, spec, conformance corpus + KAT vectors + schemas).
+# Covers: the canonical draft + conformance corpus named in PIN.json, and every entry listed in
+# MANIFEST.sha256 (draft, registries, spec, conformance corpus + KAT vectors + schemas).
 #
 # This is the gate PIN.json's note refers to. It recomputes SHA-256 over the actual bytes on disk and
 # compares to the frozen expected values. Exit 0 only if every pinned file exists and matches; exit 1
@@ -51,9 +51,7 @@ if (-not (Test-Path -LiteralPath $pinPath)) { Write-Host "PIN.json not found und
 $pin = Get-Content -LiteralPath $pinPath -Raw | ConvertFrom-Json
 
 Write-Host "== PIN.json pins (root: $Root) =="
-if ($pin.PSObject.Properties.Name -contains 'canonical_draft' -and $pin.canonical_draft) {
-  if (-not (Test-PinnedHash $pin.canonical_draft $pin.canonical_draft_sha256)) { $fail++ }
-}
+if (-not (Test-PinnedHash $pin.canonical_draft $pin.canonical_draft_sha256)) { $fail++ }
 if ($pin.PSObject.Properties.Name -contains 'conformance_corpus' -and $pin.conformance_corpus) {
   if (-not (Test-PinnedHash $pin.conformance_corpus $pin.conformance_corpus_sha256)) { $fail++ }
 }
@@ -76,5 +74,5 @@ foreach ($line in Get-Content -LiteralPath $manPath) {
 
 Write-Host ""
 if ($fail -gt 0) { Write-Host "PINS DRIFT: $fail pinned file(s) failed verification under $Root"; exit 1 }
-Write-Host "PINS OK: corpus + $entries manifest entries all match under $Root."
+Write-Host "PINS OK: canonical draft + corpus + $entries manifest entries all match under $Root."
 exit 0

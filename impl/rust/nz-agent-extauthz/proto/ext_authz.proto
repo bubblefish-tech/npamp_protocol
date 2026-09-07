@@ -1,0 +1,144 @@
+// Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+//
+// A hand-vendored MINIMAL SUBSET of `envoy.service.auth.v3` (the Envoy
+// External Authorization v3 gRPC service), grounded this session against the
+// authoritative source, NOT reconstructed from memory (Section B1/E8):
+//
+//   - Service + CheckRequest/CheckResponse shape:
+//     github.com/envoyproxy/envoy, `api/envoy/service/auth/v3/external_auth.proto`
+//     (raw.githubusercontent.com/envoyproxy/envoy/main/..., fetched 2026-08-31).
+//   - AttributeContext/Request/HttpRequest field numbers:
+//     github.com/envoyproxy/envoy, `api/envoy/service/auth/v3/attribute_context.proto`
+//     (same fetch date).
+//   - HttpStatus/StatusCode:
+//     github.com/envoyproxy/envoy, `api/envoy/type/v3/http_status.proto`
+//     (same fetch date).
+//   - google.rpc.Status shape (int32 code=1, string message=2):
+//     github.com/googleapis/googleapis, `google/rpc/status.proto`
+//     (same fetch date). Reproduced below as `RpcStatus` IN THIS package
+//     (rather than imported under a separate `google.rpc` package) to
+//     avoid prost/tonic-prost-build's cross-package module-nesting
+//     complexity; this is still byte-for-byte wire-identical to a real
+//     `google.rpc.Status` — protobuf package names are a language-level
+//     namespace, not part of a message's wire encoding, so a nested
+//     message field is indistinguishable on the wire regardless of what
+//     its type is NAMED in the reader's/writer's own `.proto`.
+//
+// agentgateway (github.com/agentgateway/agentgateway) is API-compatible with
+// this exact contract for its general (HTTP-request-level) ext_authz policy
+// — re-verified this session against agentgateway.dev/docs/standalone/latest/
+// configuration/security/external-authz/ and
+// agentgateway.dev/docs/kubernetes/main/security/extauth/byo-ext-auth-service/
+// (both fetched 2026-08-31), NOT merely inherited from a prior agent's claim.
+// agentgateway separately ships a DIFFERENT, MCP-JSON-RPC-specific "ExtMcp"
+// gRPC contract (github.com/agentgateway/agentgateway PR #1842, "ExtMcp is a
+// backend policy modeled on Envoy ext_authz but specific to MCP semantics" —
+// a distinct service/proto, not this one) for gating individual JSON-RPC
+// methods (tools/call, tools/list, ...); that is explicitly OUT OF SCOPE for
+// this R14-Unit-A deliverable (see findings doc §"What this build does NOT
+// cover"), which targets the general Envoy-ext_authz-compatible contract
+// every ext_authz-capable gateway (agentgateway included) speaks.
+//
+// EVERY field number below is copied verbatim from the real proto for every
+// field this service actually reads or writes. Fields this service does not
+// use (Peer/Address/TLSSession/Metadata on AttributeContext, HttpRequest's
+// scheme/query/fragment/size/protocol/body/raw_body, CheckResponse's
+// dynamic_metadata/ok_response/error_response, DeniedHttpResponse's response
+// `headers`) are intentionally OMITTED, not renumbered or reinvented. This is
+// wire-compatible with a real Envoy/agentgateway client: protobuf's wire
+// format is tag-numbered, so a real CheckRequest carrying fields this message
+// does not declare parses fine here (the unknown tags are simply skipped);
+// this server just never reads them.
+syntax = "proto3";
+
+package npamp.extauthz.v1;
+
+// --- Request (envoy.service.auth.v3.CheckRequest, minimal subset) ---
+
+message CheckRequest {
+  AttributeContext attributes = 1;
+}
+
+// envoy.service.auth.v3.AttributeContext — only field 4 (`request`) is
+// declared; `source`/`destination` (1/2, Peer), `context_extensions` (10),
+// `metadata_context`/`route_metadata_context` (11/13), `tls_session` (12)
+// are all omitted (unused by the R14-Unit-A triple-extraction mapping,
+// which reads the request's HTTP headers only — see the findings doc).
+message AttributeContext {
+  Request request = 4;
+}
+
+// envoy.service.auth.v3.AttributeContext.Request — only field 2 (`http`) is
+// declared; `time` (1) is omitted.
+message Request {
+  HttpRequest http = 2;
+}
+
+// envoy.service.auth.v3.AttributeContext.HttpRequest — the fields this
+// server actually inspects (`headers`, field 3) plus a few useful for
+// logging/diagnostics (`method`, `path`, `host`); everything else on the
+// real message (`id`=1, `scheme`=6, `query`=7, `fragment`=8, `size`=9,
+// `protocol`=10, `body`=11, `raw_body`=12, `header_map`=13) is omitted.
+message HttpRequest {
+  string method = 2;
+  map<string, string> headers = 3;
+  string path = 4;
+  string host = 5;
+}
+
+// --- Response (envoy.service.auth.v3.CheckResponse, minimal subset) ---
+
+// A LOCAL, wire-identical redefinition of google.rpc.Status (see the file
+// header comment): int32 code=1, string message=2. `details` (field 3 on
+// the real message, repeated google.protobuf.Any) is omitted — this
+// service never sets it.
+message RpcStatus {
+  // A google.rpc.Code value (verified this session against
+  // `google/rpc/code.proto`): OK = 0, PERMISSION_DENIED = 7,
+  // UNAUTHENTICATED = 16. code==0 means ALLOW; any non-zero code means
+  // DENY. This service emits only 0 (OK) or 7 (PERMISSION_DENIED).
+  int32 code = 1;
+  string message = 2;
+}
+
+message CheckResponse {
+  // field 1 on the real message: google.rpc.Status; code==0 (OK) allows,
+  // any non-zero code denies. The primary allow/deny signal.
+  RpcStatus status = 1;
+  oneof http_response {
+    // field 2 on the real message (`denied_response`); `ok_response` (3),
+    // `error_response` (5) are omitted (this server never needs them: an
+    // allow is signaled by status.code==0 with no http_response set at
+    // all, which is a legal, common ext_authz allow shape).
+    DeniedHttpResponse denied_response = 2;
+  }
+}
+
+// envoy.service.auth.v3.DeniedHttpResponse — `status` (field 1) and `body`
+// (field 3) only; `headers` (field 2, repeated HeaderValueOption) is
+// omitted (this server does not rewrite response headers on denial).
+message DeniedHttpResponse {
+  HttpStatus status = 1;
+  string body = 3;
+}
+
+// envoy.type.v3.HttpStatus (field number verified against the real proto).
+message HttpStatus {
+  StatusCode code = 1;
+}
+
+// envoy.type.v3.StatusCode — minimal subset: EMPTY (the proto3 zero value,
+// "not part of the HTTP status code specification" per the real enum's own
+// doc comment), OK=200, FORBIDDEN=403 (the only two values this server
+// emits). Numeric values are copied verbatim from the real enum.
+enum StatusCode {
+  EMPTY = 0;
+  OK = 200;
+  FORBIDDEN = 403;
+}
+
+// envoy.service.auth.v3.Authorization — the one RPC, `Check`, exactly as the
+// real service defines it.
+service Authorization {
+  rpc Check(CheckRequest) returns (CheckResponse);
+}

@@ -79,9 +79,9 @@ alter them.
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously and either peer MAY orchestrate or
   delegate to the other (core specification §5). The Workflow channel is **not**
-  classified Multi-stream: it does not open multiple concurrent transport
-  sub-streams within a stream family (contrast the Multi-stream Stream channel
-  `0x000C` and Knowledge channel `0x0012`).
+  classified Multi-stream: it does not carry multiple concurrent payload-layer
+  sub-streams multiplexed within its frame payloads (contrast the Multi-stream
+  Stream channel `0x000C` and Knowledge channel `0x0012`).
 - **Advertisement gate.** A peer that has not advertised the Workflow channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Workflow channel MUST be dropped (core specification §5, applied to `0x0011`).
@@ -326,8 +326,8 @@ if, for channel `0x0011`, it:
    specification defines for this channel (§3.3, §4);
 7. Supports the channel's **Bidirectional** direction — both peers sending and
    receiving on a single stream, each maintaining independent per-direction sequence
-   spaces and traffic keys — and does not open multiple concurrent transport streams
-   within the channel as though it were Multi-stream (§2); and
+   spaces and traffic keys — and does not carry multiple concurrent payload-layer
+   sub-streams within the channel as though it were Multi-stream (§2); and
 8. Defers all Workflow operation semantics beyond the registry-level interface of §4
    to the companion specification NPAMP-WORKFLOW (`../companion/8a_workflow_channel.md`),
    adding no Workflow behavior of its own that the core specification does not

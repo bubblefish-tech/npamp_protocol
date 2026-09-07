@@ -78,9 +78,9 @@ this reference restates them and does not alter them.
   every N-PAMP channel, each peer maintains an independent per-direction sequence
   space and independent per-direction traffic keys, so both peers MAY transmit on
   the channel simultaneously (core specification §5). The Compliance channel is
-  **not** classified Multi-stream; it does not open multiple concurrent transport
-  sub-streams within a stream family (contrast, for example, the Memory channel
-  `0x0001`, which is Multi-stream).
+  **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast, for
+  example, the Memory channel `0x0001`, which is Multi-stream).
 - **Advertisement gate.** A peer that has not advertised the Compliance channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Compliance channel MUST be dropped (core specification §5, applied to `0x0008`).

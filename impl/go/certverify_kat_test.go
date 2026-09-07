@@ -154,7 +154,7 @@ func TestCertVerifyKAT(t *testing.T) {
 
 		// Scheme pinning: a non-negotiated SignatureScheme MUST be rejected.
 		badScheme := bytes.Clone(value)
-		badScheme[0], badScheme[1] = 0x09, 0x05 // ML-DSA-87 code point, not negotiated at Standard
+		badScheme[0], badScheme[1] = 0x09, 0x06 // ML-DSA-87 code point (0x0906), not negotiated at Standard
 		if err := VerifyCertVerify(c.pub, c.role, c.th, badScheme); !errors.Is(err, ErrCertVerifyScheme) {
 			t.Fatalf("%s: non-negotiated scheme not rejected (err=%v)", c.roleName, err)
 		}

@@ -55,7 +55,7 @@ every normative claim is backed by executable evidence rather than prose.
 
 The NEP process sits *above*, and feeds, the three-layer decision history that
 [`CONTRIBUTING.md`](../CONTRIBUTING.md) already defines (ADRs in
-[`decisions/`](../decisions/), the in-draft change log, and issue/PR labels). It
+`decisions/`, the in-draft change log, and issue/PR labels). It
 does not replace any of them.
 
 ## Motivation
@@ -151,7 +151,7 @@ following:
    magic value, the header CRC, the frame-type number space, the TLV number
    space, the handshake flights/transcript/key-schedule, the profile parameter
    rows, or the AEAD/KEM/signature suite set. `CONTRIBUTING.md` already flags
-   these as **major-version** changes (a new ALPN identifier, e.g. `n-pamp/3`);
+   these as **major-version** changes (a new ALPN identifier, e.g. `n-pamp/4`);
    such a change **MUST** be carried by a NEP.
 5. **Opens or re-policies a code-point range** — creating a new registry,
    adding a new range to an existing registry, or changing a range's
@@ -262,7 +262,7 @@ automatic merge").
 
 On acceptance, the NEP's normative text is merged into its target document, and
 the change is recorded in the existing three layers of `CONTRIBUTING.md`:
-- **(1)** one or more MADR 4.0 ADRs in [`decisions/`](../decisions/) (the NEP
+- **(1)** one or more MADR 4.0 ADRs in `decisions/` (the NEP
   cites the ADR number(s); the ADR cites the NEP);
 - **(2)** a change-log bullet in the draft's `## Changes Since …` appendix; and
 - **(3)** the closing/consensus labels on the issue/PR.
@@ -355,7 +355,7 @@ Supporting requirements for the Final gate:
    with that limitation recorded, until an oracle is added.
 4. **Wire-major-version NEPs.** A NEP that changes the wire in a
    backwards-incompatible way (§2.4) additionally requires a new ALPN identifier
-   (e.g. `n-pamp/3`) and its own IANA registration before `Final`, per
+   (e.g. `n-pamp/4`) and its own IANA registration before `Final`, per
    `CONTRIBUTING.md` "Code-point stability".
 
 ### 7. Firewall / controlled-material check (normative)
@@ -367,7 +367,7 @@ it therefore **MUST NOT** contain any controlled or sealed material:
 1. **No controlled or sealed material** — no controlled cryptographic extensions,
    and no High/Sovereign high-assurance implementation material, all of which are
    maintained separately and out of scope for this open reference
-   ([ADR-0004](../decisions/0004-open-editions-publish-only-public-draft-primitives.md)).
+   (ADR-0004).
    Publishing a **code point** (an identifier — e.g. a KEM/signature
    suite value, a channel number) is permitted, because it discloses an
    identifier, not an implementation; publishing the High/Sovereign
@@ -543,7 +543,7 @@ Technologies, Inc. **Firewall check: clean.**
 ## Decision Record Links
 
 On adoption, this NEP is recorded in the three layers of `CONTRIBUTING.md`: an
-ADR in [`decisions/`](../decisions/) recording the decision to adopt a NEP
+ADR in `decisions/` recording the decision to adopt a NEP
 process (Considered Options: ADR-only / full IETF WG process / PEP-KEP-adapted
 NEP), a change-log bullet in the draft appendix noting the addition of the
 `process/` directory, and the `nep`-labelled issue/PR in which it was adopted.

@@ -1,0 +1,13 @@
+code,name,reaction,condition
+0,(reserved),-,"Reserved; MUST NOT be sent."
+1,unexpected_message,fatal,"A frame not legal for the current state (state-machine total default): out-of-order, wrong-flight, repeated, an application frame before ESTABLISHED, or an effecting frame in ESTABLISHED_READONLY."
+2,decrypt_failed,fatal,"An AEAD open failed, or a handshake CertVerify signature or Finished MAC verification failed."
+3,replay_detected,discard,"A frame's sequence number was below the replay window or already recorded within it; the frame is dropped and counted, the connection survives."
+4,unknown_channel,discard,"A frame arrived on a channel the peer did not advertise during the handshake; the frame is dropped and counted."
+5,unknown_critical_tlv,fatal,"A frame carried an unknown extension TLV with the high bit (0x8000) set."
+6,handshake_timeout,fatal,"The handshake did not complete within the handshake-completion timer."
+7,downgrade_detected,fatal,"A profile or algorithm selection was not covered by the transcript the handshake MAC and CertVerify authenticate."
+8,close_incomplete,fatal,"A CLOSE was not acknowledged within the CLOSE_ACK-wait timer."
+9,key_update_out_of_order,fatal,"A KeyUpdateMarker announced an epoch other than current + 1, or was malformed."
+10,flow_control_error,fatal,"A peer's cumulative sent-payload total exceeded the connection-level receive limit advertised via FLOW_UPDATE (Connection-Level Flow Control)."
+0x000B-0x00FF,(reserved),-,"Unassigned; reserved to this specification for future core conditions (RFC Required / FCFS for any IANA-hosted mirror; assigned at publication)."

@@ -13,10 +13,37 @@ use sha2::{Sha256, Sha384};
 /// Capability, Immune, Settlement, Telemetry, Commerce, Interaction, Workflow, Knowledge).
 pub mod bodies;
 
+/// NPAMP-CC carriage-object codecs (companion specs 20/21/23: JSON-RPC, HTTP,
+/// STREAM) — E2.22/R14.5's octet-exact carriage round-trip layer. See the module
+/// docs for the exact scope (carriage-object layer only, no Bridge frame/envelope).
+pub mod carriage;
+
+/// A live N-PAMP session (handshake + AEAD record layer) over an injected byte
+/// transport — the crate's ecosystem-facing adoption API, composing the wire-format
+/// primitives below. Gated behind the `session` Cargo feature (default-on); see the
+/// module docs for the exact scope and the `no-default-features` opt-out.
+#[cfg(feature = "session")]
+pub mod session;
+
+/// The SecP384r1MLKEM1024 hybrid KEM (KEM 0x11ed, High/Sovereign minimum;
+/// registries/kem.csv, RFC 10024 formerly draft-ietf-tls-ecdhe-mlkem) and its
+/// handshake-secret combiner. Gated behind the `session` Cargo feature like the
+/// X25519MLKEM768 KEM operations `session` uses (same PQ/ECDH dependency
+/// posture); see the module docs.
+#[cfg(feature = "session")]
+pub mod kem1024;
+
+/// ML-DSA-87 (FIPS 204) CertVerify (KEM-independent; spec/10 section 6.1), the
+/// High/Sovereign post-quantum signature scheme (`SIG_MLDSA87` = 0x0906).
+/// Gated behind the `session` Cargo feature like `kem1024`; see the module
+/// docs.
+#[cfg(feature = "session")]
+pub mod mldsa87;
+
 pub const HEADER_SIZE: usize = 36;
 pub const PROTOCOL_VERSION: u8 = 0x2;
 pub const MAGIC: [u8; 4] = [0x4E, 0x50, 0x41, 0x4D];
-pub const ALPN: &str = "n-pamp/2";
+pub const ALPN: &str = "n-pamp/3";
 /// Protocol-specific HKDF-Expand-Label prefix (draft-00 7.4). Provides domain
 /// separation from TLS 1.3 ("tls13 ") and QUIC; "tls13 " is non-conformant.
 pub const LABEL_PREFIX: &str = "n-pamp ";
@@ -44,15 +71,24 @@ pub const CHANNEL_SPECIFIC_BASE: u16 = 0x0100;
 // TLV types (draft-00 9.4).
 pub const TLV_PROFILE_OFFER: u16 = 0x01;
 pub const TLV_KEM_CIPHERTEXT: u16 = 0x08;
-pub const TLV_ANOMALY_CHARGE: u16 = 0x12;
 
 // Crypto-suite code points (draft-00 7).
 pub const KEM_X25519_MLKEM768: u16 = 0x11ec;
-pub const KEM_X25519_MLKEM1024: u16 = 0x11ed;
+/// SecP384r1MLKEM1024 (registries/kem.csv 0x11ed): secp384r1 + FIPS 203
+/// ML-KEM-1024, ECDHE-first (RFC 10024, formerly draft-ietf-tls-ecdhe-mlkem).
+/// High/Sovereign minimum KEM (spec/05_profiles.md); Sovereign MUST NOT accept
+/// X25519MLKEM768. Was misnamed `KEM_X25519_MLKEM1024` (the value 0x11ed was
+/// always correct; the name wrongly implied the X25519MLKEM768 construction).
+pub const KEM_SECP384R1_MLKEM1024: u16 = 0x11ed;
 pub const AEAD_AES256_GCM: u16 = 0x0001;
 pub const AEAD_CHACHA20_POLY1305: u16 = 0x0002;
 pub const SIG_ED25519: u16 = 0x0807;
-pub const SIG_MLDSA87: u16 = 0x0905;
+// Registry-correct as of P2.10 (2026-09-02): was erroneously 0x0905 (that
+// code point is reserved for ML-DSA-65 per the IANA TLS SignatureScheme
+// registry / draft-ietf-tls-mldsa, and is unused by any N-PAMP profile).
+// 0x0906 matches impl/go/suites.go's SigMLDSA87 and the SUPERSESSION-LEDGER's
+// corrected registry (already reflected on the Go side before this fix).
+pub const SIG_MLDSA87: u16 = 0x0906;
 
 /// CRC32C (Castagnoli, reflected) — identical to Go hash/crc32 Castagnoli.
 pub fn crc32c(data: &[u8]) -> u32 {
@@ -298,8 +334,8 @@ pub mod handshake {
     pub const FRAME_CLIENT_AUTH: u16 = 0x0103;
 
     /// CertVerify role context strings (binding spec/10 section 6.1).
-    pub const CONTEXT_SERVER_CERTVERIFY: &str = "N-PAMP/2, server CertificateVerify";
-    pub const CONTEXT_CLIENT_CERTVERIFY: &str = "N-PAMP/2, client CertificateVerify";
+    pub const CONTEXT_SERVER_CERTVERIFY: &str = "N-PAMP/3, server CertificateVerify";
+    pub const CONTEXT_CLIENT_CERTVERIFY: &str = "N-PAMP/3, client CertificateVerify";
 
     /// Accumulates the draft-00 handshake transcript (binding spec/10 section 3) and hashes
     /// it at a cut point. Absorption granularity is per-TLV: [`Transcript::add_frame_type`]

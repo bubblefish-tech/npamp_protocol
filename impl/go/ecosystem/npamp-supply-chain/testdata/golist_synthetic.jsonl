@@ -1,0 +1,4 @@
+{"Path": "github.com/bubblefish-tech/npamp_protocol/impl/go", "Main": true, "GoVersion": "1.25"}
+{"Path": "github.com/cloudflare/circl", "Version": "v1.6.4", "GoVersion": "1.24.0", "Sum": "h1:pOXuDTCEYyzydgUpQ0CQz3LsinKjiSk6nNP5Lt5K64U="}
+{"Path": "golang.org/x/crypto", "Version": "v0.45.0", "Indirect": true, "GoVersion": "1.24.0"}
+{"Path": "golang.org/x/sys", "Version": "v0.38.0", "Indirect": true, "GoVersion": "1.24.0", "Sum": "h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc="}

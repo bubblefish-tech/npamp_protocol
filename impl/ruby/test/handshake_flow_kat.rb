@@ -33,7 +33,7 @@ require "tmpdir"
 require_relative "../lib/npamp"
 
 VEC = File.expand_path("../../../test-vectors/v1", __dir__)
-HANDSHAKE_FLOW_KAT_SHA256 = "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9"
+HANDSHAKE_FLOW_KAT_SHA256 = "d0df49ca9eca02969f782de9ab7ff394eab3313f84291a5aaa5ad1746e5441c3"
 
 # ML-KEM-768 wire sizes (FIPS 203): ciphertext 1088, encapsulation key 1184.
 MLKEM768_CIPHERTEXT_SIZE = 1088

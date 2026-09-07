@@ -1,6 +1,6 @@
 module npamp-adapter-go
 
-go 1.26
+go 1.27
 
 require github.com/bubblefish-tech/npamp_protocol/impl/go v0.0.0
 

@@ -1,0 +1,24 @@
+// Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+//
+// Vendored (minimal — only the fields nz-agent's DelegatedIdentity client
+// actually sends/reads) from `spiffe/spire-api-sdk`,
+// `proto/spire/api/types/selector.proto`, fetched 2026-09-02:
+// https://raw.githubusercontent.com/spiffe/spire-api-sdk/main/proto/spire/api/types/selector.proto
+// Field names/numbers are byte-identical to the upstream source so this
+// vendored copy stays wire-compatible with a real SPIRE server's encoder.
+
+syntax = "proto3";
+
+package spire.api.types;
+
+option go_package = "github.com/spiffe/spire-api-sdk/proto/spire/api/types";
+
+// Represents a selector.
+message Selector {
+    // The type of the selector. This is typically the name of the plugin
+    // that produces the selector.
+    string type = 1;
+
+    // The value of the selector.
+    string value = 2;
+}

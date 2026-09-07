@@ -1,3 +1,5 @@
 code_point,name,usage,profiles,reference
 0x0807,Ed25519,"Identity, capability tokens",All,"RFC 8032"
-0x0905,ML-DSA-87,"Identity, audit epoch","High, Sovereign","FIPS 204"
+0x0904,ML-DSA-44,"Reserved (IANA TLS SignatureScheme); unused by any N-PAMP profile","—","FIPS 204 / draft-ietf-tls-mldsa"
+0x0905,ML-DSA-65,"Reserved (IANA TLS SignatureScheme); unused by any N-PAMP profile","—","FIPS 204 / draft-ietf-tls-mldsa"
+0x0906,ML-DSA-87,"Identity, audit epoch","High, Sovereign","FIPS 204 / draft-ietf-tls-mldsa"

@@ -14,7 +14,7 @@ The single file `lib/npamp.rb` defines module `Npamp`:
   payload: `Frame#marshal` / `Frame.unmarshal` / `Frame#header_prefix`, plus `Npamp.crc32c`.
 - **AES-256-GCM record layer** — `seal_aes256gcm` / `open_aes256gcm` / `derive_nonce`, using the
   21-octet header prefix as AEAD associated data.
-- **HKDF key schedule** — `hkdf_extract`, `hkdf_expand`, `hkdf_expand_label` (RFC 8446 §7.1 with the
+- **HKDF key schedule** — `hkdf_extract`, `hkdf_expand`, `hkdf_expand_label` (RFC 9846 §7.1 with the
   `"n-pamp "` label prefix), `derive_traffic_secret`, `derive_key_iv`, and the key-schedule trunk
   `derive_handshake_secret` / `derive_client_handshake_secret` / `derive_server_handshake_secret` /
   `derive_master_secret` / `derive_finished_key` (binding `spec/10` §5).
@@ -29,7 +29,7 @@ The single file `lib/npamp.rb` defines module `Npamp`:
 
 - **KEM operations** — no X25519MLKEM768 encapsulation/decapsulation; the key-schedule trunk takes
   the two KEM shared secrets as inputs.
-- A **TCP/TLS transport** (ALPN `n-pamp/2`), connection management, or an RPC/MCP client. Those live
+- A **TCP/TLS transport** (ALPN `n-pamp/3`), connection management, or an RPC/MCP client. Those live
   in a consuming product, which composes primitives like these with its own
   handshake + transport.
 

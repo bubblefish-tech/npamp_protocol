@@ -6,6 +6,19 @@ license = "Apache-2.0"
 requires-python = ">=3.9"
 dependencies = ["cryptography>=42"]
 
+# Optional: the `npamp.session` module (the live handshake + record-layer
+# adoption API) needs a real X25519MLKEM768 hybrid KEM. `cryptography`
+# predates ML-KEM (see QUICKSTART.md), so `session` pulls in `kyber-py`, a
+# pure-Python FIPS-203 ML-KEM implementation -- verified this session against
+# the frozen handshake-flow-kat.json vector (deterministic keygen from the
+# pinned seed reproduces the pinned encapsulation key; decapsulating the
+# pinned ciphertext recovers the pinned shared secret exactly). The base
+# `npamp` package never imports `kyber-py`; only `import npamp.session` does,
+# so `pip install npamp` (no extra) keeps the strict wire-only, zero-PQ-
+# dependency install.
+[project.optional-dependencies]
+session = ["kyber-py>=1.2"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

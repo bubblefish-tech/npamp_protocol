@@ -1,6 +1,6 @@
 # N-PAMP-01 — Channel Architecture (reference)
 
-> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §5 "Channel Architecture". The draft governs.
 > Machine-readable form: `../registries/channels.csv`.
 
@@ -48,11 +48,20 @@ on an unadvertised channel MUST be dropped.
 | Direction | Meaning |
 |---|---|
 | Bidirectional | Both peers send and receive frames on a single stream. |
-| Multi-stream | Bidirectional, and the channel MAY open multiple concurrent transport streams within its stream family. |
+| Multi-stream | Bidirectional, and the channel MAY carry multiple concurrent logical sub-streams multiplexed within its frame payloads (for example the Stream channel's sub-streams), all over the channel's single ordered per-direction sequence. |
 
 The Stream channel (0x000C) provides general-purpose multiplexed full-duplex
 streaming (token, audio, video, file-transfer sub-streams), each with independent
 flow control.
+
+A channel's frames for a given direction form a single ordered sequence over one transport
+byte run; the per-(channel, direction) sequence number is single-writer, and nonce
+uniqueness and the replay window depend on it. This revision does NOT define a channel
+opening multiple concurrent transport-layer streams (the header carries no
+per-transport-stream identifier, and doing so would break the single-writer sequence and
+risk nonce reuse). "Multi-stream" denotes payload-layer sub-stream multiplexing (e.g. the
+NPAMP-STREAM `sub_stream_id`), never transport-stream multiplexing; a future revision that
+adds it MUST define the correlation and nonce separation and rides a new ALPN generation.
 
 ## Reserved channel-ID ranges
 

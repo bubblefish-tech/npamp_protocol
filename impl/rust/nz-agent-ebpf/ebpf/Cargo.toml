@@ -1,0 +1,27 @@
+# Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+[package]
+name = "nz-agent-ebpf-ebpf"
+version = "0.1.0"
+edition.workspace = true
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+aya-ebpf = { workspace = true }
+nz-agent-ebpf-common = { path = "../common" }
+
+[[bin]]
+name = "samenode_splice"
+path = "src/main.rs"
+
+[[bin]]
+name = "egress_redirect"
+path = "src/egress_redirect.rs"
+
+[[bin]]
+name = "inbound_lookup"
+path = "src/inbound_lookup.rs"
+
+[[bin]]
+name = "tc_fallback"
+path = "src/tc_fallback.rs"

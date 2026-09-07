@@ -1,0 +1,63 @@
+// Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+//
+// Vendored (minimal — the DelegatedIdentity service's SubscribeToX509SVIDs
+// rpc only; FetchJWTSVIDs / SubscribeToX509Bundles / SubscribeToJWTBundles
+// are dropped because E2.6/R12 AC2's scope is binding a workload's N-PAMP
+// session to an attested X.509 SPIFFE-SVID identity, not JWT-SVIDs or trust
+// bundle distribution) from `spiffe/spire-api-sdk`,
+// `proto/spire/api/agent/delegatedidentity/v1/delegatedidentity.proto`,
+// fetched 2026-09-02:
+// https://raw.githubusercontent.com/spiffe/spire-api-sdk/main/proto/spire/api/agent/delegatedidentity/v1/delegatedidentity.proto
+// Service/rpc/message names, field names, and field numbers for everything
+// kept below are byte-identical to the upstream source, so this vendored
+// subset stays wire-compatible with a real SPIRE agent's DelegatedIdentity
+// API server (`spire-agent api watch`'s target).
+
+syntax = "proto3";
+
+package spire.api.agent.delegatedidentity.v1;
+
+option go_package = "github.com/spiffe/spire-api-sdk/proto/spire/api/agent/delegatedidentity/v1;delegatedidentityv1";
+
+import "spire/api/types/selector.proto";
+import "spire/api/types/x509svid.proto";
+
+// DelegatedIdentity is a service that exposes a specific set of the SPIRE
+// Server's capabilities to a third party (here, nz-agent) acting on behalf
+// of workloads it hosts — as opposed to the workload's own Workload API,
+// which only a self-attesting workload process may call.
+service DelegatedIdentity {
+    // Sends a workload's identity + expiry back to the caller, once at the
+    // start of the stream (nz-agent reads exactly the first response and
+    // does not keep the subscription open — see spire_client.rs's module
+    // docs for why a one-shot read over a streaming rpc is the correct,
+    // fail-closed consumption of this API for this crate's synchronous
+    // `DelegatedIdentitySource` trait).
+    rpc SubscribeToX509SVIDs(SubscribeToX509SVIDsRequest) returns (stream SubscribeToX509SVIDsResponse);
+}
+
+// Represents an X509-SVID with its private key.
+message X509SVIDWithKey {
+    // The workload's X509-SVID.
+    spire.api.types.X509SVID x509_svid = 1;
+
+    // Private key (encoding is server-configuration-dependent; nz-agent does
+    // not consume this field — see spire_client.rs's module docs for why).
+    bytes x509_svid_key = 2;
+}
+
+message SubscribeToX509SVIDsRequest {
+    // Selectors narrowing the workload lookup (empty in nz-agent's request:
+    // it identifies the workload by OS-attested PID only, never by
+    // self-asserted selectors).
+    repeated spire.api.types.Selector selectors = 1;
+
+    // The workload's OS process ID, as delegated-identity callers (never the
+    // workload's own process) supply it for third-party attestation.
+    int32 pid = 2;
+}
+
+message SubscribeToX509SVIDsResponse {
+    repeated X509SVIDWithKey x509_svids = 1;
+    repeated string federates_with = 2;
+}

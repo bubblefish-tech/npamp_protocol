@@ -666,7 +666,8 @@ lifecycle and step/completion flow, the state machine of §7, the
 no-internal-detail-on-the-wire leak-prevention requirement) are graded only by a
 live-exchange harness once one exists; a conformance claim MUST NOT present those
 behavioural clauses as graded on the strength of the payload-vector group. Both the
-graded payload surface and the tracked live-exchange gap are tracked internally.
+graded payload surface and the tracked live-exchange gap are recorded in the parity
+ledger (the conformance parity ledger, the NPAMP-WORKFLOW entry).
 
 The live-exchange harness SHOULD assert each behavioural clause above with
 a recorded exchange on the Workflow channel `0x0011`: a WORKFLOW_SUBMIT_REQ /

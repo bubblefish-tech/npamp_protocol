@@ -12,7 +12,7 @@ public enum Npamp {
     public static let headerSize = 36
     public static let protocolVersion: Int = 0x2
     public static let magic: [UInt8] = [0x4E, 0x50, 0x41, 0x4D] // "NPAM"
-    public static let alpn = "n-pamp/2"
+    public static let alpn = "n-pamp/3"
     public static let labelPrefix = "n-pamp " // protocol-specific; NOT "tls13 "
 
     public static let flagUrg = 0x01, flagEnc = 0x02, flagComp = 0x04, flagFrag = 0x08
@@ -22,7 +22,7 @@ public enum Npamp {
                       frameFlowUpdate = 0x000A, channelSpecificBase = 0x0100
     public static let aeadAes256Gcm = 0x0001, aeadChacha20Poly1305 = 0x0002
     public static let kemX25519MlKem768 = 0x11EC, kemX25519MlKem1024 = 0x11ED
-    public static let sigEd25519 = 0x0807, sigMlDsa87 = 0x0905
+    public static let sigEd25519 = 0x0807, sigMlDsa87 = 0x0906
 
     public struct FrameError: Error, Equatable {
         public let message: String

@@ -24,7 +24,7 @@ func xvHash(name string) func() hash.Hash {
 // TestHkdfExpandLabelOracleCrossValidate proves NON-CIRCULARITY for HKDF-Expand-Label (TRACK C6):
 // the OKM bytes below are the ACTUAL output of the independent Python oracle
 // (test-vectors/gen/keyschedule_label_oracle.py). That oracle implements HKDF over stdlib
-// hmac/hashlib (RFC 5869) and the RFC 8446 §7.1 HkdfLabel with the "n-pamp " prefix, and PROVES its
+// hmac/hashlib (RFC 5869) and the RFC 9846 §7.1 HkdfLabel with the "n-pamp " prefix, and PROVES its
 // own mechanism against RFC 5869 Appendix-A.1 TC1 and RFC 8448 §3 (the "tls13 " prefix) before
 // emitting — so these expected values trace to the RFCs, never to impl/go. This asserts
 // HkdfExpandLabel reproduces them (the bytes are reproducible ONLY with the "n-pamp " prefix, so a

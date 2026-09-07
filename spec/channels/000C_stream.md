@@ -59,10 +59,12 @@ Architecture (§5):
   keys, so both peers MAY transmit on the channel simultaneously. This channel
   inherits that property; it defines no exception to it.
 - **Multi-stream.** The Direction value "Multi-stream" means the channel is
-  bidirectional **and** MAY open multiple concurrent transport streams within its
-  stream family (core specification §5, Channel directionality). This is the property
-  that lets several sub-streams (for example one audio and one file-transfer stream)
-  run concurrently on one association, each independently flow-controlled.
+  bidirectional **and** MAY carry multiple concurrent payload-layer sub-streams
+  multiplexed within its frame payloads, all over the channel's single ordered
+  per-direction sequence (core specification §5, Channel directionality). This is
+  the property that lets several sub-streams (for example one audio and one
+  file-transfer sub-stream) run concurrently on one association, each independently
+  flow-controlled.
 - **Advertisement.** A peer that has not advertised channel `0x000C` during the
   handshake MUST NOT receive frames on it; frames on an unadvertised channel MUST be
   dropped (core specification §5). Enabling the channel is therefore a handshake-time
@@ -140,9 +142,10 @@ implementation obtains by enabling channel `0x000C` is the following:
    of its own.
 
 3. **Concurrent sub-streams.** As a Multi-stream channel, `0x000C` MAY carry
-   multiple concurrent transport sub-streams within its stream family (core
+   multiple concurrent payload-layer sub-streams multiplexed within its frame
+   payloads, all over the channel's single ordered per-direction sequence (core
    specification §5), for example separate token, audio, video, and file-transfer
-   streams on one association.
+   sub-streams on one association.
 
 4. **Independent flow control.** The core specification describes the Stream
    channel's sub-streams as "each with independent flow control" (§5). At the wire
@@ -244,8 +247,9 @@ if, for channel `0x000C`, it also conforms to the core specification and:
 
 2. Treats the channel as full-duplex and Multi-stream: it maintains independent
    per-direction send and receive sequence spaces and independent per-direction
-   traffic keys, and it MAY open multiple concurrent transport sub-streams within the
-   channel's stream family, each independently flow-controlled (§2, §4; core
+   traffic keys, and it MAY carry multiple concurrent payload-layer sub-streams
+   multiplexed within its frame payloads, all over the channel's single ordered
+   per-direction sequence, each independently flow-controlled (§2, §4; core
    specification §5);
 
 3. Honors the all-channel reserved frame types (`0x0001`–`0x000A`) with their core

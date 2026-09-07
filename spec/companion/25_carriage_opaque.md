@@ -241,22 +241,21 @@ prefix or terminator is used. A receiver MUST reject (BRIDGE_ERROR, code
 `EnvelopeMalformed`) an OpaqueContentType TLV whose value is empty, whose value
 contains a NUL octet, or whose value is not a syntactically valid media type.
 
-The Type code point for the OpaqueContentType TLV is a code point that the core
-specification or NPAMP-BRIDGE must reserve for this companion. **The exact code
-point is an open item for the core-specification maintainer (see §10).** Until that
-code point is assigned, this TLV cannot appear on the wire, and an implementation
-of NPAMP-CC-OPAQUE is limited to the media types enumerated by the BridgeEnvelope
-`content_type` field (§4.2 case 1).
+The Type code point for the OpaqueContentType TLV is **`0x0012`** — the fourth of
+the core specification's four companion-reserved TLV Types (`0x0010`
+BridgeEnvelope, `0x0012` OpaqueContentType, `0x0013` SafetyLabel; `0x0014` remains
+reserved but is fixed-32-octet and handshake-only, so it could not carry this
+variable-length value), assigned per §10.
 
 ### 4.4 Content-type discriminator value
 
 When an OpaqueContentType TLV is present, the BridgeEnvelope `content_type` field
 MUST be set to a discriminator value, distinct from the values NPAMP-BRIDGE already
 assigns, whose sole meaning is "the media type is carried in the OpaqueContentType
-TLV." Because the BridgeEnvelope `content_type` enumeration is defined and owned by
-NPAMP-BRIDGE, this discriminator value MUST be assigned by NPAMP-BRIDGE or by the
-core specification, not by this document. **The exact discriminator value is an
-open item for the core-specification maintainer (see §10).**
+TLV." The discriminator value is **`0x04`** — assigned per §10, the next value in
+the `content_type` enumeration after the three values NPAMP-BRIDGE assigns
+(`0x01` application/json, `0x02` application/cbor, `0x03` application/grpc+proto,
+NPAMP-BRIDGE §4).
 
 A sender MUST NOT invent an unassigned `content_type` value for this purpose, and a
 receiver MUST treat an unrecognized `content_type` value as a malformed envelope
@@ -416,32 +415,36 @@ constrain the set of content types it will dispatch to the set its application
 actually supports, and MUST validate the payload against the chosen handler's
 expectations before acting on it.
 
-## 10. Open items requiring a maintainer decision
+## 10. Code-point assignments
 
-The following code-point assignments are required for full on-the-wire operation of
-this document and are NOT yet reserved by the core specification or by NPAMP-BRIDGE.
-They are recorded here for the core-specification maintainer:
+The following two code-point assignments were required for full on-the-wire
+operation of this document. Both are now assigned by the core specification
+(decisions/adr/0015-opaque-carriage-and-grpc-code-point-assignments.md):
 
-1. **OpaqueContentType TLV type code point (§4.3).** A reserved extension-TLV Type
-   is required to carry the full media-type string. The core specification reserves
-   TLV Types `0x0010`, `0x0013`, and `0x0014` for companion specifications;
-   NPAMP-BRIDGE has consumed `0x0010` (BridgeEnvelope) and `0x0013` (SafetyLabel),
-   and `0x0014` is constrained to handshake-only use of fixed 32-octet length,
-   which does not fit a variable-length media-type string. A new companion-reserved,
-   variable-length TLV Type (with the high bit `0x8000` clear, so that endpoints
-   that do not implement opaque carriage ignore it rather than rejecting the frame)
-   is therefore requested.
-2. **BridgeEnvelope `content_type` discriminator value (§4.4).** A single
-   additional `u8` value in the BridgeEnvelope `content_type` enumeration, owned by
-   NPAMP-BRIDGE, is required to mean "media type is carried in the OpaqueContentType
-   TLV." It MUST be distinct from the currently assigned values `0x01`–`0x03`.
+1. **OpaqueContentType TLV type code point (§4.3): assigned `0x0012`.** A
+   reserved extension-TLV Type was required to carry the full media-type string.
+   The core specification reserves TLV Types `0x0010`, `0x0012`, and `0x0013` for
+   companion specifications; NPAMP-BRIDGE had already consumed `0x0010`
+   (BridgeEnvelope) and `0x0013` (SafetyLabel), and `0x0014` is constrained to
+   handshake-only use of fixed 32-octet length, which does not fit a
+   variable-length media-type string. `0x0012` was reserved for a companion
+   specification but unconsumed (it was returned to that status when the
+   unspecified "AnomalyCharge" TLV was retired, DECISIONS.md D11/T15.2) and had
+   the high bit `0x8000` clear (so endpoints that do not implement opaque
+   carriage ignore it rather than rejecting the frame) and variable length — it
+   is now assigned to OpaqueContentType.
+2. **BridgeEnvelope `content_type` discriminator value (§4.4): assigned `0x04`.**
+   A single additional `u8` value in the BridgeEnvelope `content_type`
+   enumeration, owned by NPAMP-BRIDGE, was required to mean "media type is
+   carried in the OpaqueContentType TLV." `0x04` is the next value after the
+   three previously assigned values `0x01`–`0x03` (NPAMP-BRIDGE §4).
 
-Until both assignments are made, a conforming implementation operates only over the
-media types already enumerated by the BridgeEnvelope `content_type` field (§4.2
-case 1); the open set of declared media types (§4.2 case 2) is unavailable on the
-wire. No part of this document requests any change to the core wire format or to the
-existing NPAMP-BRIDGE definitions; both items are additive reservations within
-ranges the core specification already sets aside for companions.
+Both assignments are additive: they touch no frozen wire byte, no existing code
+point, and no existing NPAMP-BRIDGE definition; both are reservations within
+ranges the core specification had already set aside for companions. A
+conforming implementation now operates over both §4.2 case 1 (the three
+BridgeEnvelope-enumerated media types) and §4.2 case 2 (any other declared media
+type, via the OpaqueContentType TLV).
 
 ## 11. Conformance
 

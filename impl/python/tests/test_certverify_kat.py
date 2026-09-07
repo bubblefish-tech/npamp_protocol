@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 VEC = os.path.join(os.path.dirname(__file__), "..", "..", "..", "test-vectors", "v1")
-CERTVERIFY_KAT_SHA256 = "19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f"
+CERTVERIFY_KAT_SHA256 = "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67"
 
 
 def _load():
@@ -91,9 +91,9 @@ def test_certverify_kat_impl():
         wrong = bytearray(thb)
         wrong[0] ^= 0x01
         assert not n.verify_cert_verify(pub, is_server, bytes(wrong), val), f"[{name}] accepted a wrong transcript hash"
-        # Scheme guard: a non-Ed25519 scheme code point must FAIL.
+        # Scheme guard: a non-Ed25519 scheme code point (0x0906, ML-DSA-87) must FAIL.
         bad_scheme = bytearray(val)
-        bad_scheme[0:2] = (0x0905).to_bytes(2, "big")
+        bad_scheme[0:2] = (0x0906).to_bytes(2, "big")
         assert not n.verify_cert_verify(pub, is_server, thb, bytes(bad_scheme)), f"[{name}] accepted a non-Ed25519 scheme"
         # Length guard: an Ed25519 signature is exactly 64 octets; a truncated value must FAIL.
         assert not n.verify_cert_verify(pub, is_server, thb, val[:-1]), f"[{name}] accepted a truncated signature"

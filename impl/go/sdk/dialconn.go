@@ -18,7 +18,7 @@ import (
 // N-PAMP session (the Phantom Relay inner tunnel is the motivating case).
 //
 // The security posture is IDENTICAL to Dial. DialConn wraps raw in a TLS 1.3
-// client with the same pinned ALPN ("n-pamp/2") and TLS 1.3 floor that Dial
+// client with the same pinned ALPN ("n-pamp/3") and TLS 1.3 floor that Dial
 // applies (via withNpampTLS), enforces the ALPN check (requireALPN), and drives
 // the SAME 1.5-RTT mutually-authenticated handshake (runClientHandshake) that
 // Dial uses, ending in a Conn built by the SAME newConn with the same
@@ -51,7 +51,7 @@ func DialConn(ctx context.Context, raw net.Conn, cfg Config) (*Conn, error) {
 	if raw == nil {
 		return nil, fmt.Errorf("npamp/sdk: DialConn requires a non-nil net.Conn")
 	}
-	priv, pub, err := identity(cfg.Identity)
+	id, err := resolveIdentity(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func DialConn(ctx context.Context, raw net.Conn, cfg Config) (*Conn, error) {
 		defer cancel()
 	}
 	// Wrap the caller's conn in a TLS client using the SAME config Dial uses:
-	// withNpampTLS pins ALPN "n-pamp/2" and a TLS 1.3 floor while preserving the
+	// withNpampTLS pins ALPN "n-pamp/3" and a TLS 1.3 floor while preserving the
 	// caller's certificates and verification settings. tls.Client is lazy, so force
 	// the handshake under hctx here — Dial gets this from tls.Dialer.DialContext.
 	tc := tls.Client(raw, withNpampTLS(cfg.TLSConfig))
@@ -76,11 +76,13 @@ func DialConn(ctx context.Context, raw net.Conn, cfg Config) (*Conn, error) {
 	if err := requireALPN(tc); err != nil {
 		return nil, err
 	}
-	master, peerID, err := runClientHandshake(hctx, tc, priv, pub, cfg.ExpectedPeerKey)
+	master, peerID, profile, err := runClientHandshake(hctx, tc, id, cfg.ExpectedPeerKey)
 	if err != nil {
 		return nil, err
 	}
-	return newConn(tc, master, peerID, npamp.DirClientToServer, npamp.DirServerToClient), nil
+	conn := newConn(tc, master, peerID, npamp.DirClientToServer, npamp.DirServerToClient)
+	conn.profile = profile
+	return conn, nil
 }
 
 // AcceptConn runs the server side of an N-PAMP session over a CALLER-SUPPLIED
@@ -109,7 +111,7 @@ func AcceptConn(ctx context.Context, raw net.Conn, cfg Config) (*Conn, error) {
 	if raw == nil {
 		return nil, fmt.Errorf("npamp/sdk: AcceptConn requires a non-nil net.Conn")
 	}
-	priv, pub, err := identity(cfg.Identity)
+	id, err := resolveIdentity(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +134,11 @@ func AcceptConn(ctx context.Context, raw net.Conn, cfg Config) (*Conn, error) {
 	if err := requireALPN(tc); err != nil {
 		return nil, err
 	}
-	master, peerID, err := runServerHandshake(hctx, tc, priv, pub, cfg.ExpectedPeerKey)
+	master, peerID, profile, err := runServerHandshake(hctx, tc, id, cfg.ExpectedPeerKey)
 	if err != nil {
 		return nil, err
 	}
-	return newConn(tc, master, peerID, npamp.DirServerToClient, npamp.DirClientToServer), nil
+	conn := newConn(tc, master, peerID, npamp.DirServerToClient, npamp.DirClientToServer)
+	conn.profile = profile
+	return conn, nil
 }

@@ -1,0 +1,7 @@
+module npamp-statelearn-sul
+
+go 1.27
+
+require github.com/bubblefish-tech/npamp_protocol/impl/go v0.0.0
+
+replace github.com/bubblefish-tech/npamp_protocol/impl/go => ../../../impl/go

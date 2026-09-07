@@ -148,11 +148,15 @@ peer MAY carry it under Class OPAQUE (§5).
 | 0x02 | A2A — Agent2Agent | JSONRPC (with DOC for the AgentCard) | NPAMP-MAP-A2A |
 | 0x03 | HTTP/2 generic carriage | HTTP | NPAMP-CC-HTTP |
 | 0x04 | WebSocket generic carriage | STREAM | NPAMP-CC-STREAM |
+| 0x05 | gRPC generic carriage | STREAM | NPAMP-CC-STREAM |
 
 Code points `0x01`–`0x04` are the values NPAMP-BRIDGE names directly; this document
 records them with their carriage class and mapping reference and MUST NOT reassign
-them. Code points `0x05`–`0x0F` are unassigned and available under the registration
-procedure of §8.
+them. Code point `0x05` is assigned under the §8 registration procedure — the next
+available value after `0x01`–`0x04`, mirroring the `0x04` WebSocket row's own
+"generic carriage" pattern (decisions/adr/0015) — and likewise MUST NOT be
+reassigned. Code points `0x06`–`0x0F` are unassigned and available under the
+registration procedure of §8.
 
 A peer that advertises support for a `protocol_id` in §6 (whether by NPAMP-DISC or by
 local configuration) asserts that it carries that protocol under the named carriage
@@ -263,7 +267,7 @@ as its carriage class, in which case no protocol-specific mapping is required.
 ### 8.4 Exhaustion of the standards-assigned range
 
 The standards-assigned range provides fifteen code points (`0x01`–`0x0F`), of which
-`0x01`–`0x04` are assigned in §6, leaving `0x05`–`0x0F` (eleven values) available.
+`0x01`–`0x05` are assigned in §6, leaving `0x06`–`0x0F` (ten values) available.
 This range is small by design: it is intended for protocols that warrant a
 standards-assigned, cross-domain identifier, while the experimental and private-use
 ranges and Class OPAQUE carry everything else without consuming it. Because the
@@ -281,7 +285,7 @@ BRIDGE_ERROR carrying the NPAMP-BRIDGE transport error `ProtocolUnsupported`
 (code 2). This is the behavior NPAMP-BRIDGE already defines for an uncarried
 `protocol_id`; this document does not add to it. Specifically:
 
-- A receiver MUST treat an unassigned standards-range value (`0x05`–`0x0F` not yet in
+- A receiver MUST treat an unassigned standards-range value (`0x06`–`0x0F` not yet in
   §6), an experimental value it has no agreement on (§7.1), and a private-use value
   it does not define (§7.2) all as "not carried," and MUST return
   `ProtocolUnsupported` for a request bearing any of them.

@@ -1,6 +1,6 @@
 # N-PAMP-01 — Profile Negotiation (reference)
 
-> **Derived extract.** Authoritative source: the Internet-Draft, published through the IETF Independent Submission stream
+> **Derived extract.** Authoritative source: `../ietf/draft-bubblefish-npamp-latest.md`
 > (revision draft-bubblefish-npamp-01; integrity pinned in ../PIN.json), §6 "Profile Negotiation". The draft governs.
 > Machine-readable: `../registries/profiles.csv`.
 
@@ -20,7 +20,7 @@ escalation of the previous.
 
 | Property | Standard | High | Sovereign |
 |---|---|---|---|
-| Minimum KEM | X25519MLKEM768 | X25519MLKEM1024 | X25519MLKEM1024 |
+| Minimum KEM | X25519MLKEM768 | SecP384r1MLKEM1024 | SecP384r1MLKEM1024 |
 | Allowed signatures | Ed25519 | Ed25519, ML-DSA-87 | ML-DSA-87 |
 | KDF hash | SHA-256 | SHA-384 | SHA-384 |
 | Per-frame AEAD diversification | Off | On | On |

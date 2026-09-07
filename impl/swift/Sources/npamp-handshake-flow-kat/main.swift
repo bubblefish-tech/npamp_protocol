@@ -66,7 +66,7 @@ let dirS2C = 1
 let mlkem768CiphertextSize = 1088
 
 // SHA-256 pin of the flow vector — fails loud on a swapped vector (mirrors the sibling KATs).
-let handshakeFlowKatPin = "cf1d3c1fba550f3742e4de16d0f86d3beeafeb56efff90f85ff16165063c0fc9"
+let handshakeFlowKatPin = "d0df49ca9eca02969f782de9ab7ff394eab3313f84291a5aaa5ad1746e5441c3"
 
 // ---------------------------------------------------------------------------
 // Leg runner + failure accounting (identical convention to npamp-handshake-kat)

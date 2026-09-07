@@ -24,7 +24,7 @@
 //	                                                       MUST fail the tag check)
 //	nonce.derive   -> npamp.DeriveNonce                   (iv XOR (0^4 || seq); no Channel ID)
 //	tlv.encode     -> npamp.TLV.Encode                    (Type||Length||Value wire bytes)
-//	hkdf.expand_label -> npamp.HkdfExpandLabel            (RFC 8446 §7.1 with the "n-pamp " prefix)
+//	hkdf.expand_label -> npamp.HkdfExpandLabel            (RFC 9846 §7.1 with the "n-pamp " prefix)
 //	keys.derive_traffic -> npamp.DeriveTrafficSecret + DeriveKeyIV (§5 (dir,epoch,suite,channel) key/iv)
 //
 // Windows: stdio is treated as raw binary and stdout is flushed after every
@@ -311,8 +311,8 @@ func handle(req request) response {
 		switch s(req.In, "kem") {
 		case "X25519MLKEM768":
 			kem = npamp.KEMX25519MLKEM768
-		case "X25519MLKEM1024":
-			kem = npamp.KEMX25519MLKEM1024
+		case "X25519MLKEM1024": // corpus name migration to SecP384r1MLKEM1024 is Phase-4 (T18.3)
+			kem = npamp.KEMSecP384r1MLKEM1024
 		default:
 			return response{Skipped: "unknown kem: " + s(req.In, "kem")}
 		}

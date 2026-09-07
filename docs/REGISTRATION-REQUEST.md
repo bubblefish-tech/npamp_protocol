@@ -126,17 +126,18 @@ Route:
 
 ## Part C — IANA registry actions (ALPN and `npamp://` URI scheme)
 
-N-PAMP requests exactly two IANA-hosted registry actions, submitted directly to
-**IANA** (not decided in this repository) and stated in full in the IANA
-Considerations of the Internet-Draft. The field shapes below are illustrative of
-the RFC 7301 / RFC 7595 templates.
+N-PAMP requests exactly two IANA-hosted registry actions. Both are already written
+up in full IANA-template form in
+`IANA_ALPN_n-pamp-2_registration_request.md` at the repository root; the field
+sets are reproduced here for reference. These are submitted to **IANA**, not
+decided in this repository.
 
 ### C.1 ALPN protocol identifier (RFC 7301 §6 — Expert Review)
 
 | Field | Value |
 |---|---|
 | **Protocol** | `<protocol name and wire major version>` |
-| **Identification Sequence** | `<the ALPN octet string, e.g. "n-pamp/2" — give the hex octets and the UTF-8 string>` |
+| **Identification Sequence** | `<the ALPN octet string, e.g. "n-pamp/3" — give the hex octets and the UTF-8 string>` |
 | **Reference** | `<the Internet-Draft / RFC number>` |
 
 Registered under **Expert Review** (RFC 8126): the designated expert verifies the
@@ -180,3 +181,5 @@ available, and the protocol genuinely benefits from ALPN negotiation.
   Review, First Come First Served).
 - **RFC 7301** §6 (ALPN registration template) and **RFC 7595** (URI-scheme
   registration template).
+- **IANA_ALPN_n-pamp-2_registration_request.md** — the filled ALPN and
+  `npamp://` submissions.

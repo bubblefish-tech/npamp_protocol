@@ -77,9 +77,9 @@ alter them.
   every N-PAMP channel, each peer maintains an independent per-direction send and
   receive sequence space and independent per-direction traffic keys, so both peers
   MAY transmit on the channel simultaneously (core specification §5). The Audit
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Memory `0x0001` and
-  Stream `0x000C` channels).
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Memory `0x0001` and Stream `0x000C` channels).
 - **Advertisement gate.** A peer that has not advertised the Audit channel during
   the handshake MUST NOT receive frames on it; frames on an unadvertised Audit
   channel MUST be dropped (core specification §5, applied to `0x000B`).

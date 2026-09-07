@@ -1,0 +1,55 @@
+[package]
+name = "nz-waypoint-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP R12/E2.7 optional L7 waypoint -- the Envoy proxy-wasm N-PAMP filter hosting shape. Composes nz-waypoint-core's EXISTING classify()/authorize()/extract_triple() logic (via the official proxy-wasm-rust-sdk) -- does not reimplement any of it. See nz-agent/src/waypoint.rs for the sibling native hosting shape, which shares this exact same core."
+
+# INDEPENDENT crate, path-dependency only. Builds standalone for the
+# wasm32-unknown-unknown target: `cd impl/rust/nz-waypoint-wasm && cargo
+# build --target wasm32-unknown-unknown`. Unit tests of the pure
+# classification/authorization decision logic (src/decision.rs,
+# src/config.rs) run on the HOST target: `cargo test` (no wasm runtime
+# needed -- see those modules' own docs for why the ABI glue in src/lib.rs
+# is deliberately thin and untested-in-isolation: it cannot be, without a
+# live Envoy/wasm host, and this crate does not fake that it can).
+#
+# `proxy-wasm` (crates.io, license Apache-2.0, the official
+# proxy-wasm/proxy-wasm-rust-sdk, checked via `cargo info proxy-wasm` this
+# session: version 0.2.5, rust-version 1.68) is the SDK this filter is
+# hosted through -- verified against its own published source (traits.rs,
+# lib.rs) this session, not from memory (Section E8): `HttpContext::
+# on_http_request_headers`/`get_http_request_header`/`send_http_response`,
+# `RootContext::on_configure`/`create_http_context`/`get_type`, and the
+# `proxy_wasm::main!`/`set_root_context`/`set_http_context` registration
+# shape all match the SDK's own `examples/http_auth_random` and
+# `examples/http_config` reference filters (fetched from
+# github.com/proxy-wasm/proxy-wasm-rust-sdk this session).
+[dependencies]
+proxy-wasm = "0.2.5"
+nz-waypoint-core = { path = "../nz-waypoint-core" }
+# Plugin-configuration parsing only (src/config.rs: the RootContext's
+# on_configure JSON blob -> (consuming_authority, grants) pair). Already a
+# transitive dependency via nz-waypoint-core's Option B1 wire format;
+# declared directly here so this crate's own code can name it.
+serde_json = "1.0"
+
+[lib]
+# "cdylib" is the real Envoy proxy-wasm module artifact shape (the SDK's own
+# examples/*/Cargo.toml convention -- verified this session). "rlib" is
+# added alongside it SOLELY so `cargo test` (host target, no wasm runtime)
+# can link this crate's own pure decision-logic unit tests; a
+# cdylib-only crate type does not support the standard `cargo test` harness
+# binary.
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+# The SDK's own example filters' convention (verified against
+# examples/http_auth_random/Cargo.toml this session): `panic = "abort"` +
+# `strip = "debuginfo"` keep the shipped .wasm module small; a proxy-wasm
+# module has no unwind-catching host to hand a panic to.
+lto = true
+opt-level = 3
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

@@ -121,7 +121,7 @@ func TestRatchetSendTier1AdvancesAndZeroizesRoot(t *testing.T) {
 // TestHandleMasterRatchetTier1AdvancesRecvRoot proves the Tier-1 RECEIVE handler
 // validates the announced generation, advances masterRecv identically, and wipes
 // the retired root. It calls the handler directly with a well-formed marker; the
-// informational ACK it spawns is drained.
+// ACK it spawns is drained.
 func TestHandleMasterRatchetTier1AdvancesRecvRoot(t *testing.T) {
 	master := make([]byte, 32)
 	for i := range master {

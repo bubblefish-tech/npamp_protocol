@@ -454,14 +454,16 @@ receiver, conversation identifier, ontology, and content-language are carried in
 verbatim foreign message (§5), not in a dedicated TLV, because routing/correlation/safety
 need only the performative (projected to `method`) and a correlation token, and because no
 carriage-class TLV code point is available to define one: the core specification reserves
-TLV tags `0x0010`, `0x0013`, and `0x0014` for companion specifications, NPAMP-BRIDGE has
-consumed `0x0010` (BridgeEnvelope) and `0x0013` (SafetyLabel), and the only remaining
-reserved companion tag, `0x0014`, is reserved as **handshake-only** and **fixed
-32-octet** in the core TLV registry — unsuitable for a variable-length, per-message
-metadata TLV. If a future need arises to project message metadata into a typed TLV (for
-example to let an intermediary route on conversation identifier without parsing the body),
-the core specification would have to reserve an additional, variable-length,
-per-frame-eligible companion TLV tag for it. A maintainer decision is needed on whether to
+TLV tags `0x0010`, `0x0012`, `0x0013`, and `0x0014` for companion specifications, and all
+four are now consumed — NPAMP-BRIDGE has `0x0010` (BridgeEnvelope) and `0x0013`
+(SafetyLabel), NPAMP-CC-OPAQUE has `0x0012` (OpaqueContentType, decisions/adr/0015), and
+the remaining reserved companion tag, `0x0014`, is reserved as **handshake-only** and
+**fixed 32-octet** in the core TLV registry — unsuitable for a variable-length,
+per-message metadata TLV. If a future need arises to project message metadata into a
+typed TLV (for example to let an intermediary route on conversation identifier without
+parsing the body), the core specification would have to reserve an additional,
+variable-length, per-frame-eligible companion TLV tag for it (none remain unassigned). A
+maintainer decision is needed on whether to
 request that reservation; absent it, the verbatim-body carriage of this document is the
 complete and code-point-clean design.
 

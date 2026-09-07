@@ -98,6 +98,21 @@ func TestReservedMustBeZero(t *testing.T) {
 	}
 }
 
+func TestReservedFlagRejected(t *testing.T) {
+	// Bit 0 (formerly URG) and bit 3 (formerly FRAG) are reserved; a receiver MUST
+	// reject a frame that sets either (T15.2, fail-closed). Removing the
+	// reservedFlagMask check makes both cases decode cleanly and this test fail.
+	for _, bit := range []uint8{0x01, 0x08} {
+		buf, _ := ping().MarshalBinary()
+		buf[4] |= bit                                                                 // set a reserved flag bit
+		binary.BigEndian.PutUint32(buf[21:25], crc32.Checksum(buf[0:21], castagnoli)) // re-validate CRC over the mutated prefix
+		var f Frame
+		if err := f.UnmarshalBinary(buf); !errors.Is(err, ErrReservedFlag) {
+			t.Fatalf("reserved flag bit %#02x: want ErrReservedFlag, got %v", bit, err)
+		}
+	}
+}
+
 func TestShortHeader(t *testing.T) {
 	var f Frame
 	if err := f.UnmarshalBinary(make([]byte, 10)); err != ErrShortHeader {
@@ -172,7 +187,7 @@ func TestProfileInvariants(t *testing.T) {
 	if ProfileStandard.KDFHash() != "SHA-256" || ProfileHigh.KDFHash() != "SHA-384" {
 		t.Fatal("kdf hash")
 	}
-	if ProfileStandard.MinKEM() != KEMX25519MLKEM768 || ProfileSovereign.MinKEM() != KEMX25519MLKEM1024 {
+	if ProfileStandard.MinKEM() != KEMX25519MLKEM768 || ProfileSovereign.MinKEM() != KEMSecP384r1MLKEM1024 {
 		t.Fatal("min kem")
 	}
 }
@@ -181,10 +196,35 @@ func TestRegistries(t *testing.T) {
 	if ChanSpatial != 0x0013 || ChanControl.Name() != "Control" || !ChannelID(0x0014).Reserved() {
 		t.Fatal("channel registry")
 	}
-	if ALPN != "n-pamp/2" || TLVAnomalyCharge != 0x12 || SigMLDSA87 != 0x0905 {
+	if ALPN != "n-pamp/3" || SigMLDSA87 != 0x0906 {
 		t.Fatal("constants")
 	}
 	if !TLVType(0x8001).ForwardIncompatible() || TLVType(0x12).ForwardIncompatible() {
 		t.Fatal("forward-incompat bit")
+	}
+}
+
+// TestReadFrameRejectsOversizeFrame pins R12.2: a frame whose declared Payload Length
+// pushes the total over MaxFrameSize is rejected with ErrFrameTooLarge BEFORE the
+// reader waits to buffer it. Mutation-guard: removing the MaxFrameSize check makes
+// ReadFrame instead return ErrIncompleteFrame (waiting to buffer 16 MiB) and this fails.
+func TestReadFrameRejectsOversizeFrame(t *testing.T) {
+	buf := make([]byte, HeaderSize)
+	binary.BigEndian.PutUint32(buf[17:21], uint32(MaxFrameSize)) // total = 36 + 16 MiB > 16 MiB
+	if _, _, err := ReadFrame(buf); !errors.Is(err, ErrFrameTooLarge) {
+		t.Fatalf("oversize frame not rejected with ErrFrameTooLarge (err=%v)", err)
+	}
+}
+
+// TestDecodeTLVsRejectsTooManyTLVs pins the MaxTLVsPerFrame bound (R12.1). Mutation-
+// guard: removing the count check lets DecodeTLVs return MaxTLVsPerFrame+1 TLVs with no
+// error and this fails.
+func TestDecodeTLVsRejectsTooManyTLVs(t *testing.T) {
+	var buf []byte
+	for i := 0; i < MaxTLVsPerFrame+1; i++ {
+		buf = TLV{Type: TLVType(0x12)}.Encode(buf) // reserved tag; only needs to be an unrecognized TLV
+	}
+	if _, err := DecodeTLVs(buf); !errors.Is(err, ErrTooManyTLVs) {
+		t.Fatalf("too many TLVs not rejected with ErrTooManyTLVs (err=%v)", err)
 	}
 }

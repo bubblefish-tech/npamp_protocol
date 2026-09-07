@@ -8,16 +8,16 @@ before any application semantics.
 
 This site renders the public reference material for N-PAMP: the Internet-Draft, the
 normative core and companion specifications, the code-point registries, the ten
-reference implementations with copy-paste quickstarts, the conformance corpus and
-harness, and the per-decision record of how the protocol was designed. The
-authoritative sources are the Markdown files in the
+reference implementations with copy-paste quickstarts, and the conformance corpus and
+harness. The authoritative sources are the Markdown files in the
 [`npamp_protocol`](https://github.com/bubblefish-tech/npamp_protocol) repository; this
 is a browsable mirror of them.
 
 !!! note "Specification status"
     The current specification is **`draft-bubblefish-npamp-01`** (Internet-Draft,
-    Independent Submission stream, Informational). Wire major version **2**, ALPN
-    identifier `n-pamp/2`. License: Apache-2.0.
+    Independent Submission stream, Informational). Wire-format version **2** (the
+    `Ver` nibble, invariant); crypto generation **3**, ALPN identifier `n-pamp/3`.
+    License: Apache-2.0.
 
 ## What N-PAMP provides
 
@@ -30,13 +30,13 @@ is a browsable mirror of them.
   Stream, Bridge, Commerce, Interaction, Discovery, Workflow, Knowledge, and Spatial.
 - **Three negotiated security profiles** — Standard, High, and Sovereign — that hold
   the wire format constant while escalating the cryptographic primitives.
-- **Hybrid post-quantum key establishment** combining X25519 with ML-KEM (FIPS 203),
-  concatenated ML-KEM-first as HKDF-Extract input keying material, aligned to NIST
-  SP 800-56C Rev. 2.
+- **Hybrid post-quantum key establishment** combining an elliptic-curve ECDH with
+  ML-KEM (FIPS 203); the concatenation order is per-group (X25519MLKEM768 is
+  ML-KEM-first, SecP384r1MLKEM1024 is ECDHE-first), aligned to NIST SP 800-56C Rev. 2.
 - **A 1.5-RTT, mutually-authenticated handshake** with transcript binding, an HKDF key
   schedule, forward secrecy, and downgrade protection.
 - **QUIC** as the primary transport and **TCP with TLS 1.3** as a fallback, negotiated
-  via the ALPN identifier `n-pamp/2`.
+  via the ALPN identifier `n-pamp/3`.
 
 N-PAMP is deliberately scoped as a **transport substrate**. It does not define
 application-layer semantics for the data carried on its channels; those are the
@@ -45,7 +45,7 @@ subject of the companion specifications and bridge mappings shipped alongside it
 ## Start here
 
 - **Read the specification** — the Internet-Draft:
-  `draft-bubblefish-npamp-01` (IETF Independent Submission stream).
+  [`draft-bubblefish-npamp-01`](../ietf/draft-bubblefish-npamp-latest.md).
 - **Pick a language and go** — ten reference implementations, each with a copy-paste
   quickstart:
   [Go](../impl/go/QUICKSTART.md) ·
@@ -67,8 +67,9 @@ subject of the companion specifications and bridge mappings shipped alongside it
   [conformance requirements](../spec/companion/55_conformance_requirements.md), the
   [test-vector corpus](../test-vectors/README.md), and the
   [harness](../harness/README.md).
-- **Understand the design** — the
-  [architecture decision records](../decisions/0001-record-architecture-decisions.md).
+- **Choose a cryptographic provider** — the per-language
+  [ML-KEM + ECDH provider matrix](provider-matrix.md) (which library each SDK uses to
+  produce the hybrid key-exchange component secrets).
 
 ## Reference implementations at a glance
 

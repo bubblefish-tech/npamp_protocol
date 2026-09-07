@@ -1,0 +1,47 @@
+[package]
+name = "nz-gwapi-controller"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP Gateway-API/GAMMA control-plane wiring (E2.7c, R12 AC4): reads standard Kubernetes Gateway-API HTTPRoute + core Service objects and configures nz-agent's --allow/--register-peer/AuthzHook seams from them, instead of static CLI flags."
+
+# INDEPENDENT crate, path-dependency only (matches every other impl/rust/nz-*
+# crate's convention): never edits ../nz-agent or ../nz-waypoint-core. Builds
+# and tests standalone: `cd impl/rust/nz-gwapi-controller && cargo build &&
+# cargo test`.
+[dependencies]
+# The seams this controller wires into (nz-agent/src/lib.rs's own R12 AC4 gap
+# note: "the AuthzTable/PeerDirectory population seams this build DOES ship
+# (allow/register, and the CLI's --allow/--register-peer) are exactly what
+# such a controller would call"). Reused directly, never re-derived: this
+# crate does not reimplement SpiffeId parsing, AuthzTable's fail-closed
+# allow-set, or PeerDirectory's pubkey table.
+nz-agent = { path = "../nz-agent" }
+# The L7 AuthzHook seam (E2.7, R12 AC3) named in this task's scope. Only
+# EffectClass is used directly here (never re-derived from memory: this
+# crate's own annotation parser rejects anything that is not one of the four
+# exact tokens EffectClass::Display already emits, then hands the
+# CORRESPONDING in-range numeric code to EffectClass::from_wire -- see
+# src/plan.rs's module docs for why from_wire's own fail-closed default must
+# NOT be reached by untrusted annotation input).
+nz-waypoint-core = { path = "../nz-waypoint-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Real Kubernetes client + controller-runtime primitives (kube 4.2.0 pairs
+# with k8s-openapi 0.28.0 -- verified against crates.io 2026-09-05). `client`
+# for kube::Client, `runtime` for kube::runtime::watcher (the list+watch
+# primitive this crate's reconcile loop uses -- see src/controller.rs's
+# module docs for why `watcher` rather than the full `Controller` builder).
+kube = { version = "4.2", features = ["client", "runtime"] }
+# `latest` pulls the newest supported Kubernetes API schema (the core
+# v1/Service type this crate reads annotations from); no Gateway-API types
+# needed from this crate -- HTTPRoute is read as a `kube::core::DynamicObject`
+# (see src/controller.rs) rather than via a generated-bindings crate, so this
+# controller depends on nothing this repo does not already need for Service.
+k8s-openapi = { version = "0.28", features = ["latest"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
+
+[[bin]]
+name = "nz-gwapi-controller"
+path = "src/bin/nz_gwapi_controller.rs"

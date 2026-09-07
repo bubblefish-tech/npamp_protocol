@@ -79,9 +79,9 @@ alter them.
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously and either peer MAY report metrics or
   health to the other (core specification §5). The Telemetry channel is **not**
-  classified Multi-stream: it does not open multiple concurrent transport
-  sub-streams within a stream family (contrast the Multi-stream Sensory channel
-  `0x0009` and Stream channel `0x000C`).
+  classified Multi-stream: it does not carry multiple concurrent payload-layer
+  sub-streams multiplexed within its frame payloads (contrast the Multi-stream
+  Sensory channel `0x0009` and Stream channel `0x000C`).
 - **Advertisement gate.** A peer that has not advertised the Telemetry channel
   during the handshake MUST NOT receive frames on it; frames on an unadvertised
   Telemetry channel MUST be dropped (core specification §5, applied to `0x000A`).
@@ -312,8 +312,8 @@ if, for channel `0x000A`, it:
    (§3.3, §4);
 7. Supports the channel's **Bidirectional** direction — both peers sending and
    receiving on a single stream, each maintaining independent per-direction sequence
-   spaces and traffic keys — and does not open multiple concurrent transport streams
-   within the channel as though it were Multi-stream (§2); and
+   spaces and traffic keys — and does not carry multiple concurrent payload-layer
+   sub-streams within the channel as though it were Multi-stream (§2); and
 8. Defers all Telemetry operation semantics beyond the registry-level interface of
    §4 to the NPAMP-TELEMETRY companion specification
    (`../companion/87_telemetry_channel.md`), adding no Telemetry behavior of its own

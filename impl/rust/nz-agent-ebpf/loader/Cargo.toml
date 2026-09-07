@@ -1,0 +1,65 @@
+# Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
+[package]
+name = "nz-agent-ebpf-loader"
+version = "0.1.0"
+edition.workspace = true
+license = "Apache-2.0"
+description = "Userspace loader for the R13-B samenode_splice eBPF program: AyaSpliceInstaller implements nz_agent::datapath::SpliceInstaller with a real aya SockHash/HashMap map-update."
+
+# Path dependency on `nz-agent` (R13-A: the capability selector + fail-closed
+# authz gate this crate's AyaSpliceInstaller plugs into). `nz-agent` itself
+# never depends on `aya`/this crate — the dependency arrow points ONE way
+# (loader -> nz-agent), so nz-agent's own Windows build is untouched (`aya`
+# is Linux-only; this whole `nz-agent-ebpf/` workspace is a SEPARATE Cargo
+# project from `../nz-agent`'s, built only on Linux/WSL2).
+[dependencies]
+aya = { workspace = true }
+anyhow = { workspace = true, features = ["std"] }
+libc = { workspace = true }
+nz-agent-ebpf-common = { path = "../common", features = ["user"] }
+nz-agent = { path = "../../nz-agent" }
+
+[build-dependencies]
+aya-build = { workspace = true }
+cargo_metadata = { workspace = true }
+anyhow = { workspace = true, features = ["std"] }
+
+[[bin]]
+name = "load_demo"
+path = "src/bin/load_demo.rs"
+
+[[bin]]
+name = "egress_redirect_demo"
+path = "src/bin/egress_redirect_demo.rs"
+
+[[bin]]
+name = "inbound_lookup_demo"
+path = "src/bin/inbound_lookup_demo.rs"
+
+[[bin]]
+name = "tc_fallback_demo"
+path = "src/bin/tc_fallback_demo.rs"
+
+[[bin]]
+name = "egress_e2e"
+path = "src/bin/egress_e2e.rs"
+
+[[bin]]
+name = "inbound_lookup_e2e"
+path = "src/bin/inbound_lookup_e2e.rs"
+
+[[bin]]
+name = "tc_fallback_e2e"
+path = "src/bin/tc_fallback_e2e.rs"
+
+[[bin]]
+name = "telemetry_bridge_e2e"
+path = "src/bin/telemetry_bridge_e2e.rs"
+
+[[bin]]
+name = "bench_splice"
+path = "src/bin/bench_splice.rs"
+
+[[bin]]
+name = "agentgateway_underlay_e2e"
+path = "src/bin/agentgateway_underlay_e2e.rs"

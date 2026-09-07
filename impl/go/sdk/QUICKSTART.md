@@ -67,7 +67,7 @@ ch, ft, reply, err := conn.Recv(context.Background())
   CLIENT_AUTH, so a client never authenticates to an impostor. `Conn.PeerIdentity()`
   returns the proven key for trust-on-first-use.
 - `TLSConfig` is required and governs certificate verification; the SDK pins ALPN
-  `n-pamp/2` and a TLS 1.3 floor but never weakens the verification you configure.
+  `n-pamp/3` and a TLS 1.3 floor but never weakens the verification you configure.
   For loopback development a self-signed certificate with `InsecureSkipVerify` is
   acceptable because peer authentication comes from the handshake, not the
   certificate.

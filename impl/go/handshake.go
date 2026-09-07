@@ -3,6 +3,7 @@ package npamp
 import (
 	"crypto/ed25519"
 	"crypto/hmac"
+	"crypto/mldsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -18,6 +19,20 @@ const (
 	FrameServerHello FrameType = 0x0101 // cleartext
 	FrameServerAuth  FrameType = 0x0102 // AEAD-sealed under the s-hs handshake key
 	FrameClientAuth  FrameType = 0x0103 // AEAD-sealed under the c-hs handshake key
+)
+
+// Master-ratchet and re-KEM frame types on the Control channel (spec/10 section 9,
+// Hybrid Tree Ratchet). They continue the Control channel's channel-specific block
+// above (0x0104-0x0107) and mark the Tier-1 (symmetric) and Tier-2 (re-KEM)
+// generation boundaries of the post-handshake ratchet. The ratchet logic lives in
+// the SDK (sdk/ratchet.go); the code points are defined here so every Control-channel
+// frame type resolves to one core-package authority, registered in
+// registries/frame_types_channel.csv and schema/npamp-wire.cddl.
+const (
+	FrameMasterRatchet    FrameType = 0x0104 // Tier-1 boundary (last gen_send frame)
+	FrameMasterRatchetAck FrameType = 0x0105 // Tier-1 ack (informational)
+	FrameReKEM            FrameType = 0x0106 // Tier-2 re-KEM request
+	FrameReKEMAck         FrameType = 0x0107 // Tier-2 re-KEM boundary
 )
 
 // Role identifies which side of the handshake produced an authentication
@@ -38,6 +53,8 @@ var (
 	ErrCertVerifySignature = errors.New("npamp: CertVerify signature verification failed")
 	ErrCertVerifyKeySize   = errors.New("npamp: identity key is not an Ed25519 public key")
 	ErrFinishedMismatch    = errors.New("npamp: Finished verify_data mismatch")
+	ErrCertVerifyMLDSAKey  = errors.New("npamp: identity key is not an ML-DSA-87 public key")
+	ErrCertVerifyMLDSASize = errors.New("npamp: CertVerify value has an invalid ML-DSA-87 signature size")
 )
 
 // certVerifyContext returns the role's CertVerify context string
@@ -45,9 +62,9 @@ var (
 func (r Role) certVerifyContext() string {
 	switch r {
 	case RoleClient:
-		return "N-PAMP/2, client CertificateVerify"
+		return "N-PAMP/3, client CertificateVerify"
 	case RoleServer:
-		return "N-PAMP/2, server CertificateVerify"
+		return "N-PAMP/3, server CertificateVerify"
 	default:
 		return ""
 	}
@@ -110,6 +127,21 @@ func parseU16List[T ~uint16](v []byte, name string) ([]T, error) {
 // requireTLVs checks that tlvs is exactly the expected types in the expected
 // order (the handshake fixes both, spec/10 section 1).
 func requireTLVs(tlvs []TLV, want []TLVType) error {
+	// Must-understand check first: an unknown high-bit (0x8000) TLV is a
+	// forward-incompatible extension the receiver cannot process, and is rejected
+	// with ErrUnknownCriticalTLV distinctly from an ordering/count error (R6). This
+	// gives ForwardIncompatible its production call site.
+	wanted := func(t TLVType) bool {
+		for _, w := range want {
+			if t == w {
+				return true
+			}
+		}
+		return false
+	}
+	if err := CheckMustUnderstand(tlvs, wanted); err != nil {
+		return err
+	}
 	if len(tlvs) != len(want) {
 		return fmt.Errorf("%w: got %d TLVs, want %d", ErrHandshakeTLVOrder, len(tlvs), len(want))
 	}
@@ -284,7 +316,7 @@ func DecodeAuthMessage(payload []byte) (*AuthMessage, error) {
 	}, nil
 }
 
-// CertVerifySigningInput builds the RFC 8446 section 4.4.3-style input the
+// CertVerifySigningInput builds the RFC 9846 section 4.4.3-style input the
 // CertVerify signature covers (spec/10 section 6.1):
 //
 //	0x20 x 64 || context || 0x00 || transcript_hash
@@ -344,8 +376,59 @@ func VerifyCertVerify(pub []byte, role Role, transcriptHash, certVerifyValue []b
 	return nil
 }
 
+// SignCertVerifyMLDSA87 produces the TLV 0x0A value for the given role using
+// ML-DSA-87 (FIPS 204, IANA TLS SignatureScheme 0x0906 — spec/10 section 6.1,
+// suites.go SigMLDSA87), the post-quantum signature scheme required at the
+// High and Sovereign profiles. It signs the same CertVerifySigningInput as
+// SignCertVerify — 64 x 0x20 || context || 0x00 || transcript_hash — directly
+// in ML-DSA's pure (non-prehashed) mode with an empty ML-DSA context string
+// (the N-PAMP role/context separation already lives inside the signing
+// input, per CertVerifySigningInput; ML-DSA's own Options.Context is left
+// unused to avoid a second, redundant domain-separation mechanism).
+// SignDeterministic is used (not the randomized Sign) so the CertVerify
+// value is reproducible for known-answer testing, matching this package's
+// deterministic-KAT convention for every other primitive.
+func SignCertVerifyMLDSA87(priv *mldsa.PrivateKey, role Role, transcriptHash []byte) ([]byte, error) {
+	input, err := CertVerifySigningInput(role, transcriptHash)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := priv.SignDeterministic(input, nil)
+	if err != nil {
+		return nil, fmt.Errorf("npamp: ML-DSA-87 CertVerify signing failed: %w", err)
+	}
+	out := binary.BigEndian.AppendUint16(make([]byte, 0, 2+len(sig)), uint16(SigMLDSA87))
+	return append(out, sig...), nil
+}
+
+// VerifyCertVerifyMLDSA87 checks a TLV 0x0A value against the peer's
+// ML-DSA-87 identity key, role, and transcript hash (spec/10 section 6.1).
+// It rejects a signature scheme other than the negotiated ML-DSA-87
+// (0x0906) and — because the role selects the context string — a server
+// CertVerify presented as a client one, mirroring VerifyCertVerify's
+// Ed25519 checks for the post-quantum scheme.
+func VerifyCertVerifyMLDSA87(pub *mldsa.PublicKey, role Role, transcriptHash, certVerifyValue []byte) error {
+	if pub == nil {
+		return ErrCertVerifyMLDSAKey
+	}
+	if len(certVerifyValue) != 2+mldsa.MLDSA87SignatureSize {
+		return fmt.Errorf("%w: value is %d octets, want %d", ErrCertVerifyMLDSASize, len(certVerifyValue), 2+mldsa.MLDSA87SignatureSize)
+	}
+	if SigID(binary.BigEndian.Uint16(certVerifyValue[:2])) != SigMLDSA87 {
+		return ErrCertVerifyScheme
+	}
+	input, err := CertVerifySigningInput(role, transcriptHash)
+	if err != nil {
+		return err
+	}
+	if err := mldsa.Verify(pub, input, certVerifyValue[2:], nil); err != nil {
+		return ErrCertVerifySignature
+	}
+	return nil
+}
+
 // ComputeFinished produces the TLV 0x0B verify_data (spec/10 section 6.2, per
-// RFC 8446 section 4.4.4):
+// RFC 9846 section 4.4.4):
 //
 //	verify_data = HMAC(finished_key, transcript_hash)
 //

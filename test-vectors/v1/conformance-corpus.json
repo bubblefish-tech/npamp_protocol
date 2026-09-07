@@ -79,6 +79,19 @@
             "MustReject",
             "BadVersion"
           ]
+        },
+        {
+          "tcId": 6,
+          "requirement": "R1/wire-format/truncated-header-MUST-reject",
+          "comment": "first 20 of the fixed 36 octets of the golden PING header (tcId 1) with none of the remainder buffered; a decoder MUST NOT parse a short header and MUST report an error rather than a partial/zero-filled result. Reference-verified to return ErrShortHeader (impl/go frame.go ReadFrame/UnmarshalBinary).",
+          "in": {
+            "frame": "4e50414d20000100000000000000000000000000"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "ShortHeader"
+          ]
         }
       ]
     },
@@ -157,6 +170,19 @@
           },
           "result": "valid",
           "flags": []
+        },
+        {
+          "tcId": 32,
+          "requirement": "R2/tlv/length-exceeds-buffer-MUST-reject",
+          "comment": "PathChallenge TLV (tag 0x0015) declares Length=32 but only 4 octets of Value follow: a decoder MUST reject a TLV whose declared Length exceeds the remaining buffer rather than reading past the end or silently truncating. Reference-verified to return ErrTruncatedTLV (impl/go tlv.go DecodeTLVs).",
+          "in": {
+            "tlv": "0015002011111111"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "TruncatedTLV"
+          ]
         }
       ]
     },

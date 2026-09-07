@@ -349,10 +349,10 @@ func TestGenHandshakeFlow(t *testing.T) {
 
 	// Oracle CertVerify verification (independent ed25519.Verify against the
 	// hand-built signing input) — proves the pinned sigs are valid.
-	if !oVerifyCertVerify(serverPub, "N-PAMP/2, server CertificateVerify", oTHSID, sCV) {
+	if !oVerifyCertVerify(serverPub, "N-PAMP/3, server CertificateVerify", oTHSID, sCV) {
 		t.Fatalf("oracle: server CertVerify does not verify")
 	}
-	if !oVerifyCertVerify(clientPub, "N-PAMP/2, client CertificateVerify", oTHCID, cCV) {
+	if !oVerifyCertVerify(clientPub, "N-PAMP/3, client CertificateVerify", oTHCID, cCV) {
 		t.Fatalf("oracle: client CertVerify does not verify")
 	}
 
@@ -504,7 +504,7 @@ const (
 // be16 returns a 2-octet big-endian encoding.
 func be16(v uint16) []byte { return []byte{byte(v >> 8), byte(v)} }
 
-// oExpandLabel is the oracle's own RFC 8446 §7.1 HKDF-Expand-Label with the
+// oExpandLabel is the oracle's own RFC 9846 §7.1 HKDF-Expand-Label with the
 // N-PAMP "n-pamp " prefix, independent of HkdfExpandLabel.
 func oExpandLabel(t *testing.T, secret []byte, label string, context []byte, length int) []byte {
 	t.Helper()
@@ -528,7 +528,7 @@ func oHMAC(key, data []byte) []byte {
 	return m.Sum(nil)
 }
 
-// oVerifyCertVerify rebuilds the RFC 8446 §4.4.3-style signing input by hand and
+// oVerifyCertVerify rebuilds the RFC 9846 §4.5.2-style signing input by hand and
 // checks the Ed25519 signature carried in the CertVerify TLV value
 // (SignatureScheme uint16 0x0807 || 64-octet signature).
 func oVerifyCertVerify(pub ed25519.PublicKey, context string, transcriptHash, certVerifyValue []byte) bool {

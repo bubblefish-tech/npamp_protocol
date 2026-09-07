@@ -6,16 +6,16 @@ import { createHash, createHmac, createCipheriv, createDecipheriv, timingSafeEqu
 export const HEADER_SIZE = 36;
 export const PROTOCOL_VERSION = 0x2;
 export const MAGIC = Buffer.from("NPAM");
-export const ALPN = "n-pamp/2";
+export const ALPN = "n-pamp/3";
 export const LABEL_PREFIX = "n-pamp "; // protocol-specific; NOT "tls13 "
 
 export const FLAG_URG = 0x01, FLAG_ENC = 0x02, FLAG_COMP = 0x04, FLAG_FRAG = 0x08;
 export const CHAN_CONTROL = 0x0000, CHAN_MEMORY = 0x0001, CHAN_IMMUNE = 0x0005, CHAN_AUDIT = 0x000b, CHAN_BRIDGE = 0x000d, CHAN_SPATIAL = 0x0013;
 export const FRAME_PING = 0x0001, FRAME_PONG = 0x0002, FRAME_CLOSE = 0x0003, FRAME_FLOW_UPDATE = 0x000a, CHANNEL_SPECIFIC_BASE = 0x0100;
-export const TLV_PROFILE_OFFER = 0x01, TLV_KEM_CIPHERTEXT = 0x08, TLV_ANOMALY_CHARGE = 0x12;
+export const TLV_PROFILE_OFFER = 0x01, TLV_KEM_CIPHERTEXT = 0x08;
 export const KEM_X25519_MLKEM768 = 0x11ec, KEM_X25519_MLKEM1024 = 0x11ed;
 export const AEAD_AES256_GCM = 0x0001, AEAD_CHACHA20_POLY1305 = 0x0002;
-export const SIG_ED25519 = 0x0807, SIG_MLDSA87 = 0x0905;
+export const SIG_ED25519 = 0x0807, SIG_MLDSA87 = 0x0906;
 
 // CRC32C (Castagnoli, reflected) - identical to Go hash/crc32 Castagnoli.
 export function crc32c(data: Buffer): number {
@@ -306,8 +306,8 @@ export function verifyFinished(finishedKey: Buffer, transcriptHash: Buffer, veri
 }
 
 // CertVerify (binding spec/10 §6.1; RFC 8446 §4.4.3 structure; Ed25519 signatures per RFC 8032).
-export const CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify";
-export const CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify";
+export const CONTEXT_SERVER_CERTVERIFY = "N-PAMP/3, server CertificateVerify";
+export const CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/3, client CertificateVerify";
 
 // RFC 8410 DER prefixes that wrap a raw 32-octet Ed25519 seed / public key into a KeyObject (Node
 // has no raw-seed Ed25519 constructor). The anchored KAT proves these reproduce RFC 8032 keys.

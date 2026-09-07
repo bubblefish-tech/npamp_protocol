@@ -64,8 +64,9 @@ alter them.
   (High, Sovereign), per the core specification's min-profile rule
   (§5: the minimum profile is the lowest profile at which a channel may be
   enabled). See §5 for profile applicability.
-- **Direction — Multi-stream.** Memory is bidirectional, and the channel MAY open
-  multiple concurrent transport streams within its stream family
+- **Direction — Multi-stream.** Memory is bidirectional, and the channel MAY carry
+  multiple concurrent payload-layer sub-streams multiplexed within its frame
+  payloads, all over the channel's single ordered per-direction sequence
   (core specification §5, Channel directionality). Each peer maintains an
   independent per-direction sequence space and independent per-direction traffic
   keys for the channel (core specification §5).
@@ -191,10 +192,10 @@ Notes and honest boundaries:
   (`../companion/81_memory_channel.md`) defines this correlation (an in-body
   correlation token). This reference does not define it.
 - **Multi-stream concurrency.** Because the channel is Multi-stream (§2), a
-  deployment MAY carry concurrent Memory operations over multiple transport streams
-  within the channel's stream family; the core specification permits this at the
-  channel level and does not constrain how operations are distributed across those
-  streams.
+  deployment MAY carry concurrent Memory operations as multiple payload-layer
+  sub-streams multiplexed within the channel's single ordered per-direction
+  sequence; the core specification permits this at the channel level and does not
+  constrain how operations are distributed across those sub-streams.
 
 ## 5. Profile applicability
 
@@ -286,8 +287,9 @@ if, for channel `0x0001`, it:
    frame, addressing scheme, value encoding, correlation scheme, or error model,
    none of which the core specification defines for this channel (§3.3, §4);
 7. Supports the channel's **Multi-stream** direction — bidirectional operation with
-   the OPTIONAL opening of multiple concurrent transport streams within the
-   channel's stream family, each peer maintaining independent per-direction
+   the OPTIONAL carrying of multiple concurrent payload-layer sub-streams
+   multiplexed within its frame payloads, all over the channel's single ordered
+   per-direction sequence, each peer maintaining independent per-direction
    sequence spaces and traffic keys (§2, §4); and
 8. Defers all Memory operation semantics beyond the registry-level interface of §4
    — including eviction, revive, and the create/read/update/delete and retrieval

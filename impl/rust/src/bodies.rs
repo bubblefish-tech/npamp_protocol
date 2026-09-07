@@ -145,6 +145,115 @@ fn err<T>(msg: impl Into<String>) -> Result<T, Malformed> {
 }
 
 // ------------------------------------------------------------------------------------
+// Deterministic-CBOR encoder (encode-side counterpart to decode_top / the value model
+// above, added for E2.22/R14.5's carriage-object codecs). Mirrors the Go reference's
+// canonical encoder (impl/go/memory_cbor.go cborEncode/encodeHead) byte for byte:
+// shortest-form integer/length headers (RFC 8949 §4.2.1) and, for a map, entries
+// emitted in ascending canonical (bytewise-of-encoded-key) order.
+// ------------------------------------------------------------------------------------
+
+/// Builds a canonically-ordered [`CborValue::Map`] from unsigned-integer-keyed entries,
+/// sorting them by the bytewise order of each key's own canonical encoding (RFC 8949
+/// §4.2.1) — exactly the order [`encode`] requires a `Map` to already carry, and the same
+/// construction the Go reference's `newCBORMapU` performs before encoding a
+/// `map[uint64]any`.
+pub fn map_from_u64_keys(entries: Vec<(u64, CborValue)>) -> CborValue {
+    let mut entries: Vec<(CborValue, CborValue)> = entries
+        .into_iter()
+        .map(|(k, v)| (CborValue::Uint(k), v))
+        .collect();
+    // Sort by the bytewise order of each key's own canonical encoding. Rust's
+    // default `Vec<u8>`/`[u8]` `Ord` is exactly RFC 8949 §4.2.1's canonical
+    // map-key order (and this crate's own `byte_less` above): compare
+    // byte-by-byte, first difference decides; if one is a prefix of the
+    // other, the shorter sorts first.
+    entries.sort_by(|a, b| encode(&a.0).cmp(&encode(&b.0)));
+    CborValue::Map(CborMap { entries })
+}
+
+/// Encodes `v` as canonical (RFC 8949 §4.2.1 core-deterministic) CBOR — the exact
+/// deterministic encoding [`decode_top`] accepts and [`decode`] enforces key-by-key. A
+/// `Map` value is trusted to already carry its entries in canonical order (build one
+/// with [`map_from_u64_keys`] rather than assembling a `CborMap` by hand) — this
+/// function does not re-sort, matching the Go reference's `cborEncode(*cborMap)`, which
+/// also assumes its `entries` slice (built by `newCBORMapU`) is already canonically
+/// ordered.
+pub fn encode(v: &CborValue) -> Vec<u8> {
+    match v {
+        CborValue::Uint(u) => encode_head(0, *u),
+        CborValue::Nint(n) => {
+            // major 1: value = -1 - argument, so argument = -1 - value. Widen to i128
+            // first so i64::MIN doesn't overflow computing -1 - n.
+            let arg = (-1i128 - *n as i128) as u64;
+            encode_head(1, arg)
+        }
+        CborValue::Bytes(b) => {
+            let mut out = encode_head(2, b.len() as u64);
+            out.extend_from_slice(b);
+            out
+        }
+        CborValue::Text(s) => {
+            let bytes = s.as_bytes();
+            let mut out = encode_head(3, bytes.len() as u64);
+            out.extend_from_slice(bytes);
+            out
+        }
+        CborValue::Array(items) => {
+            let mut out = encode_head(4, items.len() as u64);
+            for it in items {
+                out.extend_from_slice(&encode(it));
+            }
+            out
+        }
+        CborValue::Map(m) => {
+            let mut out = encode_head(5, m.entries.len() as u64);
+            for (k, val) in &m.entries {
+                out.extend_from_slice(&encode(k));
+                out.extend_from_slice(&encode(val));
+            }
+            out
+        }
+        CborValue::Bool(true) => vec![0xf5],
+        CborValue::Bool(false) => vec![0xf4],
+        CborValue::Null => vec![0xf6],
+    }
+}
+
+/// Encodes a CBOR type header (`major<<5 | argument`) in shortest form — the direct
+/// counterpart to [`decode_arg`], and byte-for-byte the same rule the Go reference's
+/// `encodeHead` implements.
+fn encode_head(major: u8, arg: u64) -> Vec<u8> {
+    let mb = major << 5;
+    if arg < 24 {
+        vec![mb | arg as u8]
+    } else if arg < 1 << 8 {
+        vec![mb | 24, arg as u8]
+    } else if arg < 1 << 16 {
+        vec![mb | 25, (arg >> 8) as u8, arg as u8]
+    } else if arg < 1u64 << 32 {
+        vec![
+            mb | 26,
+            (arg >> 24) as u8,
+            (arg >> 16) as u8,
+            (arg >> 8) as u8,
+            arg as u8,
+        ]
+    } else {
+        vec![
+            mb | 27,
+            (arg >> 56) as u8,
+            (arg >> 48) as u8,
+            (arg >> 40) as u8,
+            (arg >> 32) as u8,
+            (arg >> 24) as u8,
+            (arg >> 16) as u8,
+            (arg >> 8) as u8,
+            arg as u8,
+        ]
+    }
+}
+
+// ------------------------------------------------------------------------------------
 // Deterministic-CBOR decoder
 // ------------------------------------------------------------------------------------
 
@@ -1001,4 +1110,105 @@ pub fn validate_stream(ft: u64, payload: &[u8]) -> Result<CborMap, Malformed> {
     check_sub_stream_id_required(&m)?;
     check_fields(&m, schema)?;
     Ok(m)
+}
+
+#[cfg(test)]
+mod encoder_tests {
+    use super::*;
+
+    #[test]
+    fn encode_head_matches_shortest_form_boundaries() {
+        // major=0 (uint): the four shortest-form boundaries RFC 8949 §4.2.1
+        // requires (0-23 direct, 24-255 one-octet, 256-65535 two-octet,
+        // 65536-4294967295 four-octet, above that eight-octet).
+        assert_eq!(encode(&CborValue::Uint(0)), vec![0x00]);
+        assert_eq!(encode(&CborValue::Uint(23)), vec![0x17]);
+        assert_eq!(encode(&CborValue::Uint(24)), vec![0x18, 24]);
+        assert_eq!(encode(&CborValue::Uint(255)), vec![0x18, 0xff]);
+        assert_eq!(encode(&CborValue::Uint(256)), vec![0x19, 0x01, 0x00]);
+        assert_eq!(encode(&CborValue::Uint(65535)), vec![0x19, 0xff, 0xff]);
+        assert_eq!(encode(&CborValue::Uint(65536)), vec![0x1a, 0x00, 0x01, 0x00, 0x00]);
+        assert_eq!(
+            encode(&CborValue::Uint(1u64 << 32)),
+            vec![0x1b, 0, 0, 0, 1, 0, 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn encode_bytes_text_array_bool_null() {
+        assert_eq!(encode(&CborValue::Bytes(vec![0xAA, 0xBB])), vec![0x42, 0xAA, 0xBB]);
+        assert_eq!(encode(&CborValue::Text("ab".into())), vec![0x62, b'a', b'b']);
+        assert_eq!(
+            encode(&CborValue::Array(vec![CborValue::Uint(1), CborValue::Uint(2)])),
+            vec![0x82, 0x01, 0x02]
+        );
+        assert_eq!(encode(&CborValue::Bool(true)), vec![0xf5]);
+        assert_eq!(encode(&CborValue::Bool(false)), vec![0xf4]);
+        assert_eq!(encode(&CborValue::Null), vec![0xf6]);
+    }
+
+    #[test]
+    fn encode_nint_matches_major_1_argument_rule() {
+        // major 1: value = -1 - argument. Nint(-1) -> argument 0; Nint(-256) ->
+        // argument 255 (one-octet shortest form).
+        assert_eq!(encode(&CborValue::Nint(-1)), vec![0x20]);
+        assert_eq!(encode(&CborValue::Nint(-256)), vec![0x38, 0xff]);
+    }
+
+    /// The property this test exists to catch: `map_from_u64_keys` MUST sort
+    /// its entries into canonical (ascending) key order regardless of
+    /// insertion order — every carriage-object call site in this crate
+    /// happens to insert keys already ascending, so without this dedicated
+    /// out-of-order case a mutation that deletes the sort call would pass
+    /// every other test in the crate silently (the exact "check that never
+    /// fires" hazard the project's own TDD discipline warns against).
+    #[test]
+    fn map_from_u64_keys_sorts_out_of_order_insertions_to_canonical_order() {
+        let in_order = map_from_u64_keys(vec![
+            (1, CborValue::Uint(10)),
+            (2, CborValue::Uint(20)),
+            (9, CborValue::Uint(90)),
+        ]);
+        let out_of_order = map_from_u64_keys(vec![
+            (9, CborValue::Uint(90)),
+            (1, CborValue::Uint(10)),
+            (2, CborValue::Uint(20)),
+        ]);
+        assert_eq!(
+            encode(&in_order),
+            encode(&out_of_order),
+            "canonical map encoding must not depend on insertion order"
+        );
+        // And the encoding must actually BE the ascending-key form, not just
+        // internally self-consistent.
+        assert_eq!(
+            encode(&in_order),
+            vec![0xa3, 0x01, 0x0a, 0x02, 0x14, 0x09, 0x18, 0x5a]
+        );
+    }
+
+    #[test]
+    fn map_from_u64_keys_orders_by_encoded_key_length_before_value() {
+        // A key encoded in 2 octets (24) must sort AFTER every key encoded in
+        // 1 octet (0-23), even though 24 > 5 numerically holds either way --
+        // this specifically exercises the "shorter encoding sorts first"
+        // clause (RFC 8949 §4.2.1), not merely "ascending numeric key".
+        let m = map_from_u64_keys(vec![(24, CborValue::Uint(1)), (5, CborValue::Uint(2))]);
+        // Expect key 5 (1-octet: 0x05) before key 24 (2-octet: 0x18 0x18).
+        assert_eq!(encode(&m), vec![0xa2, 0x05, 0x02, 0x18, 0x18, 0x01]);
+    }
+
+    #[test]
+    fn decode_of_encode_round_trips_for_a_nested_structure() {
+        let v = map_from_u64_keys(vec![
+            (1, CborValue::Text("hello".into())),
+            (
+                2,
+                CborValue::Array(vec![CborValue::Uint(1), CborValue::Bytes(vec![0xAB])]),
+            ),
+        ]);
+        let wire = encode(&v);
+        let decoded = decode_top(&wire).expect("encoder output must be valid deterministic CBOR");
+        assert_eq!(decoded, v);
+    }
 }

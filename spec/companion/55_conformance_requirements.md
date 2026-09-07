@@ -116,7 +116,7 @@ contract, `../../harness/INSTRUCTIONS.md`):
    uses HKDF for all key derivation).
 6. **`profile.check`** — the public profile KEM-acceptance invariants (core
    specification §6): Standard accepts X25519MLKEM768; High and Sovereign
-   accept X25519MLKEM1024; Sovereign MUST NOT accept X25519MLKEM768. These are
+   accept SecP384r1MLKEM1024; Sovereign MUST NOT accept X25519MLKEM768. These are
    checks of the public profile-invariants table, not of High/Sovereign
    internals.
 
@@ -147,7 +147,9 @@ Class H is defined against the handshake binding
 (`../10_handshake_binding.md`), which fixes the 1.5-RTT handshake wire bytes
 for draft-00 and is targeted for ratification into draft-01. All five KATs
 exercise the **Standard** parameter row (SHA-256, HashLen 32, Ed25519,
-X25519MLKEM768); no public KAT exists for any other row (§8.4). The published
+X25519MLKEM768); no JSON corpus KAT exists for any other parameter row (§8.4); the
+SecP384r1MLKEM1024 (High/Sovereign) KEM has a Go reference KEM-wire KAT (see the
+KEM-primitives coverage note). The published
 draft-00 conformance corpus itself carries **no handshake-layer vectors**
 (handshake binding §8); Class H is graded by the standalone KAT files below.
 
@@ -306,20 +308,51 @@ The composition below is stated from the corpus file itself (all groups carry
 
 | Operation | Cases | Valid | Invalid | The MUST-reject cases assert |
 |---|---|---|---|---|
-| `header.decode` | 5 | 1 | 4 | Reserved octet non-zero; CRC32C mismatch; bad frame magic; unsupported wire version |
+| `header.decode` | 6 | 1 | 5 | Reserved octet non-zero; CRC32C mismatch; bad frame magic; unsupported wire version; buffer shorter than the fixed 36-octet header |
 | `header.encode` | 1 | 1 | 0 | — |
 | `crc32c` | 1 | 1 | 0 | — |
-| `tlv.decode` | 2 | 1 | 1 | Unknown TLV type with high bit 0x8000 set |
+| `tlv.decode` | 3 | 1 | 2 | Unknown TLV type with high bit 0x8000 set; declared TLV Length exceeding the remaining buffer |
 | `aead.seal` | 39 | 39 | 0 | — (AES-256-GCM, Wycheproof-derived) |
 | `aead.open` | 40 | 39 | 1 | Tampered GCM authentication tag |
 | `hkdf.expand` | 163 | 163 | 0 | — (83 SHA-256, 80 SHA-384, Wycheproof-derived) |
 | `profile.check` | 4 | 3 | 1 | Sovereign MUST NOT accept X25519MLKEM768 |
-| **Total** | **255** | **248** | **7** | |
+| **Total (table above)** | **257** | **250** | **9** | |
 
-Seven of the 255 cases are negative (MUST-reject) cases. They cover six
-distinct rejection rules of the core specification: reserved-octet-non-zero,
-CRC mismatch, bad frame magic, unsupported wire version, forward-incompatible
-TLV, AEAD tag mismatch — plus the Sovereign KEM-refusal invariant.
+Nine of the 257 cases tallied above are negative (MUST-reject) cases. They
+cover eight distinct rejection rules of the core specification:
+reserved-octet-non-zero, CRC mismatch, bad frame magic, unsupported wire
+version, short header, forward-incompatible TLV, truncated TLV length, AEAD
+tag mismatch — plus the Sovereign KEM-refusal invariant.
+
+> **2026-09-04 addendum (E3.7 ecosystem lane, non-wire).** The table and
+> narrative above predate several corpus-expansion waves this document has
+> not otherwise been reconciled against; `test-vectors/v1/conformance-corpus.json`
+> (MANIFEST-pinned) now carries **470** cases across **27** operation groups —
+> including `nonce.derive`, `hkdf.expand_label`, `keys.derive_traffic`,
+> `frame.seal`/`frame.open`, the ten channel `*.body.decode` groups, and the
+> `bridge.*` operations §8.1 below lists as unpopulated. A full reconciliation
+> of §7/§8 against the current corpus is tracked separately and is NOT part of
+> this addendum. This addendum records only the two negative vectors added in
+> this session, closing two of the three §8.6 examples: `header.decode`
+> tcId 6 (a buffer shorter than 36 octets — `ErrShortHeader`) and `tlv.decode`
+> tcId 32 (a TLV whose declared Length exceeds the remaining buffer —
+> `ErrTruncatedTLV`), both reference-verified against `impl/go` and passing
+> Tier B (`npamp-conform run --testee ./npamp-adapter-go`, 470/470). The third
+> §8.6 example — "Frame type 0x0000" — remains open and is **not** a
+> `header.decode` gap: reserved/unknown frame-type rejection is a STATE
+> MACHINE total-default rule (core specification §{{frame-types}},
+> §{{error-handling}}), not a header-parse rule — `header.decode` accepts any
+> 16-bit Frame Type value because frame-type validity is scoped to the
+> (role, state) the frame arrives in, not to the header alone. That rule is
+> exercised by the T18.1 deviant-trace suite (`impl/go/sdk/statetrace_test.go`,
+> driven from `harness/statemodel/npamp-state-table.json`) against the Go
+> reference implementation, but — unlike the corpus above — is not yet
+> exported as a machine-gradable, cross-language byte-level vector set; a
+> third party implementing N-PAMP in another language cannot today grade
+> "rejects frame type 0x0000" from a published vector the way it can grade
+> every row in the table above. Closing that gap needs a stateful (not
+> single-shot) extension to the `npamp-conform` harness and is out of this
+> addendum's scope.
 
 ## 8. Coverage gaps — what the current corpus does NOT cover
 
@@ -357,12 +390,15 @@ Tier A or Tier B run.
   cases are AES-256-GCM (§3.3).
 - **Signature primitives:** the corpus has no signature operation at all.
   Ed25519 is anchored only inside the CertVerify KAT (Class H). ML-DSA-87
-  (code point 0x0905, a public code point of core specification §7.3) has no
+  (code point 0x0906, a public code point of core specification §7.3) has no
   public vector in this set.
 - **KEM primitives:** the corpus has no KEM operation. ML-KEM-768 keygen and
-  X25519 are anchored only inside the KEM-wire KAT (Class H), with the
-  documented ML-KEM decapsulation-anchor limitation (§4.3 item 4). No public
-  vector exercises X25519MLKEM1024.
+  X25519 are anchored only inside the X25519MLKEM768 KEM-wire KAT (Class H), with
+  the documented ML-KEM decapsulation-anchor limitation (§4.3 item 4). The
+  SecP384r1MLKEM1024 KEM has a Go reference KEM-wire KAT
+  (`impl/go/kem1024_kat_test.go`) anchoring the secp384r1 leg to RFC 5903 §8.2 and
+  asserting the ECDHE-first (P-384-first) wire and IKM order; a cross-language JSON
+  corpus vector for it is Phase-4 (T18.3, tracked).
 
 ### 8.4 Profile coverage limits
 

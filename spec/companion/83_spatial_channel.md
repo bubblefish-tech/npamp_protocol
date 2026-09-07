@@ -90,9 +90,10 @@ handshake (core specification §5) MUST NOT receive Spatial frames; frames on an
 unadvertised Spatial channel MUST be dropped.
 
 **Multi-stream directionality.** Spatial is bidirectional and MAY carry concurrent
-traffic over multiple transport streams within the channel's stream family (core
-specification §5). Each peer maintains an independent per-direction sequence space and
-independent per-direction traffic keys. The per-direction sequence space orders frames
+traffic as multiple payload-layer sub-streams multiplexed within the channel's
+single ordered per-direction sequence (core specification §5). Each peer maintains
+an independent per-direction sequence space and independent per-direction traffic
+keys. The per-direction sequence space orders frames
 **within** a direction; it does **not** correlate a reply to a request — §6 defines
 that. Either peer MAY originate a spatial query.
 

@@ -52,7 +52,7 @@ function check(string $name, bool $ok): void
 }
 
 const VEC_DIR = __DIR__ . '/../../../test-vectors/v1';
-const CERTVERIFY_KAT_SHA256 = '19afd438c3036fd7d51481e5e6e91cc73010d76cb94aa2082c7752c8ba714d3f';
+const CERTVERIFY_KAT_SHA256 = 'ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67';
 
 /** Load and SHA-256-pin the vector (fail loud on a swapped/corrupt vector). */
 function loadKat(): array
@@ -158,10 +158,10 @@ foreach ($implCases as [$name, $isServer, $seedHex, $pubHex, $thHex, $wantSi, $w
     check("certverify impl: {$name} rejects wrong transcript",
         !Handshake::verifyCertVerify($pub, $isServer, $wrongTh, $val));
 
-    // Scheme guard: a non-Ed25519 scheme code point (0x0905) must FAIL.
+    // Scheme guard: a non-Ed25519 scheme code point (0x0906, ML-DSA-87) must FAIL.
     $badScheme = $val;
     $badScheme[0] = "\x09";
-    $badScheme[1] = "\x05";
+    $badScheme[1] = "\x06";
     check("certverify impl: {$name} rejects non-Ed25519 scheme",
         !Handshake::verifyCertVerify($pub, $isServer, $th, $badScheme));
 

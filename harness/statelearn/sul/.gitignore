@@ -1,0 +1,9 @@
+# Compiled statelearn-sul binary (build output, never committed). Also covers the
+# module-default name a bare `go build .` (no -o) would produce.
+statelearn-sul
+statelearn-sul.exe
+npamp-statelearn-sul
+npamp-statelearn-sul.exe
+
+# Ad-hoc timing scratch from `time ... 2>timing_*.txt` smoke runs.
+timing_*.txt

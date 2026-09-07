@@ -59,9 +59,9 @@ only and the registry governs.
   every N-PAMP channel, each peer maintains an independent send and receive
   sequence space and independent per-direction traffic keys, so both peers MAY
   transmit on the channel simultaneously (core specification §5). The Bridge
-  channel is **not** classified Multi-stream; it does not open multiple concurrent
-  transport sub-streams within a stream family (contrast the Stream channel
-  `0x000C`).
+  channel is **not** classified Multi-stream; it does not carry multiple concurrent
+  payload-layer sub-streams multiplexed within its frame payloads (contrast the
+  Stream channel `0x000C`).
 - **Advertisement.** A peer that has not advertised `0x000D` during the handshake
   MUST NOT receive frames on it; frames on an unadvertised channel MUST be dropped
   (core specification §5).

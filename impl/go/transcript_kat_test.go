@@ -9,7 +9,7 @@ import (
 // transcriptKAT mirrors test-vectors/v1/transcript-kat.json (ADR-0009): fixed
 // frame/TLV fixtures whose expected TH_* points were produced by an
 // independent per-TLV byte-constructor + FIPS 180-4 SHA-256, pinning the
-// spec/10 section 3 divergence from RFC 8446 section 4.4.1 (2-octet frame
+// spec/10 section 3 divergence from RFC 9846 section 4.4.1 (2-octet frame
 // type only, per-TLV granularity).
 type transcriptKAT struct {
 	Expected map[string]string `json:"expected_transcript_points"`

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
@@ -22,17 +23,27 @@ import (
 // ALPN is the application-layer protocol negotiation identifier for the
 // npamp:// fallback transport (TCP + TLS 1.3); it corresponds to wire major
 // version 2.
-const ALPN = "n-pamp/2"
+const ALPN = "n-pamp/3"
 
 // maxFrameSize caps a single frame (header + payload) accepted off the wire, so
-// a peer cannot force an unbounded allocation with a hostile length field.
-const maxFrameSize = 16 << 20 // 16 MiB
+// a peer cannot force an unbounded allocation with a hostile length field. It is
+// npamp.MaxFrameSize so the SDK and the base parser (frame.go) enforce the SAME cap
+// (R12; no uncoordinated divergence).
+const maxFrameSize = npamp.MaxFrameSize // 16 MiB
 
 // errClosed is returned by the key-derivation gateways (sendState/recvState) once
 // the connection's master secret has been wiped by Zeroize/Close, so no frame is
 // ever sealed or opened under an all-zero key after teardown. Send/Recv surface it
 // wrapped.
 var errClosed = errors.New("npamp/sdk: connection is closed")
+
+// ErrPeerClosed is returned by Recv when the peer performed a graceful, authenticated
+// CLOSE (draft {#... CLOSE Frame}): the endpoint has replied CLOSE_ACK and reached the
+// terminal CLOSED state (its keys are zeroized), so this is a clean end-of-association,
+// NOT a fault. Callers (and CloseGraceful) test for it with errors.Is to distinguish an
+// orderly teardown from a transport error or a protocol violation. It wraps io.EOF so
+// existing loops that stop on io.EOF still terminate.
+var ErrPeerClosed = fmt.Errorf("npamp/sdk: peer closed the association: %w", io.EOF)
 
 // Config configures Dial and Listen.
 //
@@ -48,12 +59,60 @@ type Config struct {
 	TLSConfig *tls.Config
 
 	// Identity is the local long-term Ed25519 signing key proven to the peer
-	// during the handshake. A fresh ephemeral key is generated when nil.
+	// during the handshake when the negotiated profile is Standard. A fresh
+	// ephemeral key is generated when nil AND the offered/accepted profile set
+	// includes Standard (the zero-value, single-profile behavior is unchanged).
 	Identity ed25519.PrivateKey
 
-	// ExpectedPeerKey, when set, pins the peer's Ed25519 identity: the handshake
-	// fails on a mismatch. On the client the check runs BEFORE CLIENT_AUTH is
-	// sent, so the client never authenticates to an impostor.
+	// MLDSAIdentity is the local long-term ML-DSA-87 (FIPS 204, post-quantum;
+	// IANA TLS SignatureScheme 0x0906) signing key proven to the peer when the
+	// negotiated profile is High or Sovereign (spec/05_profiles.md §"Profile
+	// invariants" — High and Sovereign both require ML-DSA-87; core
+	// npamp.SignCertVerifyMLDSA87 / VerifyCertVerifyMLDSA87). Nil by default:
+	// an endpoint that never sets it can only ever offer or accept the
+	// Standard profile, exactly today's behavior. Construct one with
+	// mldsa.GenerateKey(mldsa.MLDSA87()) or
+	// mldsa.NewPrivateKey(mldsa.MLDSA87(), seed). Offering or accepting High
+	// or Sovereign (via Profiles) with MLDSAIdentity nil is a Config error:
+	// Dial, Listen.Accept, DialConn, AcceptConn, DialRaw, and AcceptRaw all
+	// return it before any wire I/O.
+	//
+	// Residual (tracked, not a silent gap): spec/05_profiles.md's Profile
+	// invariants table sets the High/Sovereign minimum KEM to
+	// SecP384r1MLKEM1024 (kem1024.go), but the core package's exported
+	// combiner (npamp.HandshakeSecret) accepts only the X25519MLKEM768
+	// SharedSecrets type — there is no exported way to combine a
+	// SharedSecrets1024 into a handshake secret today. This SDK therefore
+	// negotiates X25519MLKEM768 for every profile (matching every other
+	// reference driver in this tree, including cmd/npamp-interop); a High or
+	// Sovereign session here diversifies CertVerify (ML-DSA-87) and the KDF
+	// hash (SHA-384, automatic via the negotiated Profile) but not the KEM
+	// group. Closing this gap requires extending the core package's exported
+	// API and is out of this SDK build's scope.
+	MLDSAIdentity *mldsa.PrivateKey
+
+	// Profiles is the ordered set of N-PAMP security profiles (spec/05_profiles.md)
+	// this endpoint offers (client, via Dial/DialConn/DialRaw) or is willing to
+	// select from (server, via Listen/AcceptConn/AcceptRaw). The zero value
+	// (nil or empty) is exactly []npamp.Profile{npamp.ProfileStandard} — the
+	// BYTE-FOR-BYTE same ClientHello/ServerHello a pre-multi-profile caller
+	// produced, so an existing caller's wire behavior is unchanged. On the
+	// server, the FIRST entry of Profiles that also appears in the client's
+	// ProfileOffer is selected (Profiles is therefore the server's preference
+	// order, strongest-first if configured that way); if no entry matches, the
+	// handshake is refused. Offering or accepting npamp.ProfileHigh or
+	// npamp.ProfileSovereign requires MLDSAIdentity to be set.
+	Profiles []npamp.Profile
+
+	// ExpectedPeerKey, when set, pins the peer's identity — the raw public-key
+	// encoding for the NEGOTIATED profile's signature scheme (an Ed25519
+	// public key at Standard, an ML-DSA-87 public-key encoding at High or
+	// Sovereign, per npamp.SignCertVerifyMLDSA87's TLV 0x09 IdentityKey) — and
+	// the handshake fails on a mismatch. On the client the check runs BEFORE
+	// CLIENT_AUTH is sent, so the client never authenticates to an impostor.
+	// The field keeps its Ed25519-typed name and type for backward
+	// compatibility; ed25519.PublicKey is itself a []byte and accepts an
+	// ML-DSA-87 encoding unchanged.
 	ExpectedPeerKey ed25519.PublicKey
 
 	// HandshakeTimeout bounds the server-side handshake (TLS + N-PAMP) per
@@ -81,7 +140,7 @@ type Conn struct {
 	raw     net.Conn
 	profile npamp.Profile
 	// masterSend / masterRecv are the two per-direction connection ROOTS of the
-	// Hybrid Tree Ratchet (spec/10 section 5). Both are seeded from a copy of the
+	// Hybrid Tree Ratchet (spec/10 section 9). Both are seeded from a copy of the
 	// handshake master at generation 0 (so gen-0 keys are byte-identical to the
 	// pre-ratchet schedule), and each advances INDEPENDENTLY as its direction
 	// ratchets. masterSend is the root for the direction this endpoint sends (==
@@ -96,7 +155,14 @@ type Conn struct {
 	masterRecv []byte
 	genSend    atomic.Uint64
 	genRecv    atomic.Uint64
-	peerID     ed25519.PublicKey
+	// peerID is the peer's authenticated identity-key encoding for the
+	// NEGOTIATED profile: an Ed25519 public key (32 octets) at Standard, or an
+	// ML-DSA-87 public-key encoding (2592 octets, mldsa.MLDSA87PublicKeySize)
+	// at High or Sovereign. []byte rather than ed25519.PublicKey because the
+	// two schemes are different sizes; PeerIdentity() below returns it typed
+	// ed25519.PublicKey for backward compatibility (ed25519.PublicKey is
+	// itself a []byte, so this is a widening, not a truncation).
+	peerID []byte
 
 	sendDir npamp.Direction
 	recvDir npamp.Direction
@@ -106,12 +172,48 @@ type Conn struct {
 	rmu      sync.Mutex
 	recvKeys map[npamp.ChannelID]*epochKeys
 
-	// pmu guards pendingReKEM, the initiator-side state of an in-flight Tier-2
-	// re-KEM (the ephemeral KEM client + the generation it will heal). It is set
-	// under wmu by ReKEM and consumed under rmu by the REKEM_ACK handler, so it
-	// has its own lock to avoid coupling the two direction locks.
+	// pmu is the leaf lock for this endpoint's PENDING-CONTROL-CORRELATION state: the
+	// send-initiated control exchanges awaiting the peer's acknowledgement. Every field it
+	// guards is WRITTEN by a send-side method (which holds wmu) and READ/CONSUMED by the
+	// receive path (which holds rmu), so it has its own lock to avoid coupling the two
+	// direction locks. Canonical order is wmu->pmu and rmu->pmu (pmu never nests either).
+	//
+	//   - pendingReKEM: the initiator-side state of an in-flight Tier-2 re-KEM (the ephemeral
+	//     KEM client + the generation it will heal), set by ReKEM, consumed by the REKEM_ACK
+	//     handler.
+	//   - pendingKUAck: per-channel set of KEY_UPDATE epochs this endpoint announced and whose
+	//     KEY_UPDATE_ACK it has not yet seen. A KEY_UPDATE_ACK matching an entry is SOLICITED
+	//     (consumed, SILENT); one with no entry is UNSOLICITED and is the total default
+	//     (unexpected_message), mirroring the unsolicited-CLOSE_ACK rejection.
+	//   - pendingMRAck: conn-scope (Control-only) set of MASTER_RATCHET generations awaiting a
+	//     MASTER_RATCHET_ACK, with the same solicited/unsolicited semantics.
+	//
+	// Both ACK sets are grown ONLY by this endpoint's own KeyUpdate/RatchetSend calls (a peer
+	// cannot inflate them), so no bound is needed; they hold no key material, so no wipe is
+	// owed (they are cleared at Zeroize only to free the maps).
 	pmu          sync.Mutex
 	pendingReKEM *pendingReKEM
+	pendingKUAck map[npamp.ChannelID]map[uint64]struct{}
+	pendingMRAck map[uint64]struct{}
+
+	// droppedUnauthenticated / droppedOutOfSequence count frames the receive loop DROPPED
+	// without tearing the association down — the draft's discard posture: an unauthenticated
+	// (cleartext or AEAD-open-failed) or out-of-sequence frame is dropped and counted, and the
+	// connection SURVIVES, so an off-path injection cannot end the association (the same
+	// resilience DTLS 1.3 RFC 9147 §4.5.2 and QUIC RFC 9001 §6.6.2 give the record/packet layer).
+	// Atomic: incremented under rmu by recvLocked, read lock-free by SecurityDrops.
+	droppedUnauthenticated atomic.Uint64
+	droppedOutOfSequence   atomic.Uint64
+
+	// cmu guards the CLOSING-state pending-close handshake used by CloseGraceful: closing is
+	// true while this endpoint has sent a CLOSE (Authenticated Close) and is awaiting the
+	// peer's CLOSE_ACK, and closeAckCh is closed by the receive path (signalCloseAck) when
+	// that CLOSE_ACK arrives. It has its own lock so the closer's wait touches neither
+	// direction lock: CloseGraceful sends the CLOSE under wmu, then waits on closeAckCh,
+	// which the Recv loop (rmu) signals.
+	cmu        sync.Mutex
+	closing    bool
+	closeAckCh chan struct{}
 
 	closeOnce sync.Once
 
@@ -183,11 +285,47 @@ func (k *epochKeys) advance(master []byte, dir npamp.Direction, channel npamp.Ch
 	return k.derive(master, dir, channel, p)
 }
 
-// PeerIdentity returns a copy of the peer's authenticated Ed25519 public key
-// (proven by the handshake). A caller can record it for trust-on-first-use
-// pinning via Config.ExpectedPeerKey on a later connection.
+// PeerIdentity returns a copy of the peer's authenticated identity-key
+// encoding (proven by the handshake), typed ed25519.PublicKey for backward
+// compatibility. At the Standard profile this IS a genuine Ed25519 public
+// key. At High or Sovereign it is instead the raw ML-DSA-87 public-key
+// encoding (2592 octets) — NOT a valid Ed25519 key; call Profile() first to
+// tell them apart, or use PeerMLDSAIdentity for a typed accessor. A caller
+// can record either encoding for trust-on-first-use pinning via
+// Config.ExpectedPeerKey on a later connection.
 func (c *Conn) PeerIdentity() ed25519.PublicKey {
 	return append(ed25519.PublicKey(nil), c.peerID...)
+}
+
+// PeerMLDSAIdentity returns the peer's authenticated ML-DSA-87 public key
+// when this session negotiated the High or Sovereign profile, or nil at
+// Standard (use PeerIdentity there instead). The error is non-nil only if the
+// recorded peer identity bytes do not decode as an ML-DSA-87 public key,
+// which cannot happen for a Conn produced by this package's own handshake
+// (VerifyCertVerifyMLDSA87 already validated it) but is checked rather than
+// ignored so a hand-built Conn cannot silently return a corrupt key.
+func (c *Conn) PeerMLDSAIdentity() (*mldsa.PublicKey, error) {
+	if c.profile == npamp.ProfileStandard {
+		return nil, nil
+	}
+	return mldsa.NewPublicKey(mldsa.MLDSA87(), c.peerID)
+}
+
+// Profile returns the security profile (spec/05_profiles.md) this session
+// negotiated during the handshake.
+func (c *Conn) Profile() npamp.Profile {
+	return c.profile
+}
+
+// SecurityDrops reports the cumulative counts of frames this endpoint DROPPED without tearing
+// the association down, per the draft's discard posture: an unauthenticated frame (cleartext, or
+// one whose AEAD tag failed) and an out-of-sequence frame are dropped and counted, and the
+// connection survives — so an off-path injection cannot end the association. An operator SHOULD
+// surface these as security events: a rising unauthenticated count on an otherwise-quiet
+// connection indicates injection or tampering attempts. The counts are monotonic and read
+// lock-free.
+func (c *Conn) SecurityDrops() (unauthenticated, outOfSequence uint64) {
+	return c.droppedUnauthenticated.Load(), c.droppedOutOfSequence.Load()
 }
 
 // Close tears down the underlying transport and zeroizes the connection's key
@@ -236,12 +374,15 @@ func (c *Conn) Zeroize() {
 		st.zeroize()
 	}
 	// Wipe any in-flight Tier-2 ephemeral KEM material so a pending re-KEM's
-	// private keys do not outlive the connection.
+	// private keys do not outlive the connection, and drop the pending-ACK sets
+	// (no secrets — freed only so a closed Conn holds no dangling maps).
 	c.pmu.Lock()
 	if c.pendingReKEM != nil {
 		c.pendingReKEM.zeroize()
 		c.pendingReKEM = nil
 	}
+	c.pendingKUAck = nil
+	c.pendingMRAck = nil
 	c.pmu.Unlock()
 }
 
@@ -326,82 +467,244 @@ func (c *Conn) sendState(channel npamp.ChannelID) (*epochKeys, error) {
 	return st, nil
 }
 
+// recvActionKind names what Recv must do AFTER it releases rmu.
+type recvActionKind int
+
+const (
+	actDeliver   recvActionKind = iota // return (ch, ft, pt, err) to the caller unchanged
+	actEmitError                       // POST-KEY total default: seal+send ERROR(code) on Control, tear down, return err
+	actCloseAck                        // peer CLOSE: seal+send CLOSE_ACK, tear down (CLOSED), return ErrPeerClosed
+	actPeerError                       // peer ERROR (advisory): tear down, send NO reply, return err (a *npamp.SessionError)
+)
+
+// recvAction is what Recv must do after releasing rmu: deliver a frame, or perform a
+// control-frame REACTION that seals on the send direction. Those reactions need wmu, and
+// running them while rmu is held would invert the canonical wmu->rmu order and deadlock
+// against Zeroize — so recvLocked returns the intent and Recv performs it post-rmu.
+type recvAction struct {
+	kind recvActionKind
+	code npamp.SessionErrorCode // for actEmitError
+	err  error                  // the error Recv returns for this action
+}
+
 // Recv reads, authenticates, and opens the next application frame, returning its
 // channel, frame type, and plaintext. Record-layer control frames (KEY_UPDATE /
-// KEY_UPDATE_ACK) are processed transparently and never returned to the caller.
-// It enforces the per-(channel, epoch) receive sequence, rejecting a replayed or
-// reordered frame.
+// KEY_UPDATE_ACK, and the master-ratchet / re-KEM frames) are processed transparently and
+// never returned to the caller. It enforces the per-(channel, epoch) receive sequence,
+// rejecting a replayed or reordered frame. On the Control channel it enforces the state
+// machine's total default: a frame with no legal transition in ESTABLISHED — a
+// handshake-flight frame, an unknown type, or a payload-bearing CLOSE — is answered with a
+// sealed ERROR carrying `unexpected_message` and the connection is torn down; a well-formed
+// CLOSE is answered with CLOSE_ACK and Recv returns ErrPeerClosed; a peer ERROR is surfaced
+// as a *npamp.SessionError (advisory — no reply).
 func (c *Conn) Recv(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []byte, error) {
 	c.rmu.Lock()
-	defer c.rmu.Unlock()
+	ch, ft, pt, act := c.recvLocked(ctx)
+	c.rmu.Unlock()
+	// Any control-frame reaction that seals on the send direction runs HERE, after rmu is
+	// released, so taking wmu cannot invert the canonical wmu->rmu order and deadlock
+	// against Zeroize (which takes wmu then rmu). recvLocked itself never takes wmu.
+	switch act.kind {
+	case actEmitError:
+		c.sendSessionError(act.code) // seal + send the ERROR before teardown (best-effort)
+		_ = c.Close()
+		return 0, 0, nil, act.err
+	case actCloseAck:
+		c.sendCloseAck() // seal + send CLOSE_ACK, then reach CLOSED (Close zeroizes)
+		_ = c.Close()
+		return 0, 0, nil, ErrPeerClosed
+	case actPeerError:
+		_ = c.Close() // advisory: surface + close, send NO reply (no error loop)
+		return 0, 0, nil, act.err
+	default: // actDeliver
+		return ch, ft, pt, act.err
+	}
+}
+
+// recvLocked runs the receive loop under rmu (held by Recv) and returns either a frame to
+// deliver or a recvAction describing a control-frame reaction Recv must perform after it
+// releases rmu. It NEVER takes wmu — every ACK / ERROR / CLOSE_ACK send is deferred to the
+// post-rmu switch in Recv — so no goroutine nests wmu inside rmu.
+func (c *Conn) recvLocked(ctx context.Context) (npamp.ChannelID, npamp.FrameType, []byte, recvAction) {
 	for {
 		wire, err := c.readWire(ctx)
 		if err != nil {
-			return 0, 0, nil, err
+			return 0, 0, nil, recvAction{kind: actDeliver, err: err}
 		}
 		var f npamp.Frame
 		if err := f.UnmarshalBinary(wire); err != nil {
-			return 0, 0, nil, fmt.Errorf("npamp/sdk: parse frame: %w", err)
+			return 0, 0, nil, recvAction{kind: actDeliver, err: fmt.Errorf("npamp/sdk: parse frame: %w", err)}
 		}
 		if f.Flags&npamp.FlagENC == 0 {
-			return 0, 0, nil, fmt.Errorf("npamp/sdk: frame is not AEAD-encrypted")
+			// An unauthenticated (cleartext) frame in a keyed session cannot drive a security
+			// decision (draft: MUST NOT act on unauthenticated input). It is DROPPED and counted
+			// and the association SURVIVES — the receive loop reads the next frame — so an off-path
+			// injection can neither tear the connection down (a fatal ERROR would let it) NOR end it
+			// by surfacing an error to the caller. This is the record-layer resilience DTLS 1.3
+			// (RFC 9147 §4.5.2, "invalid records SHOULD be silently discarded, thus preserving the
+			// association") and QUIC (RFC 9001 §6.6.2) give. Dropped BEFORE recvState: no traffic
+			// key is derived from attacker-chosen input.
+			c.droppedUnauthenticated.Add(1)
+			continue
 		}
 		ch := npamp.ChannelID(f.Channel)
 		st, err := c.recvState(ch)
 		if err != nil {
-			return 0, 0, nil, fmt.Errorf("npamp/sdk: derive recv key: %w", err)
+			return 0, 0, nil, recvAction{kind: actDeliver, err: fmt.Errorf("npamp/sdk: derive recv key: %w", err)}
 		}
 		if f.Seq != st.seq {
-			return 0, 0, nil, fmt.Errorf("npamp/sdk: channel %d out-of-sequence frame: got seq %d, want %d (epoch %d)", ch, f.Seq, st.seq, st.epoch)
+			// A replayed (sequence below the expected value) or reordered frame is DROPPED and
+			// counted; the association survives and st.seq is unchanged, so the next in-sequence
+			// frame still opens. It is dropped BEFORE openWith — no AEAD work on a wrong-sequence
+			// frame — and a replayed frame carries a valid old tag, so surfacing an error here would
+			// let one replayed capture end the session (the exact replay DoS the discard posture
+			// prevents). A sequence AHEAD of the expected value cannot arise from a conformant peer
+			// over the in-order transports this document specifies (TCP+TLS, QUIC per-stream) and is
+			// treated as the same drop. Replay is modeled OUT of the abstract state machine (a
+			// sequence-number property; the replay KAT covers it).
+			c.droppedOutOfSequence.Add(1)
+			continue
 		}
 		pt, err := openWith(st, &f)
 		if err != nil {
-			return 0, 0, nil, fmt.Errorf("npamp/sdk: open frame: %w", err)
+			// AEAD open failed: the frame is FlagENC but its tag does not verify — a forged or
+			// corrupted sealed frame, i.e. unauthenticated input. DROP and count; the association
+			// survives and st.seq is NOT advanced, so a subsequent legitimate frame at this sequence
+			// still opens. Same posture as the cleartext case (RFC 9147 §4.5.2 / RFC 9001 §6.6.2):
+			// an off-path attacker who flips a ciphertext octet cannot end the association.
+			c.droppedUnauthenticated.Add(1)
+			continue
 		}
 		st.seq++
 
 		switch npamp.FrameType(f.Type) {
 		case npamp.FrameKeyUpdate:
 			if err := c.handleKeyUpdate(ch, st, pt); err != nil {
-				return 0, 0, nil, err
+				// A malformed or out-of-order KeyUpdateMarker is fatal key_update_out_of_order
+				// (draft row 9): seal the ERROR and tear down. Any other failure (e.g. a local
+				// key-derivation error) is a plain drop surfaced to the caller.
+				if errors.Is(err, errKeyUpdateOutOfOrder) {
+					return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeKeyUpdateOutOfOrder, err: err}
+				}
+				return 0, 0, nil, recvAction{kind: actDeliver, err: err}
 			}
 			continue // transparent control frame; read the next
 		case npamp.FrameKeyUpdateAck:
-			continue // confirmation of our own KeyUpdate; nothing to do
+			// A KEY_UPDATE_ACK is legal only if this endpoint SOLICITED it by sending the
+			// matching KEY_UPDATE (correlated per (channel, epoch)). A solicited one is consumed
+			// and the receive path stays SILENT; an unsolicited (well-formed) one is the state
+			// machine's total default (unexpected_message), mirroring the unsolicited-CLOSE_ACK
+			// rejection below. A malformed marker is fatal key_update_out_of_order (draft row 9) —
+			// the same code as a malformed KEY_UPDATE marker, since it is the same TLV on either
+			// frame.
+			epoch, err := parseKeyUpdateMarker(pt)
+			if err != nil {
+				return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeKeyUpdateOutOfOrder,
+					err: fmt.Errorf("npamp/sdk: KEY_UPDATE_ACK on channel %d marker: %w (%v)", ch, errKeyUpdateOutOfOrder, err)}
+			}
+			if c.consumePendingKeyUpdateAck(ch, epoch) {
+				continue // solicited confirmation of our own KeyUpdate; SILENT
+			}
+			return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage,
+				err: fmt.Errorf("npamp/sdk: unsolicited KEY_UPDATE_ACK on channel %d (epoch %d)", ch, epoch)}
 		case frameMasterRatchet:
 			// Master-ratchet control frames are Control-channel-specific; the same
 			// numeric value on another channel belongs to that channel's namespace and
 			// is returned to the caller unchanged.
 			if ch != npamp.ChanControl {
-				return ch, npamp.FrameType(f.Type), pt, nil
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
 			}
 			if err := c.handleMasterRatchet(ch, pt); err != nil {
-				return 0, 0, nil, err
+				return 0, 0, nil, recvAction{kind: actDeliver, err: err}
 			}
 			continue
 		case frameMasterRatchetAck:
 			if ch != npamp.ChanControl {
-				return ch, npamp.FrameType(f.Type), pt, nil
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
 			}
-			continue // informational confirmation of our own Tier-1 step
+			// Legal only if this endpoint SOLICITED it via RatchetSend (correlated per
+			// generation); a solicited one is consumed (SILENT), an unsolicited one is the total
+			// default (unexpected_message), like KEY_UPDATE_ACK / CLOSE_ACK. A malformed marker
+			// is a plain error (drop), not a fatal ERROR.
+			gen, err := parseRatchetGenMarker(pt)
+			if err != nil {
+				return 0, 0, nil, recvAction{kind: actDeliver, err: fmt.Errorf("npamp/sdk: MASTER_RATCHET_ACK: %w", err)}
+			}
+			if c.consumePendingRatchetAck(gen) {
+				continue // solicited confirmation of our own Tier-1 step; SILENT
+			}
+			return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage,
+				err: fmt.Errorf("npamp/sdk: unsolicited MASTER_RATCHET_ACK (gen %d)", gen)}
 		case frameReKEM:
 			if ch != npamp.ChanControl {
-				return ch, npamp.FrameType(f.Type), pt, nil
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
 			}
 			if err := c.handleReKEM(ch, pt); err != nil {
-				return 0, 0, nil, err
+				return 0, 0, nil, recvAction{kind: actDeliver, err: err}
 			}
 			continue
 		case frameReKEMAck:
 			if ch != npamp.ChanControl {
-				return ch, npamp.FrameType(f.Type), pt, nil
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
 			}
 			if err := c.handleReKEMAck(pt); err != nil {
-				return 0, 0, nil, err
+				// An UNSOLICITED REKEM_ACK (no outstanding re-KEM) is the total default
+				// (unexpected_message), uniform with unsolicited KEY_UPDATE_ACK / MASTER_RATCHET_ACK
+				// / CLOSE_ACK. A SOLICITED-but-invalid ack (wrong generation or a decapsulation
+				// failure) is a different class and stays a fail-closed plain drop.
+				if errors.Is(err, errUnsolicitedReKEMAck) {
+					return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage, err: err}
+				}
+				return 0, 0, nil, recvAction{kind: actDeliver, err: err}
 			}
 			continue
+		case npamp.FrameClose:
+			// Authenticated CLOSE (Control-only): because the receive stream is drained in
+			// sequence order, every in-flight frame ahead of the CLOSE has already been
+			// processed, so the reaction is CLOSE_ACK then CLOSED. A CLOSE carrying a payload
+			// is rejected with unexpected_message (draft: CLOSE/CLOSE_ACK carry no payload).
+			// On a non-Control channel 0x0003 belongs to that channel's namespace (delivered).
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
+			}
+			if len(pt) != 0 {
+				return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage,
+					err: fmt.Errorf("npamp/sdk: CLOSE carried a %d-octet payload", len(pt))}
+			}
+			return 0, 0, nil, recvAction{kind: actCloseAck}
+		case npamp.FrameCloseAck:
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
+			}
+			// A CLOSE_ACK is legal only while this endpoint is CLOSING (it sent a CLOSE via
+			// CloseGraceful); it then signals the closer and reaches CLOSED. Unsolicited, it
+			// is the total default.
+			if c.signalCloseAck() {
+				return 0, 0, nil, recvAction{kind: actDeliver, err: ErrPeerClosed}
+			}
+			return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage,
+				err: fmt.Errorf("npamp/sdk: unsolicited CLOSE_ACK")}
+		case npamp.FrameError:
+			// A RECEIVED ERROR is advisory (draft {#error-handling}): the receiver surfaces
+			// the peer's reason and closes, and sends NO reply (no error loop). A malformed
+			// ERROR body is not acted on as an ERROR — it is surfaced as a plain parse error.
+			if ch != npamp.ChanControl {
+				return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
+			}
+			code, ectx, derr := npamp.DecodeErrorBody(pt)
+			if derr != nil {
+				return 0, 0, nil, recvAction{kind: actDeliver, err: fmt.Errorf("npamp/sdk: malformed ERROR frame from peer: %w", derr)}
+			}
+			return 0, 0, nil, recvAction{kind: actPeerError, err: &npamp.SessionError{Code: code, Context: ectx}}
 		default:
-			return ch, npamp.FrameType(f.Type), pt, nil
+			if ch == npamp.ChanControl {
+				// The Control channel is the system channel: no application frame is delivered
+				// on it, so a type not handled above — a handshake-flight frame after
+				// establishment, or an unknown/unexpected type — is the total default.
+				return 0, 0, nil, recvAction{kind: actEmitError, code: npamp.ErrCodeUnexpectedMessage,
+					err: fmt.Errorf("npamp/sdk: unexpected frame type 0x%04x on Control in ESTABLISHED", f.Type)}
+			}
+			return ch, npamp.FrameType(f.Type), pt, recvAction{kind: actDeliver}
 		}
 	}
 }

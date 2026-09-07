@@ -1,0 +1,114 @@
+[package]
+name = "nz-agent"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "N-PAMP per-node/ambient PQC data-plane agent (R12, tasks E2.5-E2.8): composes the npamp crate's session module — does not reimplement the handshake or record layer."
+
+# INDEPENDENT crate, path-dependency only: never edits ../ (the npamp reference
+# library / Part-1 core). Builds and tests standalone: `cd impl/rust/nz-agent &&
+# cargo build && cargo test`. SPIFFE-ID parsing, the node-to-node tunnel mux,
+# capture rule construction, and the L4/L7 authz tables are all pure-std Rust
+# (no network dependency). The one exception is `spire_client.rs` (E2.6, R12
+# AC2): the real SPIRE Workload API (DelegatedIdentity) client genuinely needs
+# a gRPC-over-UDS stack (tonic/prost/tokio/tower/hyper-util — see below).
+[dependencies]
+npamp = { path = "..", default-features = true, features = ["session"] }
+# Already an indirect (transitive) dependency of npamp's default "session"
+# feature — declared directly here, pinned to the SAME version npamp itself
+# pins, only so this crate's identity/agent modules can name
+# ed25519_dalek::SigningKey/VerifyingKey (the type npamp::session::
+# generate_identity/Session::peer_identity already hand back). No new crate
+# enters the overall dependency graph; Cargo unifies both requirements
+# against the one already-resolved ed25519-dalek 2.2.0 in Cargo.lock.
+ed25519-dalek = "2.2"
+# E2.7 (R12 AC3, extracted 2026-09-05): the pure, target-agnostic waypoint
+# authorization/carriage-dispatch core (`src/waypoint.rs`'s implementation,
+# now a thin `pub use` of this crate) — shared with `../nz-waypoint-wasm`'s
+# Envoy proxy-wasm hosting shape so both hosting shapes E2.7/R12 AC3 names
+# compose the SAME decision. `serde`/`serde_json` (the P2.5 Option B1 shared
+# JSON wire format that lets a resolved grant cross the process boundary to
+# the Go impl/go/ecosystem/npamp-gnap bridge, gnapexport.go's Option-B
+# header) now live INSIDE nz-waypoint-core rather than as direct
+# dependencies of this crate — this crate no longer names either directly.
+nz-waypoint-core = { path = "../nz-waypoint-core" }
+
+# E2.6/R12 AC2: the real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS
+# client (src/spire_client.rs). Genuinely new dependencies — this is the one
+# unit in the crate that talks to an external process over the network
+# instead of composing pure-std logic. Versions pinned to the latest stable
+# release at the time this was added (crates.io, checked 2026-09-02):
+# tonic 0.14.6, prost 0.14.4. `transport` (tonic's default feature set) and
+# `tower::service_fn` are what let the client dial a Unix-domain socket
+# instead of TCP — the documented tonic UDS-client recipe
+# (hyperium/tonic examples/src/uds/client.rs).
+tonic = { version = "0.14", features = ["transport"] }
+# tonic 0.14 decoupled the Prost-based wire codec from the core `tonic`
+# crate; generated client/server code needs `tonic_prost::ProstCodec` at
+# runtime (the build-dependency `tonic-prost-build` below only generates the
+# code — it does not itself provide the codec the generated code calls).
+tonic-prost = "0.14"
+prost = "0.14"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+# E2.13 (R13.5 exporter half): real OTel + Prometheus export of
+# `datapath::DropEvent` (src/telemetry.rs). `opentelemetry`/`opentelemetry_sdk`
+# build the actual span/tracer-provider pipeline; `opentelemetry-stdout` is
+# the official, no-collector-required production `SpanExporter`
+# `telemetry::OtelPrometheusSink::new_production` ships spans through;
+# `prometheus` is the real counter registry + text-exposition encoder. No
+# "testing" SDK feature needed: `opentelemetry_sdk` 0.32.1 ships no
+# `testing::trace::InMemorySpanExporter` (checked against its published
+# source 2026-09-03), so telemetry.rs's own tests implement the real
+# `SpanExporter` trait directly against an in-process capture point instead.
+opentelemetry = { version = "0.32.0", features = ["trace"] }
+opentelemetry_sdk = { version = "0.32.1", features = ["trace"] }
+opentelemetry-stdout = { version = "0.32.0", features = ["trace"] }
+prometheus = "0.14.0"
+# N-PAMP decision-B residual (b), PQ-audit-seal signer key-provisioning
+# (`src/audit_seal.rs`): a DEDICATED ML-DSA-87 audit-seal key, cryptographically
+# separate from the Ed25519 session-identity key in `src/identity.rs`. Already an
+# indirect (transitive) dependency of npamp's default "session" feature (npamp's own
+# `mldsa87.rs` uses it for CertVerify) — declared directly here, at the SAME "0.1"
+# version constraint npamp itself pins, so Cargo unifies both requirements against one
+# resolved `ml-dsa` release in this crate's own Cargo.lock (no new crate enters the
+# dependency graph). Same `default-features = false` + `alloc`-only posture as npamp's
+# own pin (see that crate's Cargo.toml comment): this module supplies its own OS-entropy
+# seed via `getrandom` (already a direct/transitive dependency here too), never uses
+# ML-DSA's PKCS#8 encoding, and avoids a possible `getrandom` version clash with the
+# workspace's own pinned `getrandom = "0.2"`.
+ml-dsa = { version = "0.1", default-features = false, features = ["alloc"] }
+getrandom = "0.2"
+
+[build-dependencies]
+# tonic 0.14 moved prost-based proto compilation out of `tonic-build` into
+# this dedicated crate (`tonic-build` itself now covers only manual/custom
+# codegen) — see this file's own note above.
+tonic-prost-build = "0.14"
+# Ships a bundled `protoc` binary as a crate dependency so compiling the
+# vendored `proto/` sources needs no system-installed `protoc` on any
+# developer machine or CI runner (see build.rs).
+protoc-bin-vendored = "3"
+
+[dev-dependencies]
+# The mock DelegatedIdentity UDS server tests in src/spire_client.rs (the F3
+# non-circular witness for the client's wire behavior — see that module's
+# docs) run their own tokio runtime, on their own OS thread, alongside the
+# client's own runtime.
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "test-util"] }
+# `wrappers::UnixListenerStream` (feature "net") + `once` — used only by the
+# mock server test double, not by `spire_client.rs`'s production code path.
+tokio-stream = { version = "0.1", features = ["net"] }
+
+[[bin]]
+name = "nz-agent"
+path = "src/bin/nz_agent.rs"
+
+[[bin]]
+# Prints a resolved ResolvedWaypointGrant's Option-B1 JSON wire encoding to stdout — the
+# mechanism used to produce the REAL, Rust-run cross-language fixture
+# (testdata/waypoint_grant.json, byte-identical to the Go side's copy of the same file)
+# rather than a hand-typed literal on either side.
+name = "print-waypoint-grant-fixture"
+path = "src/bin/print_waypoint_grant_fixture.rs"

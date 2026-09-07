@@ -82,8 +82,9 @@ The Memory channel `0x0001` is registered by the core specification with purpose
 channel architecture every channel is full-duplex: each peer maintains an
 independent per-direction sequence space and independent per-direction traffic
 keys, and — because Memory is Multi-stream — a deployment MAY carry concurrent
-Memory operations over multiple transport streams within the channel's stream
-family. Either peer MAY originate a Memory operation.
+Memory operations as multiple payload-layer sub-streams multiplexed within the
+channel's single ordered per-direction sequence. Either peer MAY originate a
+Memory operation.
 
 **Minimum-profile gate.** A peer MUST enable the Memory channel only at the
 **Standard** profile or higher; once Standard is met the channel is available at
@@ -251,9 +252,9 @@ body (§2).
   request's `corr` verbatim.
 * A receiver MUST match a reply to its request by `corr`, **not** by the
   per-(channel, direction) frame sequence number. Because the Memory channel is
-  Multi-stream, concurrent operations may be carried across multiple transport
-  streams, where sequence order within any one stream does not identify the
-  originating exchange.
+  Multi-stream, concurrent operations may be interleaved as multiple payload-layer
+  sub-streams within the channel's single ordered per-direction sequence, where
+  the sequence number alone does not identify the originating exchange.
 
 ### 5.2 Correlation lifetime
 

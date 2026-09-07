@@ -24,14 +24,28 @@ import (
 // (major 7 simple false/true/null). Encoding accepts the same Go types.
 
 var (
-	errCBORTrailing    = errors.New("npamp/cbor: trailing bytes after top-level item")
-	errCBORTruncated   = errors.New("npamp/cbor: truncated input")
-	errCBORNotShortest = errors.New("npamp/cbor: integer/length not in shortest form")
-	errCBORIndefinite  = errors.New("npamp/cbor: indefinite-length item (non-deterministic)")
-	errCBORUnsupported = errors.New("npamp/cbor: unsupported major type or simple value")
-	errCBORMapOrder    = errors.New("npamp/cbor: map keys not in canonical ascending order (or duplicate)")
-	errCBORBadType     = errors.New("npamp/cbor: unsupported Go type for encoding")
+	errCBORTrailing      = errors.New("npamp/cbor: trailing bytes after top-level item")
+	errCBORTruncated     = errors.New("npamp/cbor: truncated input")
+	errCBORNotShortest   = errors.New("npamp/cbor: integer/length not in shortest form")
+	errCBORIndefinite    = errors.New("npamp/cbor: indefinite-length item (non-deterministic)")
+	errCBORUnsupported   = errors.New("npamp/cbor: unsupported major type or simple value")
+	errCBORMapOrder      = errors.New("npamp/cbor: map keys not in canonical ascending order (or duplicate)")
+	errCBORBadType       = errors.New("npamp/cbor: unsupported Go type for encoding")
+	errCBORDepthExceeded = errors.New("npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)")
 )
+
+// cborMaxNestingDepth bounds how deeply cborDecode will recurse into an untrusted
+// CBOR item (RFC 8949 §10 decoder implementation-limits guidance; the same
+// resource-bound discipline as the sibling N-AALP CBOR decoder's DecodeBounded).
+// A minimally-sized, pathologically deeply-nested input (e.g. a run of
+// array-of-one headers 0x81 0x81 0x81 ...) costs only one byte per nesting level,
+// so without a depth bound an attacker-controlled payload can drive unbounded Go
+// call-stack recursion — a resource-exhaustion / stack-overflow DoS — using a
+// vanishingly small number of wire bytes. The outermost item is depth 1; each
+// array element, and each map key and value, is one level deeper than its
+// container. An item that would sit at depth cborMaxNestingDepth+1 is rejected
+// with errCBORDepthExceeded before it is materialized.
+const cborMaxNestingDepth = 8
 
 // cborMap is a CBOR map preserving canonical key order. Keys are themselves CBOR
 // values (here always uint64/int64/string/[]byte); entries are kept sorted by the
@@ -81,18 +95,24 @@ func byteEqual(a, b []byte) bool {
 	return true
 }
 
-// byteLess reports whether a sorts strictly before b in bytewise (shorter-prefix-
-// first, then lexicographic) order — RFC 8949 §4.2.1 canonical map-key ordering.
+// byteLess reports whether a sorts strictly before b in bytewise lexicographic
+// order — RFC 8949 §4.2.1 core deterministic map-key ordering: compare the encoded
+// keys byte by byte; the first differing byte decides, and if one key is a proper
+// prefix of the other, the shorter sorts first. This is NOT the length-first
+// §4.2.3 order: under length-first a shorter key with a larger leading byte (e.g.
+// a 2-octet text-string key 0x61..) would wrongly sort ahead of a longer key with
+// a smaller leading byte (e.g. a 3-octet uint key 0x19..).
 func byteLess(a, b []byte) bool {
-	if len(a) != len(b) {
-		return len(a) < len(b)
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
 	}
-	for i := range a {
+	for i := 0; i < n; i++ {
 		if a[i] != b[i] {
 			return a[i] < b[i]
 		}
 	}
-	return false
+	return len(a) < len(b)
 }
 
 // ---------- encoding ----------
@@ -181,7 +201,7 @@ func encodeHead(major byte, arg uint64) []byte {
 // cborDecodeTop decodes a single canonical CBOR item and requires that it consumes
 // all of b (no trailing bytes) — the shape of a frame payload.
 func cborDecodeTop(b []byte) (any, error) {
-	v, n, err := cborDecode(b)
+	v, n, err := cborDecode(b, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -191,9 +211,14 @@ func cborDecodeTop(b []byte) (any, error) {
 	return v, nil
 }
 
-// cborDecode decodes one item from b, returning the value and the number of bytes
-// consumed. It enforces the deterministic subset strictly.
-func cborDecode(b []byte) (any, int, error) {
+// cborDecode decodes one item from b at the given nesting depth (the top-level
+// item passed by cborDecodeTop is depth 1), returning the value and the number of
+// bytes consumed. It enforces the deterministic subset strictly, and enforces
+// cborMaxNestingDepth as a resource-exhaustion guard against unbounded recursion.
+func cborDecode(b []byte, depth int) (any, int, error) {
+	if depth > cborMaxNestingDepth {
+		return nil, 0, errCBORDepthExceeded
+	}
 	if len(b) == 0 {
 		return nil, 0, errCBORTruncated
 	}
@@ -250,7 +275,7 @@ func cborDecode(b []byte) (any, int, error) {
 		out := make([]any, 0, arg)
 		off := n
 		for i := uint64(0); i < arg; i++ {
-			el, en, err := cborDecode(b[off:])
+			el, en, err := cborDecode(b[off:], depth+1)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -270,7 +295,7 @@ func cborDecode(b []byte) (any, int, error) {
 		var prevKeyEnc []byte
 		for i := uint64(0); i < arg; i++ {
 			keyStart := off
-			key, kn, err := cborDecode(b[off:])
+			key, kn, err := cborDecode(b[off:], depth+1)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -281,7 +306,7 @@ func cborDecode(b []byte) (any, int, error) {
 			}
 			prevKeyEnc = keyEnc
 			off += kn
-			val, vn, err := cborDecode(b[off:])
+			val, vn, err := cborDecode(b[off:], depth+1)
 			if err != nil {
 				return nil, 0, err
 			}

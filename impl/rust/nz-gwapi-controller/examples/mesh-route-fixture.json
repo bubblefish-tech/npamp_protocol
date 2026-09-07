@@ -1,0 +1,17 @@
+{
+    "routes": [
+        {
+            "namespace": "faces",
+            "spec": {
+                "parentRefs": [{ "name": "smiley", "kind": "Service", "group": "" }],
+                "rules": [{ "backendRefs": [{ "name": "smiley-v2" }] }]
+            }
+        }
+    ],
+    "service_annotations": {
+        "faces/smiley-v2": {
+            "npamp.bubblefish.io/svid-pubkey-hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "npamp.bubblefish.io/max-effect-class": "idempotent_write"
+        }
+    }
+}

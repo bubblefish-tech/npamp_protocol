@@ -14,7 +14,7 @@ module Npamp
   HEADER_SIZE = 36
   PROTOCOL_VERSION = 0x2
   MAGIC = "NPAM".b
-  ALPN = "n-pamp/2"
+  ALPN = "n-pamp/3"
   LABEL_PREFIX = "n-pamp " # protocol-specific; NOT "tls13 "
 
   FLAG_URG  = 0x01
@@ -37,7 +37,6 @@ module Npamp
 
   TLV_PROFILE_OFFER  = 0x01
   TLV_KEM_CIPHERTEXT = 0x08
-  TLV_ANOMALY_CHARGE = 0x12
 
   KEM_X25519_MLKEM768  = 0x11EC
   KEM_X25519_MLKEM1024 = 0x11ED
@@ -46,7 +45,7 @@ module Npamp
   AEAD_CHACHA20_POLY1305 = 0x0002
 
   SIG_ED25519 = 0x0807
-  SIG_MLDSA87 = 0x0905
+  SIG_MLDSA87 = 0x0906
 
   # CRC32C (Castagnoli, reflected) - identical to Go hash/crc32 Castagnoli.
   # poly 0x82F63B78, init/xorout 0xFFFFFFFF. Returns an unsigned 32-bit integer.
@@ -296,8 +295,8 @@ module Npamp
   FRAME_CLIENT_AUTH  = 0x0103
 
   # CertVerify context strings (spec 6.1).
-  CONTEXT_SERVER_CERTVERIFY = "N-PAMP/2, server CertificateVerify"
-  CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/2, client CertificateVerify"
+  CONTEXT_SERVER_CERTVERIFY = "N-PAMP/3, server CertificateVerify"
+  CONTEXT_CLIENT_CERTVERIFY = "N-PAMP/3, client CertificateVerify"
 
   # Transcript accumulates the draft-00 handshake transcript (binding spec/10 sec 3)
   # and hashes it at a cut point. Per-TLV granularity: add_frame_type appends the
