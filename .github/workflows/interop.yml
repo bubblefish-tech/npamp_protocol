@@ -68,6 +68,15 @@ jobs:
       # Rust toolchain, same action the conformance workflow's rust job uses.
       - uses: dtolnay/rust-toolchain@stable
 
+      # Python leg: run-interop.sh drives Go<->Rust<->Python; the Python client/server
+      # imports kyber-py (FIPS-203 ML-KEM) + cryptography. Install them so the Python
+      # legs do not ModuleNotFoundError-loop to the 15-minute job timeout.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Install the Python interop-leg deps (kyber-py + cryptography)
+        run: python -m pip install --disable-pip-version-check kyber-py "cryptography>=42"
+
       # Build BOTH implementations and run the bidirectional interop. The committed
       # harness echoes "== building Go interop harness ==" / "== building Rust interop
       # examples ==" then runs each direction; it exits non-zero on any handshake,
