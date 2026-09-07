@@ -108,11 +108,10 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/KeyScheduleKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/FinishedKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/CertVerifyKat.kt \
-      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/HandshakeFlowKat.kt -d "$KT/out" 2>"$KE"; then
-    STDLIB="$(dirname "$(command -v kotlinc)")/../lib/kotlin-stdlib.jar"
+      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/HandshakeFlowKat.kt -include-runtime -d "$KT/kat.jar" 2>"$KE"; then
     ec=0; ko=""
     for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat; do
-      out="$( java -cp "$(kp "$KT/out")$KSEP$(kp "$STDLIB")" "sh.bubblefish.npamp.$K" "$(kp "$VEC")" 2>&1 )" || ec=1
+      out="$( java -cp "$(kp "$KT/kat.jar")" "sh.bubblefish.npamp.$K" "$(kp "$VEC")" 2>&1 )" || ec=1
       ko="$ko$out"$'\n'
     done
     chk kotlin "$ko" "$ec" 'ALL PASS'
