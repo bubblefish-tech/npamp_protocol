@@ -19,9 +19,9 @@
 > **Class OPAQUE** (`25_carriage_opaque.md`). This document builds on **NPAMP-BRIDGE**
 > (`10_bridge_framework.md`) and the N-PAMP core specification
 > (draft-bubblefish-npamp-01, the "core specification"); it consumes only code points
-> those documents already reserve, uses a **PROVISIONAL** experimental `protocol_id`
-> for standalone carriage (§3), defines no new frame type or TLV, and introduces no
-> change to the core wire format or to NPAMP-BRIDGE.
+> those documents already reserve, uses `protocol_id 0x09` (assigned, NPAMP-REG §6)
+> for standalone Mandate-document carriage (§3), defines no new frame type or TLV,
+> and introduces no change to the core wire format or to NPAMP-BRIDGE.
 
 ## 1. Scope
 
@@ -32,9 +32,9 @@ specifics a peer needs in order to carry AP2 over an N-PAMP association:
 
 - The AP2 **protocol status** — what is confirmed and what is unconfirmed in AP2's
   transport — and the resulting OPAQUE-READY carriage posture (§2);
-- The **`protocol_id`** used for standalone AP2 carriage (PROVISIONAL, experimental
-  range) and the assigned `protocol_id` under which AP2 travels when it rides a host
-  agent protocol (§3);
+- The **`protocol_id`** used for standalone AP2 carriage (`0x09`, assigned under
+  NPAMP-REG §6) and the assigned `protocol_id` under which AP2 travels when it rides
+  a host agent protocol (§3);
 - How AP2's signed **Mandate documents** ride NPAMP-CC-DOC, and how AP2's Mandate-
   bearing host traffic rides NPAMP-CC-JSONRPC through the host mapping (§4, §5);
 - The AP2-specific **object identifiers** a peer keys on — the Mandate `vct`
@@ -107,6 +107,9 @@ code point below is asserted beyond its source.
   state and payload inside the `metadata` of A2A `Message`/`Task` objects, under the
   keys `x402.payment.status`, `x402.payment.required`, and `x402.payment.payload`, and
   is declared by the extension URI `https://github.com/google-a2a/a2a-x402/v0.1`.
+- AP2 has an **N-PAMP `protocol_id`**: NPAMP-REG §6 assigns AP2 the standards code
+  point `0x09` for standalone Mandate-document carriage, as part of the first wave
+  of agent-protocol registrations under §8 (§3).
 
 **Unconfirmed / deliberately out of scope in AP2 (marked, not fabricated):**
 
@@ -114,8 +117,6 @@ code point below is asserted beyond its source.
   catalog APIs, checkout updates, and specific APIs for communication between the
   different roles) are outside the scope of AP2."** AP2 therefore confirms **no native
   method/operation namespace** and **no native message framing** of its own.
-- Consequently AP2 has **no `protocol_id` assigned by NPAMP-REG** (`30_protocol_registry.md`
-  §6 assigns only `0x01`–`0x04`); an AP2-specific code point is PROVISIONAL (§3).
 - **Terminology has evolved.** AP2's original announcement described three Mandates —
   **Intent Mandate**, **Cart Mandate**, and **Payment Mandate**; the current
   specification uses **Checkout Mandate** (open/closed) and **Payment Mandate**. This
@@ -135,17 +136,17 @@ mapping is pinned here only once AP2 confirms a wire protocol of its own.
 | Property | Value |
 |---|---|
 | Protocol | Agent Payments Protocol (AP2) — an authorization/Mandate extension layered on a host agent protocol. |
-| `protocol_id` (standalone AP2 carriage) | **PROVISIONAL.** AP2 has **no** NPAMP-REG-assigned code point. For carriage of AP2 Mandate documents as a standalone protocol independent of a host, this mapping uses an **experimental** `protocol_id` in the range `0x10`–`0x7F` (NPAMP-REG §7.1); `0x14` is used **provisionally** and by out-of-band agreement only. It is **not** a standards-assigned value and **MUST NOT** be a production default (NPAMP-REG §7.1). A standards-range code point SHOULD be obtained under NPAMP-REG §8 before general interoperation. |
+| `protocol_id` (standalone AP2 carriage) | **`0x09`, assigned.** NPAMP-REG §6 assigns AP2 the standards code point `0x09`, for carriage of AP2 Mandate documents as a standalone protocol independent of a host, as part of the first wave of agent-protocol registrations under §8. A sender MUST set `protocol_id` to `0x09` for standalone AP2 carriage. |
 | `protocol_id` (AP2 riding A2A) | `0x02` (A2A), assigned by NPAMP-REG §6. When AP2 Mandates travel inside A2A JSON-RPC messages, the frames carry A2A's `protocol_id 0x02` (NPAMP-MAP-A2A §3); no separate AP2 code point is consumed on that path (§4.2). |
 | Carriage class | **DOC** for Mandate documents (NPAMP-CC-DOC); **JSONRPC** for host-carried AP2 traffic via the host mapping (NPAMP-CC-JSONRPC); **OPAQUE** as the universal fallback (NPAMP-CC-OPAQUE). |
 | `content_type` | `0x01` (application/json) for AP2 objects carried inside a host JSON-RPC message (NPAMP-CC-JSONRPC §3). For a standalone SD-JWT Mandate document, the precise media type (for example an SD-JWT media type) is named in the DocumentBinding `doc_content_type` (NPAMP-CC-DOC §6.2); the core `content_type` octet registry (NPAMP-BRIDGE §4) does not yet define a dedicated SD-JWT value, which this document notes rather than inventing one. |
 | Foreign-message form | A signed AP2 Mandate (an SD-JWT verifiable credential), or a host protocol message that carries one, carried octet-for-octet as the foreign message (NPAMP-BRIDGE §1). |
 
-A sender that carries standalone AP2 under `0x14` MUST have out-of-band agreement with
-its peer on that experimental value (NPAMP-REG §7.1); absent such agreement, a receiver
-MUST treat it as an uncarried protocol and return `ProtocolUnsupported` (NPAMP-BRIDGE §6;
-NPAMP-REG §9). A receiver MUST select the foreign protocol solely from `protocol_id`,
-never inferring AP2 from a Mandate `vct` or any other envelope or payload field.
+A sender that carries standalone AP2 MUST set `protocol_id` to `0x09` (NPAMP-REG §6);
+a receiver that does not carry `0x09` MUST reply to a BRIDGE_REQUEST bearing it with
+`ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9). A receiver MUST select the
+foreign protocol solely from `protocol_id`, never inferring AP2 from a Mandate `vct`
+or any other envelope or payload field.
 
 ## 4. Carriage model
 
@@ -202,8 +203,8 @@ confirmed in detail here.
 Any AP2 payload for which neither NPAMP-CC-DOC nor a confirmed host mapping applies —
 for example a future AP2-native message whose framing AP2 has not yet published — is
 carriable immediately under **Class OPAQUE** (NPAMP-CC-OPAQUE): the payload is carried
-under its declared `content_type` with no protocol-specific structure, using the
-PROVISIONAL experimental `protocol_id` of §3 under out-of-band agreement. This is the
+under its declared `content_type` with no protocol-specific structure, using
+`protocol_id 0x09` of §3 (assigned; no out-of-band agreement required). This is the
 OPAQUE-READY guarantee: AP2 is carriable now, and a richer mapping is added when AP2's
 transport is confirmed.
 
@@ -287,7 +288,7 @@ to the core wire format.
 
 | Resource | Origin | Use here |
 |---|---|---|
-| `protocol_id` `0x14` (AP2, **PROVISIONAL**, experimental) | NPAMP-REG §7.1 | Standalone AP2 carriage under out-of-band agreement only; not standards-assigned (§3). |
+| `protocol_id` `0x09` (AP2, **assigned**) | NPAMP-REG §6 | Standalone AP2 carriage (§3). |
 | `protocol_id` `0x02` (A2A) | NPAMP-REG §6 | The identifier AP2 traffic carries when it rides A2A (§3, §4.2). |
 | `content_type` `0x01` (application/json) | NPAMP-BRIDGE §4 | AP2 objects carried inside a host JSON-RPC message (§3, §4.2). |
 | Channel `0x000D` (Bridge) | Core specification | Default channel for all AP2 carriage (§7). |
@@ -320,9 +321,10 @@ Carrying AP2 over N-PAMP makes no security claim about AP2 itself. In particular
   SafetyLabel on a state-mutating operation is `destructive` — apply to every AP2
   Mandate-creation and payment-submission operation. A receiver MUST enforce its own
   authorization at the point of charge and MUST NOT rely on a favorable SafetyLabel.
-- **Provisional identifier.** The experimental `protocol_id 0x14` (§3) carries no
-  cross-domain meaning (NPAMP-REG §7.1, §10). A receiver MUST treat it as uncarried
-  absent out-of-band agreement, rather than guessing an AP2 interpretation.
+- **Assigned identifier.** The standalone `protocol_id 0x09` (§3) is assigned by
+  NPAMP-REG §6 and carries the registered cross-domain meaning of AP2 standalone
+  Mandate-document carriage. A receiver that does not carry `0x09` MUST treat it as
+  uncarried, rather than guessing an AP2 interpretation.
 - **Unconfirmed transport.** Because AP2 confirms no native wire protocol (§2), an
   implementation MUST NOT infer AP2 message structure that AP2 has not published; the
   confirmed carriage is that of §4, and anything beyond it is carried opaquely (§4.3)
@@ -376,9 +378,8 @@ N-PAMP documents built on:
 - NPAMP-CC-OPAQUE (`25_carriage_opaque.md`) — universal opaque carriage (the fallback,
   §4.3).
 - NPAMP-MAP-A2A (`61_map_a2a.md`) — the confirmed host mapping AP2 rides over A2A (§4.2).
-- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry; AP2
-  has no assigned code point, and the experimental-range rules of §7.1 govern the
-  PROVISIONAL identifier of §3.
+- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry,
+  which assigns AP2 the code point `0x09` for standalone carriage (§3).
 - NPAMP-DISC (`40_discovery.md`) — Discovery-channel advertisement referenced in §7.
 - BCP 14 (RFC 2119, RFC 8174) — requirement key words.
 
@@ -402,12 +403,11 @@ or NPAMP-CC-OPAQUE), and, for AP2 traffic, it:
    Mandate and any x402 `metadata` (`x402.payment.*`) verbatim inside that object and
    never lifting them into an envelope field (§4.2, §5);
 3. Carries any AP2 payload without a confirmed richer carriage under Class OPAQUE, using
-   the PROVISIONAL experimental `protocol_id` of §3 only under out-of-band agreement,
-   and never emits that experimental identifier as a production default (§3, §4.3;
-   NPAMP-REG §7.1);
+   `protocol_id 0x09` of §3 (assigned by NPAMP-REG §6) (§3, §4.3);
 4. Selects the foreign protocol solely from `protocol_id`, never inferring AP2 from a
    Mandate `vct`, an x402 metadata key, or any other envelope or payload field, and — for
-   standalone `0x14` without agreement — returns `ProtocolUnsupported` (§3; NPAMP-REG §9);
+   standalone `0x09` toward a peer that does not carry it — returns `ProtocolUnsupported`
+   (§3; NPAMP-REG §9);
 5. Attaches a SafetyLabel to every AP2 state-mutating operation using the effect classes
    of §6 — labelling a Mandate creation/authorization at least `non_idempotent_write` and
    a fund-moving payment authorization `destructive` — and treats a **missing** SafetyLabel
@@ -430,6 +430,6 @@ recovered octets reproduce the producer's digest; a Payment Mandate carried unde
 `protocol_id 0x02` inside an A2A `message/send` object with x402 `metadata` preserved
 verbatim; a payment-authorizing operation carrying a `destructive` SafetyLabel and a
 second identical operation with the SafetyLabel omitted, verified to be treated as
-`destructive`; a standalone AP2 payload carried under Class OPAQUE with the PROVISIONAL
-`protocol_id`; and a standalone `0x14` frame received without prior agreement, verified to
-draw `ProtocolUnsupported`.
+`destructive`; a standalone AP2 payload carried under Class OPAQUE with `protocol_id
+0x09`; and a standalone `0x09` frame received by a peer that does not carry AP2,
+verified to draw `ProtocolUnsupported`.

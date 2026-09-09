@@ -156,7 +156,7 @@ following:
 5. **Opens or re-policies a code-point range** — creating a new registry,
    adding a new range to an existing registry, or changing a range's
    **registration policy** (for example, converting a range from
-   "Specification Required" to "Experimental", per RFC 8126). Registries in
+   "First Come First Served" to "Experimental", per RFC 8126). Registries in
    scope include [`channels.csv`](../registries/channels.csv),
    [`frame_types_reserved.csv`](../registries/frame_types_reserved.csv),
    [`tlv_tags.csv`](../registries/tlv_tags.csv),
@@ -178,12 +178,12 @@ The following changes proceed through the existing pull-request + ADR path in
    or non-normative clarification (the `editorial` label of `CONTRIBUTING.md`).
 2. **A single additive code-point registration within an existing range whose
    policy already permits it** — e.g. registering one new `protocol_id` in the
-   `bridge_protocol_ids` "Specification Required" range `0x05-0x0F`
+   `bridge_protocol_ids` **First Come First Served** range `0x05-0x0F`
    ([`bridge_protocol_ids.csv`](../registries/bridge_protocol_ids.csv)), or one
-   new suite value in an additive registry. Per RFC 8126, a Specification
-   Required registration needs a stable public specification reviewed by the
-   designated expert, **not** a NEP. Such a registration still gets an ADR and a
-   change-log bullet.
+   new suite value in an additive registry. Per RFC 8126, a First Come First
+   Served registration is recorded by the maintainer on a first-come basis (no
+   substantive-review or designated-expert gate), **not** a NEP. Such a
+   registration still gets an ADR and a change-log bullet.
 3. **A thin per-protocol mapping onto an already-defined carriage class** — e.g.
    a new `NN_map_*.md` that reuses JSONRPC/HTTP/MSG/STREAM/DOC/OPAQUE. It is a
    registration (item 2) plus a short document; it needs a NEP only if it

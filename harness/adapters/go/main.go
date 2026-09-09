@@ -419,7 +419,7 @@ func handle(req request) response {
 			return response{Error: "bad foreign hex"}
 		}
 		env := npamp.BridgeEnvelope{
-			Protocol:      npamp.BridgeProtocol(uint8(i(fields, "protocol_id"))),
+			Protocol:      npamp.BridgeProtocol(uint16(i(fields, "protocol_id"))),
 			Kind:          npamp.BridgeMessageKind(uint8(i(fields, "message_kind"))),
 			ContentType:   npamp.BridgeContentType(uint8(i(fields, "content_type"))),
 			Flags:         uint8(i(fields, "flags")),

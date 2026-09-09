@@ -38,7 +38,7 @@ the prior `n-pamp/2` request is written up in
 | KEM suites | `code_point` (u16) | 2 | Core spec + future revisions | `registries/kem.csv` | [Cryptographic suites](../spec/06_cryptographic_suites.md) |
 | AEAD suites | `code_point` (u16) | 2 | Core spec + future revisions | `registries/aead.csv` | [Cryptographic suites](../spec/06_cryptographic_suites.md) |
 | Signature schemes | `code_point` (u16) | 2 | Core spec + future revisions | `registries/signatures.csv` | [Cryptographic suites](../spec/06_cryptographic_suites.md) |
-| Bridge protocol IDs | `protocol_id` (u8) | 4 assigned + reserved/experimental/private ranges | **Specification Required** (RFC 8126) | `registries/bridge_protocol_ids.csv` | [Bridge protocol registry](../spec/companion/30_protocol_registry.md) |
+| Bridge protocol IDs | `protocol_id` (u16, formerly u8) | 10 assigned + reserved/experimental/private ranges | **First Come First Served** (RFC 8126) | `registries/bridge_protocol_ids.csv` | [Bridge protocol registry](../spec/companion/30_protocol_registry.md) |
 | Per-channel frame types | `(channel_id, frame_type)` (u16,u16) | 108 rows across 12 Standard-profile channels | Core spec §4.6 + companion specs | `registries/frame_types_channel.csv` | [Frame types §4.6](../spec/04_frame_types.md) |
 
 The eight registries above are rendered in full as mirror tables below. The
@@ -248,13 +248,14 @@ Machine-readable: `../registries/error_codes.csv` · Authoritative:
 
 ## Bridge protocol-ID registry
 
-The one-octet `protocol_id` is the first octet of the BridgeEnvelope TLV (core TLV
-type `0x0010`) carried on the Bridge channel `0x000D`; it names the foreign
-agentic protocol carried verbatim in the frame. This is the **only** N-PAMP
-registry with an open registration procedure: values `0x05`–`0x0F` are assigned
-under the **Specification Required** policy of RFC 8126. The full procedure,
-carriage-class definitions, and designated-expert criteria are in the companion
-registry [NPAMP-REG](../spec/companion/30_protocol_registry.md).
+The two-octet `protocol_id` (formerly one octet; widened per NPAMP-REG §8.4) is the
+first two octets of the BridgeEnvelope TLV (core TLV type `0x0010`) carried on the
+Bridge channel `0x000D`; it names the foreign agentic protocol carried verbatim in
+the frame. A pre-widening value `0xNN` migrates losslessly to `0x00NN`. This is the
+**only** N-PAMP registry with an open registration procedure: values `0x05`–`0x0F`
+are assigned under the **First Come First Served** policy of RFC 8126. The full
+procedure, carriage-class definitions, and designated-expert criteria are in the
+companion registry [NPAMP-REG](../spec/companion/30_protocol_registry.md).
 
 Machine-readable: `../registries/bridge_protocol_ids.csv` · Authoritative:
 [NPAMP-REG — Bridge protocol registry](../spec/companion/30_protocol_registry.md).
@@ -262,12 +263,17 @@ Machine-readable: `../registries/bridge_protocol_ids.csv` · Authoritative:
 | `protocol_id` | Name | Carriage class | Mapping reference | Assignment policy | Description |
 |---|---|---|---|---|---|
 | 0x00 | (reserved) | -- | -- | Not assignable | Reserved (the null identifier). MUST NOT be used as a protocol_id; a receiver MUST reject a BridgeEnvelope whose protocol_id is 0x00 with EnvelopeMalformed (NPAMP-BRIDGE transport error code 1). NPAMP-REG Sections 4 and 9. |
-| 0x01 | MCP — Model Context Protocol | JSONRPC | NPAMP-MAP-MCP | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
-| 0x02 | A2A — Agent2Agent | JSONRPC (with DOC for the AgentCard) | NPAMP-MAP-A2A | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
-| 0x03 | HTTP/2 generic carriage | HTTP | NPAMP-CC-HTTP | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
-| 0x04 | WebSocket generic carriage | STREAM | NPAMP-CC-STREAM | Specification Required | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
-| 0x05 | gRPC generic carriage | STREAM | NPAMP-CC-STREAM | Specification Required | Standards-assigned via NPAMP-REG Section 8 registration procedure; recorded in NPAMP-REG Section 6; the next available code point after 0x01-0x04, mirroring the 0x04 WebSocket row's own generic-carriage pattern; MUST NOT be reassigned. |
-| 0x06–0x0F | (unassigned) | -- | -- | Specification Required | Unassigned standards range; available under the Specification Required policy of RFC 8126 via the registration procedure of NPAMP-REG Section 8. |
+| 0x01 | MCP — Model Context Protocol | JSONRPC | NPAMP-MAP-MCP | First Come First Served | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
+| 0x02 | A2A — Agent2Agent | JSONRPC (with DOC for the AgentCard) | NPAMP-MAP-A2A | First Come First Served | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
+| 0x03 | HTTP/2 generic carriage | HTTP | NPAMP-CC-HTTP | First Come First Served | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
+| 0x04 | WebSocket generic carriage | STREAM | NPAMP-CC-STREAM | First Come First Served | Standards-assigned; named directly by NPAMP-BRIDGE and recorded in NPAMP-REG Section 6; MUST NOT be reassigned. |
+| 0x05 | gRPC generic carriage | STREAM | NPAMP-CC-STREAM | First Come First Served | Standards-assigned via NPAMP-REG Section 8 registration procedure; recorded in NPAMP-REG Section 6; the next available code point after 0x01-0x04, mirroring the 0x04 WebSocket row's own generic-carriage pattern; MUST NOT be reassigned. |
+| 0x06 | NLIP — Natural Language Interaction Protocol | HTTP; STREAM | NPAMP-MAP-NLIP | First Come First Served | Standards-assigned via NPAMP-REG Section 8; recorded in NPAMP-REG Section 6 (first-wave assignment 0x06-0x0A); MUST NOT be reassigned. |
+| 0x07 | ANP — Agent Network Protocol | HTTP; OPAQUE | NPAMP-MAP-ANP | First Come First Served | Standards-assigned via NPAMP-REG Section 8; recorded in NPAMP-REG Section 6 (first-wave assignment 0x06-0x0A); MUST NOT be reassigned. |
+| 0x08 | AGNTCY — Internet of Agents collective | STREAM; HTTP; DOC | NPAMP-MAP-AGNTCY | First Come First Served | Standards-assigned via NPAMP-REG Section 8; recorded in NPAMP-REG Section 6 (first-wave assignment 0x06-0x0A); MUST NOT be reassigned. |
+| 0x09 | AP2 — Agent Payments Protocol | DOC; JSONRPC (via NPAMP-MAP-A2A) | NPAMP-MAP-AP2 | First Come First Served | Standards-assigned via NPAMP-REG Section 8; recorded in NPAMP-REG Section 6 (first-wave assignment 0x06-0x0A); MUST NOT be reassigned. |
+| 0x0A | x402 — internet-native HTTP payments | HTTP | NPAMP-MAP-X402 | First Come First Served | Standards-assigned via NPAMP-REG Section 8; recorded in NPAMP-REG Section 6 (first-wave assignment 0x06-0x0A); MUST NOT be reassigned. |
+| 0x0B–0x0F | (unassigned) | -- | -- | First Come First Served | Unassigned standards range; available under the First Come First Served policy of RFC 8126 via the registration procedure of NPAMP-REG Section 8. |
 | 0x10–0x7F | (experimental) | -- | -- | No registration | Experimental range; usable without registration; carries no guaranteed cross-domain meaning; a sender MUST NOT use it without out-of-band agreement with the peer. NPAMP-REG Section 7.1. |
 | 0x80–0xFF | (private use) | -- | -- | No registration | Private-use range; usable within a single administrative domain without registration; never assigned by this registry; MUST NOT be emitted toward a peer outside that domain. NPAMP-REG Section 7.2. |
 
@@ -279,7 +285,7 @@ matches the registry you want to touch, then use the
 
 | Registry / range | RFC 8126 policy | How to request | Decided by |
 |---|---|---|---|
-| Bridge `protocol_id` `0x05`–`0x0F` | **Specification Required** | Registration request (NPAMP-REG §8.2 fields) + a stable public specification | Designated expert (NPAMP-REG §8.3) |
+| Bridge `protocol_id` `0x05`–`0x0F` | **First Come First Served** | Registration request (NPAMP-REG §8.2 fields) | The NPAMP-REG maintainer (§8; no substantive-review/expert gate) |
 | Bridge `protocol_id` `0x10`–`0x7F` (experimental) | **No registration** | Use directly under out-of-band peer agreement (NPAMP-REG §7.1) | Nobody — unregistered |
 | Bridge `protocol_id` `0x80`–`0xFF` (private use) | **No registration** | Use within one administrative domain (NPAMP-REG §7.2) | The controlling domain |
 | Bridge `protocol_id` `0x00`–`0x04` | **Not assignable / already assigned** | — MUST NOT be reassigned | — |

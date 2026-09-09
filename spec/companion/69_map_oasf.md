@@ -103,7 +103,7 @@ NPAMP-CC-DOC could appear to differ on a structural matter, NPAMP-CC-DOC governs
 | Property | Value |
 |---|---|
 | Protocol | Open Agentic Schema Framework (OASF). |
-| `protocol_id` | **PROVISIONAL.** OASF has **no** standards-assigned code point in NPAMP-REG §6 (which assigns only `0x01`–`0x04`). Until one is assigned under NPAMP-REG §8 (Specification Required), an OASF deployment that carries records natively MUST use a code point from the **experimental range `0x10`–`0x7F`** (NPAMP-REG §7.1) by out-of-band agreement. This document uses **`0x1A`** as its provisional reference value; it carries no cross-domain meaning and is **not** a standards assignment. |
+| `protocol_id` | **PROVISIONAL.** OASF has **no** standards-assigned code point in NPAMP-REG §6 (which assigns only `0x01`–`0x04`). Until one is assigned under NPAMP-REG §8 (First Come First Served), an OASF deployment that carries records natively MUST use a code point from the **experimental range `0x10`–`0x7F`** (NPAMP-REG §7.1) by out-of-band agreement. This document uses **`0x1A`** as its provisional reference value; it carries no cross-domain meaning and is **not** a standards assignment. |
 | Carriage class | DOC (NPAMP-CC-DOC). |
 | `content_type` | `0x01` (application/json) for a JSON OASF record (§1.2 excludes the Protobuf encoding). |
 | Foreign-message form | A single OASF record document (or a detached proof over it), carried octet-for-octet as the foreign message (NPAMP-BRIDGE §1; NPAMP-CC-DOC §4). |

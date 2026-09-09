@@ -408,20 +408,23 @@ sigs = (
                         ; and impl/go/suites.go:31 were already correct)
 )
 
-; Bridge Protocol ID (u8; Bridge channel 0x000D BridgeEnvelope) —
-; bridge_protocol_ids.csv:2-9. BridgeEnvelope byte layout is defined in the
-; companion specs, NOT the core draft (spec/09:45-48) — only IDs are modeled.
+; Bridge Protocol ID (u16, big-endian; formerly u8 before the NPAMP-REG §8.4
+; widening -- a pre-widening value 0xNN migrates losslessly to 0x00NN; Bridge
+; channel 0x000D BridgeEnvelope) — bridge_protocol_ids.csv:2-9. BridgeEnvelope byte
+; layout is defined in the companion specs, NOT the core draft (spec/09:45-48) —
+; only IDs are modeled.
 bridge-protocol-id-value = &bridge-protocol-ids / bridge-protocol-id-ranges
 bridge-protocol-ids = (
-  mcp:       0x01,
-  a2a:       0x02,
-  http2:     0x03,
-  websocket: 0x04,
+  mcp:       0x0001,
+  a2a:       0x0002,
+  http2:     0x0003,
+  websocket: 0x0004,
 )
-; 0x00 reserved, MUST reject; 0x05 .. 0x0F unassigned (Spec Required);
-; 0x10 .. 0x7F experimental; 0x80 .. 0xFF private use.
-bridge-protocol-id-reserved     = 0x00
-bridge-protocol-id-ranges       = 0x05 .. 0x0F / 0x10 .. 0x7F / 0x80 .. 0xFF
+; 0x0000 reserved, MUST reject; 0x0005 .. 0x000F unassigned (Spec Required);
+; 0x0010 .. 0x007F experimental; 0x0080 .. 0x00FF private use; 0x0100 .. 0xFFFF
+; extended standards-assigned range opened by the NPAMP-REG §8.4 widening.
+bridge-protocol-id-reserved     = 0x0000
+bridge-protocol-id-ranges       = 0x0005 .. 0x000F / 0x0010 .. 0x007F / 0x0080 .. 0x00FF / 0x0100 .. 0xFFFF
 
 
 ; ===========================================================================

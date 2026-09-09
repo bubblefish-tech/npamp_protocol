@@ -6909,473 +6909,6 @@
       ]
     },
     {
-      "op": "bridge.envelope.decode",
-      "profile": "Standard",
-      "tests": [
-        {
-          "tcId": 1,
-          "requirement": "10/4/envelope-request",
-          "comment": "BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
-          "in": {
-            "frameType": 256,
-            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 1,
-            "message_kind": 1,
-            "content_type": 1,
-            "flags": 0,
-            "final": false,
-            "corr": "0a0b0c0d",
-            "method": "tools/call",
-            "safety": {
-              "effect": 2,
-              "scope": "fs:/tmp"
-            },
-            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          }
-        },
-        {
-          "tcId": 2,
-          "requirement": "10/5/reply-echoes-corr",
-          "comment": "BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
-          "in": {
-            "frameType": 257,
-            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 1,
-            "message_kind": 2,
-            "content_type": 1,
-            "flags": 0,
-            "final": false,
-            "corr": "0a0b0c0d",
-            "method": "tools/call",
-            "safety": null,
-            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          }
-        },
-        {
-          "tcId": 3,
-          "requirement": "10/6/preserve-foreign-error",
-          "comment": "BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
-          "in": {
-            "frameType": 258,
-            "payload": "0010001401040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 1,
-            "message_kind": 4,
-            "content_type": 1,
-            "flags": 0,
-            "final": false,
-            "corr": "0a0b0c0d",
-            "method": "tools/call",
-            "safety": null,
-            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
-          }
-        },
-        {
-          "tcId": 4,
-          "requirement": "10/5/notify-corr-len-zero",
-          "comment": "BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
-          "in": {
-            "frameType": 259,
-            "payload": "0010001b0203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 2,
-            "message_kind": 3,
-            "content_type": 1,
-            "flags": 0,
-            "final": false,
-            "corr": "",
-            "method": "notifications/message",
-            "safety": null,
-            "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
-          }
-        },
-        {
-          "tcId": 5,
-          "requirement": "10/4/reserved-flags-ignored",
-          "comment": "BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
-          "in": {
-            "frameType": 260,
-            "payload": "0010001401050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 1,
-            "message_kind": 5,
-            "content_type": 1,
-            "flags": 2,
-            "final": false,
-            "corr": "0a0b0c0d",
-            "method": "tools/call",
-            "safety": null,
-            "foreign": "6368756e6b2d30"
-          }
-        },
-        {
-          "tcId": 6,
-          "requirement": "10/2/stream-end-final",
-          "comment": "BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
-          "in": {
-            "frameType": 261,
-            "payload": "0010001401060101040a0b0c0d0a746f6f6c732f63616c6c"
-          },
-          "result": "valid",
-          "expected": {
-            "protocol_id": 1,
-            "message_kind": 6,
-            "content_type": 1,
-            "flags": 1,
-            "final": true,
-            "corr": "0a0b0c0d",
-            "method": "tools/call",
-            "safety": null,
-            "foreign": ""
-          }
-        },
-        {
-          "tcId": 7,
-          "requirement": "10/4/envelope-absent-MUST-reject",
-          "comment": "payload's first TLV is a SafetyLabel, not the REQUIRED BridgeEnvelope",
-          "in": {
-            "frameType": 256,
-            "payload": "001300030001787b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "EnvelopeAbsent"
-          ]
-        },
-        {
-          "tcId": 8,
-          "requirement": "10/4/envelope-tlv-truncated-MUST-reject",
-          "comment": "BridgeEnvelope TLV length exceeds the remaining payload",
-          "in": {
-            "frameType": 256,
-            "payload": "001000200101010004"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "EnvelopeTruncated"
-          ]
-        },
-        {
-          "tcId": 9,
-          "requirement": "10/4/envelope-value-truncated-MUST-reject",
-          "comment": "corr_len=8 but only 3 correlation octets present",
-          "in": {
-            "frameType": 256,
-            "payload": "001000080101010008aabbcc"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "EnvelopeTruncated"
-          ]
-        },
-        {
-          "tcId": 10,
-          "requirement": "10/4/message-kind-mismatch-MUST-reject",
-          "comment": "message_kind=response(0x02) contradicts frame type BRIDGE_REQUEST(0x0100)",
-          "in": {
-            "frameType": 256,
-            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "MessageKindMismatch"
-          ]
-        },
-        {
-          "tcId": 11,
-          "requirement": "10/5/request-empty-corr-MUST-reject",
-          "comment": "BRIDGE_REQUEST carries an empty correlation_id (corr_len=0)",
-          "in": {
-            "frameType": 256,
-            "payload": "0010001001010100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "CorrelationRule"
-          ]
-        },
-        {
-          "tcId": 12,
-          "requirement": "10/5/notify-nonempty-corr-MUST-reject",
-          "comment": "BRIDGE_NOTIFY carries a non-empty correlation_id (corr_len>0)",
-          "in": {
-            "frameType": 259,
-            "payload": "0010001f02030100040a0b0c0d156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "CorrelationRule"
-          ]
-        },
-        {
-          "tcId": 13,
-          "requirement": "10/5/reply-empty-corr-MUST-reject",
-          "comment": "BRIDGE_RESPONSE carries an empty correlation_id and cannot echo the request",
-          "in": {
-            "frameType": 257,
-            "payload": "0010001001020100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "CorrelationRule"
-          ]
-        },
-        {
-          "tcId": 14,
-          "requirement": "10/4/envelope-trailing-octets-MUST-reject",
-          "comment": "method_len=4 but 7 method octets present (trailing octets in the envelope value)",
-          "in": {
-            "frameType": 256,
-            "payload": "0010001201010100040a0b0c0d04746f6f6c63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "EnvelopeTruncated"
-          ]
-        },
-        {
-          "tcId": 15,
-          "requirement": "10/7/safetylabel-truncated-MUST-reject",
-          "comment": "present SafetyLabel TLV value is truncated (scope_len=5, 1 octet)",
-          "in": {
-            "frameType": 256,
-            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c001300030205667b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "SafetyLabelMalformed"
-          ]
-        },
-        {
-          "tcId": 16,
-          "requirement": "10/2/not-a-bridge-frame-MUST-reject",
-          "comment": "frame type PING(0x0001) is not a Bridge operation frame",
-          "in": {
-            "frameType": 1,
-            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "invalid",
-          "flags": [
-            "MustReject",
-            "NotABridgeFrame"
-          ]
-        }
-      ]
-    },
-    {
-      "op": "bridge.envelope.encode",
-      "profile": "Standard",
-      "tests": [
-        {
-          "tcId": 1,
-          "requirement": "10/4/envelope-request",
-          "comment": "canonical encode of: BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
-          "in": {
-            "fields": {
-              "frameType": 256,
-              "protocol_id": 1,
-              "message_kind": 1,
-              "content_type": 1,
-              "flags": 0,
-              "corr": "0a0b0c0d",
-              "method": "tools/call",
-              "safety": {
-                "effect": 2,
-                "scope": "fs:/tmp"
-              },
-              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-            }
-          },
-          "expected": {
-            "payload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 2,
-          "requirement": "10/5/reply-echoes-corr",
-          "comment": "canonical encode of: BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
-          "in": {
-            "fields": {
-              "frameType": 257,
-              "protocol_id": 1,
-              "message_kind": 2,
-              "content_type": 1,
-              "flags": 0,
-              "corr": "0a0b0c0d",
-              "method": "tools/call",
-              "safety": null,
-              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-            }
-          },
-          "expected": {
-            "payload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 3,
-          "requirement": "10/6/preserve-foreign-error",
-          "comment": "canonical encode of: BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
-          "in": {
-            "fields": {
-              "frameType": 258,
-              "protocol_id": 1,
-              "message_kind": 4,
-              "content_type": 1,
-              "flags": 0,
-              "corr": "0a0b0c0d",
-              "method": "tools/call",
-              "safety": null,
-              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
-            }
-          },
-          "expected": {
-            "payload": "0010001401040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 4,
-          "requirement": "10/5/notify-corr-len-zero",
-          "comment": "canonical encode of: BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
-          "in": {
-            "fields": {
-              "frameType": 259,
-              "protocol_id": 2,
-              "message_kind": 3,
-              "content_type": 1,
-              "flags": 0,
-              "corr": "",
-              "method": "notifications/message",
-              "safety": null,
-              "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
-            }
-          },
-          "expected": {
-            "payload": "0010001b0203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 5,
-          "requirement": "10/4/reserved-flags-ignored",
-          "comment": "canonical encode of: BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
-          "in": {
-            "fields": {
-              "frameType": 260,
-              "protocol_id": 1,
-              "message_kind": 5,
-              "content_type": 1,
-              "flags": 2,
-              "corr": "0a0b0c0d",
-              "method": "tools/call",
-              "safety": null,
-              "foreign": "6368756e6b2d30"
-            }
-          },
-          "expected": {
-            "payload": "0010001401050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 6,
-          "requirement": "10/2/stream-end-final",
-          "comment": "canonical encode of: BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
-          "in": {
-            "fields": {
-              "frameType": 261,
-              "protocol_id": 1,
-              "message_kind": 6,
-              "content_type": 1,
-              "flags": 1,
-              "corr": "0a0b0c0d",
-              "method": "tools/call",
-              "safety": null,
-              "foreign": ""
-            }
-          },
-          "expected": {
-            "payload": "0010001401060101040a0b0c0d0a746f6f6c732f63616c6c"
-          },
-          "result": "valid"
-        }
-      ]
-    },
-    {
-      "op": "bridge.correlate",
-      "profile": "Standard",
-      "tests": [
-        {
-          "tcId": 1,
-          "requirement": "10/5/reply-correlates",
-          "comment": "BRIDGE_RESPONSE echoing the request correlation_id correlates",
-          "in": {
-            "requestFrameType": 256,
-            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
-            "replyFrameType": 257,
-            "replyPayload": "0010001401020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          },
-          "expected": {
-            "match": true
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 2,
-          "requirement": "10/5/reply-different-corr-does-not-correlate",
-          "comment": "a reply with a different correlation_id does NOT correlate",
-          "in": {
-            "requestFrameType": 256,
-            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
-            "replyFrameType": 257,
-            "replyPayload": "001000140102010004ffffffff0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
-          },
-          "expected": {
-            "match": false
-          },
-          "result": "valid"
-        },
-        {
-          "tcId": 3,
-          "requirement": "10/5/stream-reply-correlates",
-          "comment": "a BRIDGE_STREAM_DATA chunk echoing the correlation_id correlates",
-          "in": {
-            "requestFrameType": 256,
-            "requestPayload": "0010001401010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
-            "replyFrameType": 260,
-            "replyPayload": "0010001401050100040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
-          },
-          "expected": {
-            "match": true
-          },
-          "result": "valid"
-        }
-      ]
-    },
-    {
       "op": "nonce.derive",
       "profile": "any",
       "tests": [
@@ -7515,6 +7048,951 @@
           "expected": {
             "tlv": "80010002abcd"
           }
+        }
+      ]
+    },
+    {
+      "op": "bridge.envelope.decode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/4/envelope-request",
+          "comment": "BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
+          "in": {
+            "frameType": 256,
+            "payload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 1,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": {
+              "effect": 2,
+              "scope": "fs:/tmp"
+            },
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          }
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-echoes-corr",
+          "comment": "BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "frameType": 257,
+            "payload": "001000150001020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 2,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          }
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/6/preserve-foreign-error",
+          "comment": "BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
+          "in": {
+            "frameType": 258,
+            "payload": "001000150001040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 4,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          }
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/notify-corr-len-zero",
+          "comment": "BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
+          "in": {
+            "frameType": 259,
+            "payload": "0010001c000203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 2,
+            "message_kind": 3,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "",
+            "method": "notifications/message",
+            "safety": null,
+            "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          }
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/4/reserved-flags-ignored",
+          "comment": "BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
+          "in": {
+            "frameType": 260,
+            "payload": "001000150001050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 5,
+            "content_type": 1,
+            "flags": 2,
+            "final": false,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": "6368756e6b2d30"
+          }
+        },
+        {
+          "tcId": 6,
+          "requirement": "10/2/stream-end-final",
+          "comment": "BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
+          "in": {
+            "frameType": 261,
+            "payload": "001000150001060101040a0b0c0d0a746f6f6c732f63616c6c"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 1,
+            "message_kind": 6,
+            "content_type": 1,
+            "flags": 1,
+            "final": true,
+            "corr": "0a0b0c0d",
+            "method": "tools/call",
+            "safety": null,
+            "foreign": ""
+          }
+        },
+        {
+          "tcId": 7,
+          "requirement": "30/6/wave1-nlip-request",
+          "comment": "BRIDGE_REQUEST (NLIP 0x06, STREAM/WebSocket JSON-fallback binding): envelope + SafetyLabel(non_idempotent_write, the ECMA-431 POST/stream-open floor, 70_map_nlip.md \u00a77) + an ECMA-430 NLIP message object carried verbatim; NLIP has no method namespace (\u00a74.1), so method_len=0",
+          "in": {
+            "frameType": 256,
+            "payload": "0010000b0006010100044e4c3031000013000702052f6e6c69707b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 6,
+            "message_kind": 1,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "4e4c3031",
+            "method": "",
+            "safety": {
+              "effect": 2,
+              "scope": "/nlip"
+            },
+            "foreign": "7b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d"
+          }
+        },
+        {
+          "tcId": 8,
+          "requirement": "30/6/wave1-nlip-reply",
+          "comment": "BRIDGE_RESPONSE (NLIP 0x06) echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "frameType": 257,
+            "payload": "0010000b0006020100044e4c3031007b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a22436c65617220736b6965732c203138432e227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 6,
+            "message_kind": 2,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "4e4c3031",
+            "method": "",
+            "safety": null,
+            "foreign": "7b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a22436c65617220736b6965732c203138432e227d"
+          }
+        },
+        {
+          "tcId": 9,
+          "requirement": "30/6/wave1-anp-request",
+          "comment": "BRIDGE_REQUEST (ANP 0x07, Class OPAQUE JSON-LD): envelope + SafetyLabel(non_idempotent_write, 63_map_anp.md \u00a77 'meta-protocol negotiation' row) + a did:wba-identified negotiation request carried verbatim",
+          "in": {
+            "frameType": 256,
+            "payload": "00100024000701010004414e3031196d6574612d70726f746f636f6c2d6e65676f74696174696f6e0013000f020d6d6574612d70726f746f636f6c7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e52657175657374222c2270726f706f73616c223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 7,
+            "message_kind": 1,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "414e3031",
+            "method": "meta-protocol-negotiation",
+            "safety": {
+              "effect": 2,
+              "scope": "meta-protocol"
+            },
+            "foreign": "7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e52657175657374222c2270726f706f73616c223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          }
+        },
+        {
+          "tcId": 10,
+          "requirement": "30/6/wave1-anp-reply",
+          "comment": "BRIDGE_RESPONSE (ANP 0x07) echoes the request correlation_id and method; no SafetyLabel on a reply",
+          "in": {
+            "frameType": 257,
+            "payload": "00100024000702010004414e3031196d6574612d70726f746f636f6c2d6e65676f74696174696f6e7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e526573706f6e7365222c226163636570746564223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 7,
+            "message_kind": 2,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "414e3031",
+            "method": "meta-protocol-negotiation",
+            "safety": null,
+            "foreign": "7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e526573706f6e7365222c226163636570746564223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          }
+        },
+        {
+          "tcId": 11,
+          "requirement": "30/6/wave1-agntcy-request",
+          "comment": "BRIDGE_REQUEST (AGNTCY 0x08, ACP over Class OPAQUE): envelope + SafetyLabel(non_idempotent_write, 6f_map_agntcy.md \u00a77 'ACP create a run' row) + a `POST /runs` JSON body carried verbatim",
+          "in": {
+            "frameType": 256,
+            "payload": "00100015000801010004414330310a504f5354202f72756e730013000702052f72756e737b226167656e745f6964223a22706c616e6e65722d6167656e74222c22696e707574223a7b226d65737361676573223a5b7b22726f6c65223a2275736572222c22636f6e74656e74223a22706c616e20612074726970227d5d7d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 8,
+            "message_kind": 1,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "41433031",
+            "method": "POST /runs",
+            "safety": {
+              "effect": 2,
+              "scope": "/runs"
+            },
+            "foreign": "7b226167656e745f6964223a22706c616e6e65722d6167656e74222c22696e707574223a7b226d65737361676573223a5b7b22726f6c65223a2275736572222c22636f6e74656e74223a22706c616e20612074726970227d5d7d7d"
+          }
+        },
+        {
+          "tcId": 12,
+          "requirement": "30/6/wave1-agntcy-reply",
+          "comment": "BRIDGE_RESPONSE (AGNTCY 0x08) echoes the request correlation_id and method; no SafetyLabel on a reply",
+          "in": {
+            "frameType": 257,
+            "payload": "00100015000802010004414330310a504f5354202f72756e737b2272756e5f6964223a2272756e5f30303031222c22737461747573223a2273756363657373222c226f7574707574223a7b226d65737361676573223a5b7b22726f6c65223a22617373697374616e74222c22636f6e74656e74223a22706c616e207265616479227d5d7d7d"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 8,
+            "message_kind": 2,
+            "content_type": 1,
+            "flags": 0,
+            "final": false,
+            "corr": "41433031",
+            "method": "POST /runs",
+            "safety": null,
+            "foreign": "7b2272756e5f6964223a2272756e5f30303031222c22737461747573223a2273756363657373222c226f7574707574223a7b226d65737361676573223a5b7b22726f6c65223a22617373697374616e74222c22636f6e74656e74223a22706c616e207265616479227d5d7d7d"
+          }
+        },
+        {
+          "tcId": 13,
+          "requirement": "30/6/wave1-ap2-request",
+          "comment": "BRIDGE_REQUEST (AP2 0x09, standalone Mandate carriage): envelope, content_type=0x04 (OpaqueContentType TLV; no dedicated SD-JWT value exists, 65_map_ap2.md \u00a73) + a Checkout Mandate SD-JWT carried octet-for-octet; serving a Mandate document is read_only (65_map_ap2.md \u00a74.1), so no SafetyLabel; AP2 defines no operation-method namespace, so method_len=0",
+          "in": {
+            "frameType": 256,
+            "payload": "0010000b000901040004415030310065794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6d4e6f5a574e72623356304c6a45694c434a7063334d694f694a6b615751366447567a6443316d6158683064584a6c4f6d6c7a6333566c63694a392e63326c6e7e"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 9,
+            "message_kind": 1,
+            "content_type": 4,
+            "flags": 0,
+            "final": false,
+            "corr": "41503031",
+            "method": "",
+            "safety": null,
+            "foreign": "65794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6d4e6f5a574e72623356304c6a45694c434a7063334d694f694a6b615751366447567a6443316d6158683064584a6c4f6d6c7a6333566c63694a392e63326c6e7e"
+          }
+        },
+        {
+          "tcId": 14,
+          "requirement": "30/6/wave1-ap2-reply",
+          "comment": "BRIDGE_RESPONSE (AP2 0x09) echoes the request correlation_id and carries a Payment Mandate SD-JWT octet-for-octet; read_only, no SafetyLabel",
+          "in": {
+            "frameType": 257,
+            "payload": "0010000b000902040004415030310065794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6e42686557316c626e51754d534973496d6c7a63794936496d52705a4470305a584e304c575a7065485231636d553661584e7a64575679496e302e63326c6e7e"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 9,
+            "message_kind": 2,
+            "content_type": 4,
+            "flags": 0,
+            "final": false,
+            "corr": "41503031",
+            "method": "",
+            "safety": null,
+            "foreign": "65794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6e42686557316c626e51754d534973496d6c7a63794936496d52705a4470305a584e304c575a7065485231636d553661584e7a64575679496e302e63326c6e7e"
+          }
+        },
+        {
+          "tcId": 15,
+          "requirement": "30/6/wave1-x402-request",
+          "comment": "BRIDGE_REQUEST (x402 0x0A, native HTTP binding): envelope, content_type=0x02 (deterministic-CBOR HTTP-Carriage Object per NPAMP-CC-HTTP \u00a74.1/\u00a74.2 -- x402's sole registered carriage) + a plain GET carrying no payment header; read_only (71_map_x402.md \u00a76), so no SafetyLabel",
+          "in": {
+            "frameType": 256,
+            "payload": "0010001d000a010200045834303212474554202f706169642d656e64706f696e74a301010263474554036e2f706169642d656e64706f696e74"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 10,
+            "message_kind": 1,
+            "content_type": 2,
+            "flags": 0,
+            "final": false,
+            "corr": "58343032",
+            "method": "GET /paid-endpoint",
+            "safety": null,
+            "foreign": "a301010263474554036e2f706169642d656e64706f696e74"
+          }
+        },
+        {
+          "tcId": 16,
+          "requirement": "30/6/wave1-x402-reply",
+          "comment": "BRIDGE_RESPONSE (x402 0x0A) carries the `402 Payment Required` challenge as a deterministic-CBOR HTTP-Carriage Object (status=402, a base64-encoded PaymentRequired object in the lowercase `payment-required` header per HTTP-Carriage \u00a74.4); read_only (71_map_x402.md \u00a76), so no SafetyLabel",
+          "in": {
+            "frameType": 257,
+            "payload": "0010001d000a020200045834303212474554202f706169642d656e64706f696e74a3010206190192088182707061796d656e742d726571756972656459014865794a344e444179566d567963326c76626949364d537769636d567a62335679593255694f694976634746705a43316c626d527762326c7564434973496d466a5932567764484d694f6c7437496e4e6a614756745a534936496d563459574e3049697769626d56306432397961794936496d5670634445314e546f344e44557a496977695957317664573530496a6f694d5441774d4441694c434a6863334e6c64434936496a42344d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d434973496e426865565276496a6f694d4867774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d444177496977696257463456476c745a57393164464e6c593239755a484d694f6a597766563139"
+          },
+          "result": "valid",
+          "expected": {
+            "protocol_id": 10,
+            "message_kind": 2,
+            "content_type": 2,
+            "flags": 0,
+            "final": false,
+            "corr": "58343032",
+            "method": "GET /paid-endpoint",
+            "safety": null,
+            "foreign": "a3010206190192088182707061796d656e742d726571756972656459014865794a344e444179566d567963326c76626949364d537769636d567a62335679593255694f694976634746705a43316c626d527762326c7564434973496d466a5932567764484d694f6c7437496e4e6a614756745a534936496d563459574e3049697769626d56306432397961794936496d5670634445314e546f344e44557a496977695957317664573530496a6f694d5441774d4441694c434a6863334e6c64434936496a42344d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d434973496e426865565276496a6f694d4867774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d444177496977696257463456476c745a57393164464e6c593239755a484d694f6a597766563139"
+          }
+        },
+        {
+          "tcId": 17,
+          "requirement": "10/4/envelope-absent-MUST-reject",
+          "comment": "payload's first TLV is a SafetyLabel, not the REQUIRED BridgeEnvelope",
+          "in": {
+            "frameType": 256,
+            "payload": "001300030001787b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeAbsent"
+          ]
+        },
+        {
+          "tcId": 18,
+          "requirement": "10/4/envelope-tlv-truncated-MUST-reject",
+          "comment": "BridgeEnvelope TLV length exceeds the remaining payload",
+          "in": {
+            "frameType": 256,
+            "payload": "001000200101010004"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 19,
+          "requirement": "10/4/envelope-value-truncated-MUST-reject",
+          "comment": "corr_len=8 but only 3 correlation octets present",
+          "in": {
+            "frameType": 256,
+            "payload": "00100009000101010008aabbcc"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 20,
+          "requirement": "10/4/message-kind-mismatch-MUST-reject",
+          "comment": "message_kind=response(0x02) contradicts frame type BRIDGE_REQUEST(0x0100)",
+          "in": {
+            "frameType": 256,
+            "payload": "001000150001020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "MessageKindMismatch"
+          ]
+        },
+        {
+          "tcId": 21,
+          "requirement": "10/5/request-empty-corr-MUST-reject",
+          "comment": "BRIDGE_REQUEST carries an empty correlation_id (corr_len=0)",
+          "in": {
+            "frameType": 256,
+            "payload": "001000110001010100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 22,
+          "requirement": "10/5/notify-nonempty-corr-MUST-reject",
+          "comment": "BRIDGE_NOTIFY carries a non-empty correlation_id (corr_len>0)",
+          "in": {
+            "frameType": 259,
+            "payload": "001000200002030100040a0b0c0d156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 23,
+          "requirement": "10/5/reply-empty-corr-MUST-reject",
+          "comment": "BRIDGE_RESPONSE carries an empty correlation_id and cannot echo the request",
+          "in": {
+            "frameType": 257,
+            "payload": "001000110001020100000a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "CorrelationRule"
+          ]
+        },
+        {
+          "tcId": 24,
+          "requirement": "10/4/envelope-trailing-octets-MUST-reject",
+          "comment": "method_len=4 but 7 method octets present (trailing octets in the envelope value)",
+          "in": {
+            "frameType": 256,
+            "payload": "001000130001010100040a0b0c0d04746f6f6c63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "EnvelopeTruncated"
+          ]
+        },
+        {
+          "tcId": 25,
+          "requirement": "10/7/safetylabel-truncated-MUST-reject",
+          "comment": "present SafetyLabel TLV value is truncated (scope_len=5, 1 octet)",
+          "in": {
+            "frameType": 256,
+            "payload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c001300030205667b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "SafetyLabelMalformed"
+          ]
+        },
+        {
+          "tcId": 26,
+          "requirement": "10/2/not-a-bridge-frame-MUST-reject",
+          "comment": "frame type PING(0x0001) is not a Bridge operation frame",
+          "in": {
+            "frameType": 1,
+            "payload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "invalid",
+          "flags": [
+            "MustReject",
+            "NotABridgeFrame"
+          ]
+        }
+      ]
+    },
+    {
+      "op": "bridge.envelope.encode",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/4/envelope-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (MCP tools/call): envelope + SafetyLabel(non_idempotent_write) + foreign JSON verbatim",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 1,
+              "message_kind": 1,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": {
+                "effect": 2,
+                "scope": "fs:/tmp"
+              },
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+            }
+          },
+          "expected": {
+            "payload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c00130009020766733a2f746d707b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-echoes-corr",
+          "comment": "canonical encode of: BRIDGE_RESPONSE echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 1,
+              "message_kind": 2,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+            }
+          },
+          "expected": {
+            "payload": "001000150001020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/6/preserve-foreign-error",
+          "comment": "canonical encode of: BRIDGE_ERROR carries the foreign protocol's own JSON-RPC error object verbatim (never reduced to text)",
+          "in": {
+            "fields": {
+              "frameType": 258,
+              "protocol_id": 1,
+              "message_kind": 4,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+            }
+          },
+          "expected": {
+            "payload": "001000150001040100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226572726f72223a7b22636f6465223a2d33323630312c226d657373616765223a224d6574686f64206e6f7420666f756e64227d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 4,
+          "requirement": "10/5/notify-corr-len-zero",
+          "comment": "canonical encode of: BRIDGE_NOTIFY (A2A) MUST set corr_len=0; one-way, no reply",
+          "in": {
+            "fields": {
+              "frameType": 259,
+              "protocol_id": 2,
+              "message_kind": 3,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "",
+              "method": "notifications/message",
+              "safety": null,
+              "foreign": "7b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+            }
+          },
+          "expected": {
+            "payload": "0010001c000203010000156e6f74696669636174696f6e732f6d6573736167657b226a736f6e727063223a22322e30222c226d6574686f64223a226e6f74696669636174696f6e732f6d657373616765227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 5,
+          "requirement": "10/4/reserved-flags-ignored",
+          "comment": "canonical encode of: BRIDGE_STREAM_DATA with a reserved flag bit (0x02) set: receiver MUST ignore it; final stays false",
+          "in": {
+            "fields": {
+              "frameType": 260,
+              "protocol_id": 1,
+              "message_kind": 5,
+              "content_type": 1,
+              "flags": 2,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": "6368756e6b2d30"
+            }
+          },
+          "expected": {
+            "payload": "001000150001050102040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 6,
+          "requirement": "10/2/stream-end-final",
+          "comment": "canonical encode of: BRIDGE_STREAM_END sets the final flag (0x01) and carries an empty foreign message",
+          "in": {
+            "fields": {
+              "frameType": 261,
+              "protocol_id": 1,
+              "message_kind": 6,
+              "content_type": 1,
+              "flags": 1,
+              "corr": "0a0b0c0d",
+              "method": "tools/call",
+              "safety": null,
+              "foreign": ""
+            }
+          },
+          "expected": {
+            "payload": "001000150001060101040a0b0c0d0a746f6f6c732f63616c6c"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 7,
+          "requirement": "30/6/wave1-nlip-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (NLIP 0x06, STREAM/WebSocket JSON-fallback binding): envelope + SafetyLabel(non_idempotent_write, the ECMA-431 POST/stream-open floor, 70_map_nlip.md \u00a77) + an ECMA-430 NLIP message object carried verbatim; NLIP has no method namespace (\u00a74.1), so method_len=0",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 6,
+              "message_kind": 1,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "4e4c3031",
+              "method": "",
+              "safety": {
+                "effect": 2,
+                "scope": "/nlip"
+              },
+              "foreign": "7b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d"
+            }
+          },
+          "expected": {
+            "payload": "0010000b0006010100044e4c3031000013000702052f6e6c69707b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 8,
+          "requirement": "30/6/wave1-nlip-reply",
+          "comment": "canonical encode of: BRIDGE_RESPONSE (NLIP 0x06) echoes the request correlation_id; no SafetyLabel on a reply",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 6,
+              "message_kind": 2,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "4e4c3031",
+              "method": "",
+              "safety": null,
+              "foreign": "7b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a22436c65617220736b6965732c203138432e227d"
+            }
+          },
+          "expected": {
+            "payload": "0010000b0006020100044e4c3031007b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a22436c65617220736b6965732c203138432e227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 9,
+          "requirement": "30/6/wave1-anp-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (ANP 0x07, Class OPAQUE JSON-LD): envelope + SafetyLabel(non_idempotent_write, 63_map_anp.md \u00a77 'meta-protocol negotiation' row) + a did:wba-identified negotiation request carried verbatim",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 7,
+              "message_kind": 1,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "414e3031",
+              "method": "meta-protocol-negotiation",
+              "safety": {
+                "effect": 2,
+                "scope": "meta-protocol"
+              },
+              "foreign": "7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e52657175657374222c2270726f706f73616c223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+            }
+          },
+          "expected": {
+            "payload": "00100024000701010004414e3031196d6574612d70726f746f636f6c2d6e65676f74696174696f6e0013000f020d6d6574612d70726f746f636f6c7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e52657175657374222c2270726f706f73616c223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 10,
+          "requirement": "30/6/wave1-anp-reply",
+          "comment": "canonical encode of: BRIDGE_RESPONSE (ANP 0x07) echoes the request correlation_id and method; no SafetyLabel on a reply",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 7,
+              "message_kind": 2,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "414e3031",
+              "method": "meta-protocol-negotiation",
+              "safety": null,
+              "foreign": "7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e526573706f6e7365222c226163636570746564223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+            }
+          },
+          "expected": {
+            "payload": "00100024000702010004414e3031196d6574612d70726f746f636f6c2d6e65676f74696174696f6e7b2240636f6e74657874223a5b2268747470733a2f2f7777772e77332e6f72672f6e732f6469642f7631225d2c226964223a226469643a7762613a746573742d666978747572653a6167656e74733a706c616e6e6572222c2274797065223a224e65676f74696174696f6e526573706f6e7365222c226163636570746564223a22766e642e746573742d666978747572652e726f7574652d706c616e6e696e672d76312b6a736f6e227d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 11,
+          "requirement": "30/6/wave1-agntcy-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (AGNTCY 0x08, ACP over Class OPAQUE): envelope + SafetyLabel(non_idempotent_write, 6f_map_agntcy.md \u00a77 'ACP create a run' row) + a `POST /runs` JSON body carried verbatim",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 8,
+              "message_kind": 1,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "41433031",
+              "method": "POST /runs",
+              "safety": {
+                "effect": 2,
+                "scope": "/runs"
+              },
+              "foreign": "7b226167656e745f6964223a22706c616e6e65722d6167656e74222c22696e707574223a7b226d65737361676573223a5b7b22726f6c65223a2275736572222c22636f6e74656e74223a22706c616e20612074726970227d5d7d7d"
+            }
+          },
+          "expected": {
+            "payload": "00100015000801010004414330310a504f5354202f72756e730013000702052f72756e737b226167656e745f6964223a22706c616e6e65722d6167656e74222c22696e707574223a7b226d65737361676573223a5b7b22726f6c65223a2275736572222c22636f6e74656e74223a22706c616e20612074726970227d5d7d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 12,
+          "requirement": "30/6/wave1-agntcy-reply",
+          "comment": "canonical encode of: BRIDGE_RESPONSE (AGNTCY 0x08) echoes the request correlation_id and method; no SafetyLabel on a reply",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 8,
+              "message_kind": 2,
+              "content_type": 1,
+              "flags": 0,
+              "corr": "41433031",
+              "method": "POST /runs",
+              "safety": null,
+              "foreign": "7b2272756e5f6964223a2272756e5f30303031222c22737461747573223a2273756363657373222c226f7574707574223a7b226d65737361676573223a5b7b22726f6c65223a22617373697374616e74222c22636f6e74656e74223a22706c616e207265616479227d5d7d7d"
+            }
+          },
+          "expected": {
+            "payload": "00100015000802010004414330310a504f5354202f72756e737b2272756e5f6964223a2272756e5f30303031222c22737461747573223a2273756363657373222c226f7574707574223a7b226d65737361676573223a5b7b22726f6c65223a22617373697374616e74222c22636f6e74656e74223a22706c616e207265616479227d5d7d7d"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 13,
+          "requirement": "30/6/wave1-ap2-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (AP2 0x09, standalone Mandate carriage): envelope, content_type=0x04 (OpaqueContentType TLV; no dedicated SD-JWT value exists, 65_map_ap2.md \u00a73) + a Checkout Mandate SD-JWT carried octet-for-octet; serving a Mandate document is read_only (65_map_ap2.md \u00a74.1), so no SafetyLabel; AP2 defines no operation-method namespace, so method_len=0",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 9,
+              "message_kind": 1,
+              "content_type": 4,
+              "flags": 0,
+              "corr": "41503031",
+              "method": "",
+              "safety": null,
+              "foreign": "65794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6d4e6f5a574e72623356304c6a45694c434a7063334d694f694a6b615751366447567a6443316d6158683064584a6c4f6d6c7a6333566c63694a392e63326c6e7e"
+            }
+          },
+          "expected": {
+            "payload": "0010000b000901040004415030310065794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6d4e6f5a574e72623356304c6a45694c434a7063334d694f694a6b615751366447567a6443316d6158683064584a6c4f6d6c7a6333566c63694a392e63326c6e7e"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 14,
+          "requirement": "30/6/wave1-ap2-reply",
+          "comment": "canonical encode of: BRIDGE_RESPONSE (AP2 0x09) echoes the request correlation_id and carries a Payment Mandate SD-JWT octet-for-octet; read_only, no SafetyLabel",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 9,
+              "message_kind": 2,
+              "content_type": 4,
+              "flags": 0,
+              "corr": "41503031",
+              "method": "",
+              "safety": null,
+              "foreign": "65794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6e42686557316c626e51754d534973496d6c7a63794936496d52705a4470305a584e304c575a7065485231636d553661584e7a64575679496e302e63326c6e7e"
+            }
+          },
+          "expected": {
+            "payload": "0010000b000902040004415030310065794a68624763694f694a46557a49314e694973496e523563434936496e5a6a4b334e6b4c57703364434a392e65794a32593351694f694a745957356b5958526c4c6e42686557316c626e51754d534973496d6c7a63794936496d52705a4470305a584e304c575a7065485231636d553661584e7a64575679496e302e63326c6e7e"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 15,
+          "requirement": "30/6/wave1-x402-request",
+          "comment": "canonical encode of: BRIDGE_REQUEST (x402 0x0A, native HTTP binding): envelope, content_type=0x02 (deterministic-CBOR HTTP-Carriage Object per NPAMP-CC-HTTP \u00a74.1/\u00a74.2 -- x402's sole registered carriage) + a plain GET carrying no payment header; read_only (71_map_x402.md \u00a76), so no SafetyLabel",
+          "in": {
+            "fields": {
+              "frameType": 256,
+              "protocol_id": 10,
+              "message_kind": 1,
+              "content_type": 2,
+              "flags": 0,
+              "corr": "58343032",
+              "method": "GET /paid-endpoint",
+              "safety": null,
+              "foreign": "a301010263474554036e2f706169642d656e64706f696e74"
+            }
+          },
+          "expected": {
+            "payload": "0010001d000a010200045834303212474554202f706169642d656e64706f696e74a301010263474554036e2f706169642d656e64706f696e74"
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 16,
+          "requirement": "30/6/wave1-x402-reply",
+          "comment": "canonical encode of: BRIDGE_RESPONSE (x402 0x0A) carries the `402 Payment Required` challenge as a deterministic-CBOR HTTP-Carriage Object (status=402, a base64-encoded PaymentRequired object in the lowercase `payment-required` header per HTTP-Carriage \u00a74.4); read_only (71_map_x402.md \u00a76), so no SafetyLabel",
+          "in": {
+            "fields": {
+              "frameType": 257,
+              "protocol_id": 10,
+              "message_kind": 2,
+              "content_type": 2,
+              "flags": 0,
+              "corr": "58343032",
+              "method": "GET /paid-endpoint",
+              "safety": null,
+              "foreign": "a3010206190192088182707061796d656e742d726571756972656459014865794a344e444179566d567963326c76626949364d537769636d567a62335679593255694f694976634746705a43316c626d527762326c7564434973496d466a5932567764484d694f6c7437496e4e6a614756745a534936496d563459574e3049697769626d56306432397961794936496d5670634445314e546f344e44557a496977695957317664573530496a6f694d5441774d4441694c434a6863334e6c64434936496a42344d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d434973496e426865565276496a6f694d4867774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d444177496977696257463456476c745a57393164464e6c593239755a484d694f6a597766563139"
+            }
+          },
+          "expected": {
+            "payload": "0010001d000a020200045834303212474554202f706169642d656e64706f696e74a3010206190192088182707061796d656e742d726571756972656459014865794a344e444179566d567963326c76626949364d537769636d567a62335679593255694f694976634746705a43316c626d527762326c7564434973496d466a5932567764484d694f6c7437496e4e6a614756745a534936496d563459574e3049697769626d56306432397961794936496d5670634445314e546f344e44557a496977695957317664573530496a6f694d5441774d4441694c434a6863334e6c64434936496a42344d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d434973496e426865565276496a6f694d4867774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d4441774d444177496977696257463456476c745a57393164464e6c593239755a484d694f6a597766563139"
+          },
+          "result": "valid"
+        }
+      ]
+    },
+    {
+      "op": "bridge.correlate",
+      "profile": "Standard",
+      "tests": [
+        {
+          "tcId": 1,
+          "requirement": "10/5/reply-correlates",
+          "comment": "BRIDGE_RESPONSE echoing the request correlation_id correlates",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 257,
+            "replyPayload": "001000150001020100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "expected": {
+            "match": true
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 2,
+          "requirement": "10/5/reply-different-corr-does-not-correlate",
+          "comment": "a reply with a different correlation_id does NOT correlate",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 257,
+            "replyPayload": "00100015000102010004ffffffff0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c22726573756c74223a7b226f6b223a747275657d7d"
+          },
+          "expected": {
+            "match": false
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 3,
+          "requirement": "10/5/stream-reply-correlates",
+          "comment": "a BRIDGE_STREAM_DATA chunk echoing the correlation_id correlates",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "001000150001010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
+            "replyFrameType": 260,
+            "replyPayload": "001000150001050100040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30"
+          },
+          "expected": {
+            "match": true
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 4,
+          "requirement": "30/6/wave1-nlip-reply-correlates",
+          "comment": "a BRIDGE_RESPONSE (NLIP 0x06) echoing the request correlation_id correlates",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "0010000b0006010100044e4c3031007b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d",
+            "replyFrameType": 257,
+            "replyPayload": "0010000b0006020100044e4c3031007b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a22436c65617220736b6965732c203138432e227d"
+          },
+          "expected": {
+            "match": true
+          },
+          "result": "valid"
+        },
+        {
+          "tcId": 5,
+          "requirement": "30/6/wave1-agntcy-reply-different-corr-does-not-correlate",
+          "comment": "a BRIDGE_RESPONSE (AGNTCY 0x08) with a different correlation_id does NOT correlate",
+          "in": {
+            "requestFrameType": 256,
+            "requestPayload": "00100015000801010004414330310a504f5354202f72756e737b226167656e745f6964223a22706c616e6e65722d6167656e74222c22696e707574223a7b226d65737361676573223a5b7b22726f6c65223a2275736572222c22636f6e74656e74223a22706c616e20612074726970227d5d7d7d",
+            "replyFrameType": 257,
+            "replyPayload": "00100015000802010004ffffffff0a504f5354202f72756e737b2272756e5f6964223a2272756e5f30303031222c22737461747573223a2273756363657373222c226f7574707574223a7b226d65737361676573223a5b7b22726f6c65223a22617373697374616e74222c22636f6e74656e74223a22706c616e207265616479227d5d7d7d"
+          },
+          "expected": {
+            "match": false
+          },
+          "result": "valid"
         }
       ]
     }

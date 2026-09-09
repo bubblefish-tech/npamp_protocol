@@ -31,9 +31,10 @@ import (
 var ErrBridgeMalformed = errors.New("npamp/bridge: envelope_malformed")
 
 // BridgeEnvelope is the decoded §4 BridgeEnvelope value. Multi-octet integers are
-// big-endian on the wire; every scalar here is a single octet. CorrelationID and
-// Method are the raw variable-length fields (each length-prefixed by a u8 on the
-// wire, so each is at most 255 octets).
+// big-endian on the wire; every scalar here is a single octet EXCEPT Protocol
+// (protocol_id), which is two octets (NPAMP-REG §8.4; one octet before that
+// widening). CorrelationID and Method are the raw variable-length fields (each
+// length-prefixed by a u8 on the wire, so each is at most 255 octets).
 type BridgeEnvelope struct {
 	Protocol      BridgeProtocol    // protocol_id (§4)
 	Kind          BridgeMessageKind // message_kind (§4; MUST agree with the frame type)
@@ -73,9 +74,10 @@ func (f BridgeFrame) EffectiveEffect() BridgeEffect {
 }
 
 // encodeEnvelopeValue encodes the §4 BridgeEnvelope value (the TLV Value, without the
-// 4-octet TLV header). Layout: protocol_id, message_kind, content_type, flags,
-// corr_len, correlation_id, method_len, method. It panics if CorrelationID or Method
-// exceeds 255 octets, which the u8 length fields cannot represent.
+// 4-octet TLV header). Layout: protocol_id (u16, big-endian; NPAMP-REG §8.4),
+// message_kind, content_type, flags, corr_len, correlation_id, method_len, method. It
+// panics if CorrelationID or Method exceeds 255 octets, which the u8 length fields
+// cannot represent.
 func encodeEnvelopeValue(e BridgeEnvelope) []byte {
 	if len(e.CorrelationID) > 255 {
 		panic(fmt.Errorf("npamp/bridge: correlation_id %d octets exceeds u8 corr_len", len(e.CorrelationID)))
@@ -83,8 +85,9 @@ func encodeEnvelopeValue(e BridgeEnvelope) []byte {
 	if len(e.Method) > 255 {
 		panic(fmt.Errorf("npamp/bridge: method %d octets exceeds u8 method_len", len(e.Method)))
 	}
-	out := make([]byte, 0, 5+len(e.CorrelationID)+1+len(e.Method))
-	out = append(out, byte(e.Protocol), byte(e.Kind), byte(e.ContentType), e.Flags, byte(len(e.CorrelationID)))
+	out := make([]byte, 0, 6+len(e.CorrelationID)+1+len(e.Method))
+	out = binary.BigEndian.AppendUint16(out, uint16(e.Protocol))
+	out = append(out, byte(e.Kind), byte(e.ContentType), e.Flags, byte(len(e.CorrelationID)))
 	out = append(out, e.CorrelationID...)
 	out = append(out, byte(len(e.Method)))
 	out = append(out, e.Method...)
@@ -121,18 +124,19 @@ func EncodeBridgeFrame(f BridgeFrame) []byte {
 // are a malformation. It enforces the exact length arithmetic of the two u8-prefixed
 // variable fields.
 func decodeEnvelopeValue(v []byte) (BridgeEnvelope, error) {
-	// Fixed head: protocol_id, message_kind, content_type, flags, corr_len (5 octets).
-	if len(v) < 5 {
-		return BridgeEnvelope{}, fmt.Errorf("%w: envelope value truncated before corr_len (%d < 5 octets)", ErrBridgeMalformed, len(v))
+	// Fixed head: protocol_id (u16, big-endian; NPAMP-REG §8.4), message_kind,
+	// content_type, flags, corr_len (6 octets).
+	if len(v) < 6 {
+		return BridgeEnvelope{}, fmt.Errorf("%w: envelope value truncated before corr_len (%d < 6 octets)", ErrBridgeMalformed, len(v))
 	}
-	corrLen := int(v[4])
+	corrLen := int(v[5])
 	// correlation_id (corr_len octets) then method_len (1 octet).
-	if len(v) < 5+corrLen+1 {
+	if len(v) < 6+corrLen+1 {
 		return BridgeEnvelope{}, fmt.Errorf("%w: envelope value truncated in correlation_id/method_len", ErrBridgeMalformed)
 	}
-	corr := v[5 : 5+corrLen]
-	methodLen := int(v[5+corrLen])
-	end := 5 + corrLen + 1 + methodLen
+	corr := v[6 : 6+corrLen]
+	methodLen := int(v[6+corrLen])
+	end := 6 + corrLen + 1 + methodLen
 	if len(v) < end {
 		return BridgeEnvelope{}, fmt.Errorf("%w: envelope value truncated in method", ErrBridgeMalformed)
 	}
@@ -140,15 +144,15 @@ func decodeEnvelopeValue(v []byte) (BridgeEnvelope, error) {
 		return BridgeEnvelope{}, fmt.Errorf("%w: envelope value has %d trailing octet(s)", ErrBridgeMalformed, len(v)-end)
 	}
 	e := BridgeEnvelope{
-		Protocol:    BridgeProtocol(v[0]),
-		Kind:        BridgeMessageKind(v[1]),
-		ContentType: BridgeContentType(v[2]),
-		Flags:       v[3],
+		Protocol:    BridgeProtocol(binary.BigEndian.Uint16(v[0:2])),
+		Kind:        BridgeMessageKind(v[2]),
+		ContentType: BridgeContentType(v[3]),
+		Flags:       v[4],
 	}
 	// Copy the variable fields out of the caller's buffer so the decoded frame does
 	// not alias the input (the caller may reuse or mutate the payload slice).
 	e.CorrelationID = append([]byte(nil), corr...)
-	e.Method = append([]byte(nil), v[5+corrLen+1:end]...)
+	e.Method = append([]byte(nil), v[6+corrLen+1:end]...)
 	return e, nil
 }
 

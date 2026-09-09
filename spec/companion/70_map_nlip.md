@@ -24,17 +24,17 @@
 > no change to the core wire format, to NPAMP-BRIDGE, to NPAMP-CC-HTTP, or to
 > NPAMP-CC-STREAM.
 >
-> **Status of this mapping: OPAQUE-READY; `protocol_id` PROVISIONAL.** NLIP is
-> carriable over N-PAMP **today** via Class OPAQUE (`25_carriage_opaque.md`) with no
-> protocol-specific mapping. This document supplies the native HTTP-class and
-> STREAM-class mapping. Unlike some sibling mappings, **NLIP's protocol itself is
-> confirmed and ratified**: its message format and its HTTP and WebSocket bindings
-> are fixed by the published ECMA standards (§4, §5, §11). The only reason this
-> mapping is not yet a settled native DRAFT is that NLIP has **no standards-assigned
-> N-PAMP `protocol_id`**: the Bridge Protocol Identifier registry (NPAMP-REG §6)
-> assigns `0x01`–`0x04` and reserves `0x05`–`0x0F` unassigned, and NLIP is not among
-> them, so a sender carries NLIP under an out-of-band-agreed **experimental-range**
-> `protocol_id` (§2). §9 states precisely what is confirmed versus unconfirmed.
+> **Status of this mapping: OPAQUE-READY; `protocol_id` 0x06 (assigned, NPAMP-REG
+> §6).** NLIP is carriable over N-PAMP **today** via Class OPAQUE
+> (`25_carriage_opaque.md`) with no protocol-specific mapping. This document
+> supplies the native HTTP-class and STREAM-class mapping. Unlike some sibling
+> mappings, **NLIP's protocol itself is confirmed and ratified**: its message
+> format and its HTTP and WebSocket bindings are fixed by the published ECMA
+> standards (§4, §5, §11). NLIP's N-PAMP `protocol_id` is likewise confirmed: the
+> Bridge Protocol Identifier registry (NPAMP-REG §6) assigns NLIP the code point
+> `0x06`, as part of the first wave of agent-protocol registrations under §8. A
+> sender MUST carry NLIP under `protocol_id 0x06`; no out-of-band agreement on the
+> identifier is required. §9 states precisely what is confirmed versus unconfirmed.
 
 ## 1. Scope
 
@@ -45,8 +45,8 @@ without bespoke adaptation. It pins, against NLIP's own published specification 
 only the NLIP specifics that NPAMP-CC-HTTP and NPAMP-CC-STREAM leave to a per-protocol
 mapping:
 
-- The NLIP **protocol identifier** (PROVISIONAL) and the foreign-message
-  `content_type` for each carriage class (§2);
+- The NLIP **protocol identifier** (`0x06`, assigned under NPAMP-REG §6) and the
+  foreign-message `content_type` for each carriage class (§2);
 - The OPAQUE-ready posture, and what is confirmed versus unconfirmed (§3, §9);
 - NLIP's **operation surface** — a single well-known envelope endpoint reached by one
   HTTP method, not a per-operation method namespace — and how it rides NPAMP-CC-HTTP
@@ -106,36 +106,35 @@ NPAMP-CC-STREAM, NPAMP-BRIDGE, or NLIP's own specification already fix them:
 | Property | Value |
 |---|---|
 | Protocol | NLIP — Natural Language Interaction Protocol (Ecma TC56; ECMA-430/431/432/433/434, ECMA TR/113; `nlip-project.org`, `github.com/nlip-project`; §11). |
-| `protocol_id` | **PROVISIONAL.** No standards-assigned code point exists: NPAMP-REG §6 assigns `0x01`–`0x04` and reserves `0x05`–`0x0F` unassigned, and NLIP is not among them. A sender MUST therefore carry NLIP under an **experimental-range** `protocol_id` (`0x10`–`0x7F`) agreed out of band with the peer (NPAMP-REG §7.1), and MUST NOT emit NLIP under a value NPAMP-REG has assigned to another protocol. A deployment MAY instead use a private-use value (`0x80`–`0xFF`) within one administrative domain (NPAMP-REG §7.2). A standards-assigned identifier, if warranted, would be obtained under NPAMP-REG §8 (§9). |
+| `protocol_id` | **`0x06`, assigned.** NPAMP-REG §6 assigns NLIP the standards code point `0x06`, as part of the first wave of agent-protocol registrations under §8. A sender MUST set `protocol_id` to `0x06` on every Bridge frame carrying NLIP, and MUST NOT emit NLIP under a value NPAMP-REG has assigned to another protocol. |
 | Carriage class | **HTTP** (NPAMP-CC-HTTP) for the ECMA-431 REST/HTTP binding, and **STREAM** (NPAMP-CC-STREAM) for the ECMA-432 WebSocket binding. Class OPAQUE (`25_carriage_opaque.md`) is the equivalent zero-mapping fallback available today (§3, §9). |
 | `content_type` | Per carriage class. For the **HTTP** carriage, `0x02` (`application/cbor`), as required by NPAMP-CC-HTTP §2.3 for the HTTP-Carriage Object container; the NLIP body carried **inside** that object retains its own media type (`application/json`) in the object's header-field list (NPAMP-CC-HTTP §4.4). For the **STREAM** carriage, the NLIP message is itself the foreign event, so `content_type` is the NLIP wire encoding actually carried — `0x01` (`application/json`, the ECMA-432 UTF-8 JSON text frame) or `0x02` (`application/cbor`, the ECMA-432 CBOR binary frame). A sender MUST set `content_type` to the encoding it actually carries and MUST NOT assume the other. |
 | Foreign-message form | Under HTTP: one HTTP-Carriage Object (NPAMP-CC-HTTP §4) per Bridge frame, carrying one NLIP HTTP request or response octet-for-octet. Under STREAM: one NLIP message object (bearing the REQUIRED `format`/`subformat`/`content` fields; ECMA-430) per Bridge frame, carried octet-for-octet (NPAMP-BRIDGE §1). |
 
-A sender MUST set the same agreed experimental `protocol_id` on every Bridge frame
-carrying an NLIP message. A receiver that does not carry NLIP MUST reply to a
-BRIDGE_REQUEST bearing that value with `ProtocolUnsupported` (NPAMP-BRIDGE §6;
-NPAMP-REG §9), and MUST NOT infer NLIP from any other envelope field (NPAMP-REG §9).
-Because the value is experimental, a receiver with no out-of-band agreement on its
-meaning MUST treat it as an uncarried protocol (NPAMP-REG §7.1, §9).
+A sender MUST set `protocol_id` to `0x06` on every Bridge frame carrying an NLIP
+message. A receiver that does not carry NLIP MUST reply to a BRIDGE_REQUEST bearing
+that value with `ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9), and MUST NOT
+infer NLIP from any other envelope field (NPAMP-REG §9). A receiver that carries
+NLIP recognizes `0x06` as the registered NLIP code point; no out-of-band agreement
+on its meaning is required (NPAMP-REG §6, §9).
 
 ## 3. Carriage posture — confirmed and OPAQUE-ready
 
 Under the OPAQUE-ready posture (Status blockquote), a peer carries NLIP today via
 Class OPAQUE (`25_carriage_opaque.md`): the NLIP message rides octet-for-octet under
-the provisional `protocol_id` and its declared `content_type`, with no
-protocol-specific structure. The native mapping specified in §4–§8 pins the NLIP
-carriage over NPAMP-CC-HTTP and NPAMP-CC-STREAM.
+`protocol_id 0x06` and its declared `content_type`, with no protocol-specific
+structure. The native mapping specified in §4–§8 pins the NLIP carriage over
+NPAMP-CC-HTTP and NPAMP-CC-STREAM.
 
 NLIP differs from some sibling OPAQUE-ready protocols in that **its own specification
 is ratified and stable**: the message format (ECMA-430), the HTTP binding
 (ECMA-431), and the WebSocket binding (ECMA-432) are published Ecma standards (§11).
 The frame mapping of §4–§5, the effect-class treatment of §7, and the `content_type`
-of §2 are therefore grounded in confirmed primary sources, not in a moving target. The
-single blocking dependency is the N-PAMP `protocol_id`: until one is assigned under
-NPAMP-REG §8, NLIP MUST be carried under an out-of-band-agreed experimental identifier
-(§2), and an implementation MUST NOT assume the mapping of §4–§8 is interoperable
-across independently developed peers that have not agreed on that identifier (§9). §9
-states precisely what is confirmed versus unconfirmed.
+of §2 are therefore grounded in confirmed primary sources, not in a moving target.
+NLIP's N-PAMP `protocol_id` is likewise confirmed: NPAMP-REG §6 assigns NLIP the
+code point `0x06` (§2). A sender MUST carry NLIP under `protocol_id 0x06`, and a
+receiver recognizes it without prior out-of-band agreement. §9 states precisely what
+is confirmed versus unconfirmed.
 
 ## 4. Relationship to the carriage classes, and NLIP's operation surface
 
@@ -392,13 +391,12 @@ posture of the companion index.
   and the `content_type` treatment of §2.
 - The **request-response paradigm**, the **control/data** separation, and the
   **synchronous/asynchronous streaming** requirement (ECMA-430) mapped in §4–§5.
+- The N-PAMP **`protocol_id`** is assigned: NPAMP-REG §6 assigns NLIP the code
+  point `0x06`, as part of the first wave of agent-protocol registrations under §8
+  (§2).
 
 **Unconfirmed, provisional, or externally dependent:**
 
-- **`protocol_id` is PROVISIONAL.** NPAMP-REG §6 assigns NLIP no code point. Until one is
-  assigned under NPAMP-REG §8, NLIP MUST be carried under an out-of-band-agreed
-  experimental identifier (`0x10`–`0x7F`; §2). This is the sole reason the mapping is
-  OPAQUE-ready rather than settled native DRAFT (§3).
 - **Endpoint enumeration beyond `POST /nlip`.** The exact set of OPTIONAL endpoints
   (ECMA-431 §6.1) and the precise ECMA-432 WebSocket endpoint paths are fixed by the
   respective standards; this document pins the confirmed primary endpoint and treats the
@@ -508,8 +506,8 @@ N-PAMP documents built on:
 - NPAMP-CC-DOC (`24_carriage_documents.md`) — the document carriage referenced for the
   OPTIONAL policy/capability-document case (§6).
 - NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry, which
-  assigns NLIP no code point (the PROVISIONAL status of §2, §9) and defines the
-  experimental range and `ProtocolUnsupported` handling.
+  assigns NLIP the code point `0x06` (§2, §9) and defines `ProtocolUnsupported`
+  handling.
 - NPAMP-DISC (`40_discovery.md`) — the Discovery-channel advertisement referenced in §6, §8.
 - NPAMP-MAP-ACP (`62_map_acp.md`) and NPAMP-MAP-A2A (`61_map_a2a.md`) — the HTTP-class and
   document-as-capability precedents referenced in §4, §6.
@@ -525,15 +523,14 @@ N-PAMP documents built on:
 An implementation conforms to NPAMP-MAP-NLIP if and only if it conforms to NPAMP-CC-HTTP
 and NPAMP-CC-STREAM (and therefore to NPAMP-BRIDGE) and, for NLIP traffic, it:
 
-1. Carries every NLIP message octet-for-octet under an out-of-band-agreed experimental
-   `protocol_id` (`0x10`–`0x7F`) because NPAMP-REG assigns NLIP none, never emitting NLIP
-   under a `protocol_id` assigned to another protocol, sets `content_type` to `0x02` for
-   the HTTP-Carriage Object container and to the encoding actually carried (`0x01` or
-   `0x02`) for a WebSocket-binding NLIP event, and selects NLIP solely from `protocol_id`,
-   never from another envelope field (§2, §3);
+1. Carries every NLIP message octet-for-octet under `protocol_id 0x06` (assigned by
+   NPAMP-REG §6), never emitting NLIP under a `protocol_id` assigned to another
+   protocol, sets `content_type` to `0x02` for the HTTP-Carriage Object container
+   and to the encoding actually carried (`0x01` or `0x02`) for a WebSocket-binding
+   NLIP event, and selects NLIP solely from `protocol_id`, never from another
+   envelope field (§2, §3);
 2. Treats the mapping as OPAQUE-ready — carrying NLIP via Class OPAQUE where a native
-   binding is not yet agreed — and does not assume cross-implementation interoperability of
-   §4–§8 until a `protocol_id` is assigned under NPAMP-REG §8 (§3, §9);
+   binding is not yet agreed (§3, §9);
 3. Maps the NLIP HTTP binding onto NPAMP-CC-HTTP — a `POST /nlip` submission to
    BRIDGE_REQUEST with the method token and target in the HTTP-Carriage Object and
    reflected in the BridgeEnvelope `method` routing key, a non-streamed response to

@@ -11,7 +11,7 @@ policy and the decider:
 
 | You want to register / allocate | Use | Policy | Decided by |
 |---|---|---|---|
-| A Bridge `protocol_id` in `0x05`–`0x0F` (a new foreign agent protocol carried over the Bridge channel) | **Part A** | Specification Required (RFC 8126) | Designated expert (NPAMP-REG §8.3) |
+| A Bridge `protocol_id` in `0x05`–`0x0F` (a new foreign agent protocol carried over the Bridge channel) | **Part A** | First Come First Served (RFC 8126) | The NPAMP-REG maintainer (§8) |
 | A core code point: a new channel, frame type, TLV tag, profile, or KEM/AEAD/signature suite | **Part B** | Maintained in the specification (Independent Submission) | Draft editor via the NEP process |
 | The ALPN identifier or the `npamp://` URI scheme | **Part C** | Expert Review / FCFS (IANA) | IANA |
 
@@ -23,13 +23,17 @@ policy and the decider:
 
 ---
 
-## Part A — Bridge protocol-ID registration (Specification Required)
+## Part A — Bridge protocol-ID registration (First Come First Served)
 
 Use this to register a foreign agentic protocol so it has a standards-assigned,
-cross-domain Bridge `protocol_id` in the range `0x05`–`0x0F`. The policy,
-required fields, and designated-expert criteria are normative in
-**NPAMP-REG** (`spec/companion/30_protocol_registry.md`), §8. A request that does
-not satisfy §8.3 will be rejected.
+cross-domain Bridge `protocol_id` in the range `0x05`–`0x0F`. The policy and
+required fields are normative in **NPAMP-REG**
+(`spec/companion/30_protocol_registry.md`), §8. Assignment is First Come First
+Served (§8.1): the stable-specification reference is a required field of the
+registration (§8.2), not a substantive-review gate — the maintainer assigns the
+requested code point (or, absent a specific request, the next available value)
+once the §8.2 fields are complete, and MUST NOT withhold assignment pending a
+substantive evaluation of the foreign protocol's merits.
 
 ### A.1 Required fields (NPAMP-REG §8.2)
 

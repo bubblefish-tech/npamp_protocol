@@ -136,7 +136,7 @@ bearing it with `ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9).
 
 > **Registration note.** Assigning a stable `protocol_id` to the FIPA-ACL family in
 > the standards range is the subject of NPAMP-CC-MSG Appendix A, OPEN QUESTION 1, and
-> is a maintainer/registry decision under NPAMP-REG §8 (Specification Required). When
+> is a maintainer/registry decision under NPAMP-REG §8 (First Come First Served). When
 > such a value is registered, this mapping's §3.1 is updated to that value and the
 > experimental-range direction above is retired; the rest of this document is
 > unchanged, because the carriage does not otherwise depend on the identifier's value.

@@ -264,7 +264,7 @@ following are confirmed against AITP's then-current published specification:
    the Threads API, plus **STREAM** (NPAMP-CC-STREAM) only if AITP later specifies a
    streaming transport. It is **not** JSONRPC.
 2. **A `protocol_id` is assigned.** A standards-assigned value in `0x05`–`0x0F` is
-   obtained under NPAMP-REG §8 (Specification Required), replacing the provisional
+   obtained under NPAMP-REG §8 (First Come First Served), replacing the provisional
    experimental value of §2; production traffic MUST NOT continue on an experimental
    identifier (NPAMP-REG §7.1).
 3. **Capability schemas are pinned.** The wire schemas of AITP-01..05 (and any

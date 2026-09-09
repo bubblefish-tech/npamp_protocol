@@ -5,10 +5,12 @@
 //! for each op by calling the OPEN reference implementation crate `npamp` (path
 //! dependency `../../../impl/rust`). This file owns NO protocol logic: every op routes
 //! into a function exported by `npamp` (crc32c, Frame::unmarshal, header_prefix,
-//! seal_aes256gcm, open_aes256gcm, hkdf_expand; and the channel body decoders
-//! bodies::validate_memory / validate_stream / validate_by_op). Operations the reference
-//! impl does not provide a function for (tlv.decode, profile.check) return {"skipped":...}
-//! and are reported Unimplemented, never reimplemented here.
+//! seal_aes256gcm, open_aes256gcm, hkdf_expand; the channel body decoders
+//! bodies::validate_memory / validate_stream / validate_by_op; and the Bridge
+//! (channel 0x000D) frame codec bridge::decode_bridge_frame / decode_bridge_envelope /
+//! encode_bridge_payload / correlate_bridge_reply). Operations the reference impl does
+//! not provide a function for (tlv.decode, profile.check) return {"skipped":...} and
+//! are reported Unimplemented, never reimplemented here.
 //!
 //! Windows note: stdin/stdout are used as raw binary byte streams (no text-mode CRLF
 //! translation exists on the `std::io::Stdin`/`Stdout` byte handles) and the adapter
@@ -20,17 +22,24 @@ use std::io::{self, Read, Write};
 use npamp::{self, Frame};
 
 // ---------------------------------------------------------------------------
-// Minimal, dependency-free JSON for the flat request/response objects of the
-// conformance contract. Requests are {"op": <str>, "in": { <str>: <str|int> }}.
-// Responses are one flat object: {"out": {...}} | {"error": <str>} | {"skipped": <str>}.
+// Minimal, dependency-free JSON for the request/response objects of the conformance
+// contract. Requests are {"op": <str>, "in": { <str>: <str|int|bool|null|obj|arr> }}.
+// Responses are one flat-or-nested object: {"out": {...}} | {"error": <str>} |
+// {"skipped": <str>}. Most ops use only flat scalar fields; bridge.envelope.encode's
+// `in.fields` (and its nested `in.fields.safety`) is the one nested-object input the
+// contract carries, so Val recurses (Obj/Arr) rather than staying flat.
 // ---------------------------------------------------------------------------
 
-/// A decoded JSON scalar value as it appears in the `in` object: every field the
-/// contract uses is either a hex/identifier string or a non-negative integer.
+/// A decoded JSON value as it appears in the `in` object (or nested within it).
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Bool/Arr are parsed for completeness; no current op field reads them.
 enum Val {
     Str(String),
     Int(i64),
+    Bool(bool),
+    Null,
+    Obj(Vec<(String, Val)>),
+    Arr(Vec<Val>),
 }
 
 /// A parsed request.
@@ -41,17 +50,44 @@ struct Request {
 
 impl Request {
     fn get_str(&self, key: &str) -> Option<&str> {
-        self.input.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
-            Val::Str(s) => Some(s.as_str()),
-            Val::Int(_) => None,
-        })
+        field_str(&self.input, key)
     }
     fn get_int(&self, key: &str) -> Option<i64> {
-        self.input.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
-            Val::Int(n) => Some(*n),
-            Val::Str(_) => None,
-        })
+        field_int(&self.input, key)
     }
+    /// Returns the nested object at `key` (e.g. `in.fields`), if present and an
+    /// object.
+    fn get_obj(&self, key: &str) -> Option<&Vec<(String, Val)>> {
+        field_obj(&self.input, key)
+    }
+}
+
+/// Looks up a string-valued field in a flat-or-nested object slice (`in` or a nested
+/// object such as `in.fields`).
+fn field_str<'a>(fields: &'a [(String, Val)], key: &str) -> Option<&'a str> {
+    fields.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
+        Val::Str(s) => Some(s.as_str()),
+        _ => None,
+    })
+}
+
+/// Looks up an integer-valued field in a flat-or-nested object slice.
+fn field_int(fields: &[(String, Val)], key: &str) -> Option<i64> {
+    fields.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
+        Val::Int(n) => Some(*n),
+        _ => None,
+    })
+}
+
+/// Looks up a nested-object-valued field in a flat-or-nested object slice. Returns
+/// `None` both when the key is absent and when its value is JSON `null` (the
+/// corpus's explicit `"safety": null` on a reply without a SafetyLabel), matching Go's
+/// `fields["safety"].(map[string]interface{})` type-assertion semantics.
+fn field_obj<'a>(fields: &'a [(String, Val)], key: &str) -> Option<&'a Vec<(String, Val)>> {
+    fields.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
+        Val::Obj(o) => Some(o),
+        _ => None,
+    })
 }
 
 /// A scanning cursor over UTF-8 bytes.
@@ -152,91 +188,56 @@ impl<'a> Parser<'a> {
         let s = std::str::from_utf8(&self.b[start..self.i]).map_err(|_| "bad number".to_string())?;
         s.parse::<i64>().map_err(|_| format!("invalid integer {:?}", s))
     }
-    /// Parse a value from the `in` object. The flat contract consumes only scalars
-    /// (string / integer / bool / null); a nested object or array appears only for an
-    /// op the rust adapter does not implement (e.g. the `fields` object of
-    /// bridge.envelope.encode), so such a value is skipped whole and recorded as an
-    /// empty placeholder — the op then grades Unimplemented rather than crashing the
-    /// parser into a Fail.
+    /// Parse a value from the `in` object, or from a nested object/array within it
+    /// (e.g. bridge.envelope.encode's `in.fields` and its nested `in.fields.safety`).
+    /// Recurses fully: an object becomes `Val::Obj`, an array `Val::Arr`, so a caller
+    /// can walk into any depth the corpus's request payloads use.
     fn parse_value(&mut self) -> Result<Val, String> {
         self.skip_ws();
         match self.peek() {
             Some(b'"') => Ok(Val::Str(self.parse_string()?)),
             Some(c) if c == b'-' || c.is_ascii_digit() => Ok(Val::Int(self.parse_number()?)),
-            Some(b'{') => {
-                self.i += 1;
-                self.skip_container(b'}')?;
-                Ok(Val::Str(String::new()))
-            }
+            Some(b'{') => Ok(Val::Obj(self.parse_flat_object()?)),
             Some(b'[') => {
                 self.i += 1;
-                self.skip_container(b']')?;
-                Ok(Val::Str(String::new()))
+                let mut items = Vec::new();
+                self.skip_ws();
+                if self.peek() == Some(b']') {
+                    self.i += 1;
+                    return Ok(Val::Arr(items));
+                }
+                loop {
+                    items.push(self.parse_value()?);
+                    self.skip_ws();
+                    match self.peek() {
+                        Some(b',') => {
+                            self.i += 1;
+                        }
+                        Some(b']') => {
+                            self.i += 1;
+                            break;
+                        }
+                        other => return Err(format!("expected ',' or ']' got {:?}", other)),
+                    }
+                }
+                Ok(Val::Arr(items))
             }
             Some(b't') => {
                 self.consume_literal("true")?;
-                Ok(Val::Int(1))
+                Ok(Val::Bool(true))
             }
             Some(b'f') => {
                 self.consume_literal("false")?;
-                Ok(Val::Int(0))
+                Ok(Val::Bool(false))
             }
             Some(b'n') => {
                 self.consume_literal("null")?;
-                Ok(Val::Str(String::new()))
+                Ok(Val::Null)
             }
             other => Err(format!("unexpected value byte {:?}", other)),
         }
     }
 
-    /// Skip one JSON value (scalar, object, or array) without materializing it. Used to
-    /// consume nested structures the flat request contract does not read.
-    fn skip_value(&mut self) -> Result<(), String> {
-        self.skip_ws();
-        match self.peek() {
-            Some(b'{') => {
-                self.i += 1;
-                self.skip_container(b'}')
-            }
-            Some(b'[') => {
-                self.i += 1;
-                self.skip_container(b']')
-            }
-            Some(b'"') => {
-                self.parse_string()?;
-                Ok(())
-            }
-            Some(c) if c == b'-' || c.is_ascii_digit() => {
-                self.parse_number()?;
-                Ok(())
-            }
-            Some(b't') => self.consume_literal("true"),
-            Some(b'f') => self.consume_literal("false"),
-            Some(b'n') => self.consume_literal("null"),
-            other => Err(format!("unexpected value byte {:?}", other)),
-        }
-    }
-
-    /// Skip the remainder of a JSON object or array (opening delimiter already consumed)
-    /// up to and including its matching `close`. Strings are consumed via `parse_string`
-    /// so a delimiter inside a string cannot unbalance the scan; nested containers are
-    /// handled by `skip_value`.
-    fn skip_container(&mut self, close: u8) -> Result<(), String> {
-        loop {
-            self.skip_ws();
-            match self.peek() {
-                None => return Err("unterminated container".into()),
-                Some(c) if c == close => {
-                    self.i += 1;
-                    return Ok(());
-                }
-                Some(b',') | Some(b':') => {
-                    self.i += 1;
-                }
-                Some(_) => self.skip_value()?,
-            }
-        }
-    }
     fn consume_literal(&mut self, lit: &str) -> Result<(), String> {
         for &want in lit.as_bytes() {
             if self.peek() == Some(want) {
@@ -332,11 +333,15 @@ fn utf8_len(first: u8) -> usize {
     }
 }
 
-/// A response field value for serialization.
+/// A response field value for serialization. `Obj` is used by bridge.envelope.decode's
+/// `safety` field, which the contract requires as either a nested object or an
+/// explicit JSON `null` (never an omitted key — see `serialize_val`'s `Null` arm).
 enum OutVal {
     Str(String),
     Int(i64),
     Bool(bool),
+    Null,
+    Obj(Vec<(&'static str, OutVal)>),
 }
 
 /// Escape a string for JSON output.
@@ -359,16 +364,25 @@ fn json_escape(s: &str) -> String {
 }
 
 fn serialize_out(fields: &[(&str, OutVal)]) -> String {
+    format!("{{\"out\":{}}}", serialize_obj(fields))
+}
+
+fn serialize_obj(fields: &[(&str, OutVal)]) -> String {
     let mut parts = Vec::with_capacity(fields.len());
     for (k, v) in fields {
-        let vs = match v {
-            OutVal::Str(s) => format!("\"{}\"", json_escape(s)),
-            OutVal::Int(n) => n.to_string(),
-            OutVal::Bool(b) => b.to_string(),
-        };
-        parts.push(format!("\"{}\":{}", json_escape(k), vs));
+        parts.push(format!("\"{}\":{}", json_escape(k), serialize_val(v)));
     }
-    format!("{{\"out\":{{{}}}}}", parts.join(","))
+    format!("{{{}}}", parts.join(","))
+}
+
+fn serialize_val(v: &OutVal) -> String {
+    match v {
+        OutVal::Str(s) => format!("\"{}\"", json_escape(s)),
+        OutVal::Int(n) => n.to_string(),
+        OutVal::Bool(b) => b.to_string(),
+        OutVal::Null => "null".to_string(),
+        OutVal::Obj(o) => serialize_obj(o),
+    }
 }
 
 fn serialize_error(reason: &str) -> String {
@@ -409,6 +423,14 @@ fn hex_encode(b: &[u8]) -> String {
         s.push_str(&format!("{:02x}", x));
     }
     s
+}
+
+/// Decodes plain UTF-8 bytes (e.g. a Bridge envelope's `method` or a SafetyLabel's
+/// `scope`, which the corpus carries as raw text, not hex) for JSON output. Uses
+/// `from_utf8_lossy` rather than `unwrap` so a malformed-but-decoded field (never
+/// produced by the corpus's own vectors) still serializes instead of panicking.
+fn bytes_to_utf8(b: &[u8]) -> String {
+    String::from_utf8_lossy(b).into_owned()
 }
 
 // ---------------------------------------------------------------------------
@@ -608,6 +630,119 @@ fn handle(req: &Request, break_mode: bool) -> String {
         | "knowledge.body.decode" => {
             let op = req.op.as_str();
             body_decode_corr(req, |ft, body| npamp::bodies::validate_by_op(op, ft, body))
+        }
+
+        // --- bridge.envelope.decode: decode a Bridge payload (BridgeEnvelope TLV +
+        //     optional SafetyLabel + verbatim foreign octets) via npamp::bridge and
+        //     project its declared fields; a reference rejection is an {"error"} (the
+        //     "invalid" verdict). `safety` is ALWAYS emitted — a nested object when
+        //     present, else an explicit JSON null (never an omitted key) — mirroring
+        //     the Go adapter's "emit null so the absent case matches" contract. ---
+        "bridge.envelope.decode" => {
+            let payload = match req.get_str("payload") {
+                Some(h) => match hex_decode(h) {
+                    Ok(b) => b,
+                    Err(e) => return serialize_error(&e),
+                },
+                None => return serialize_error("missing payload"),
+            };
+            let ft = req.get_int("frameType").unwrap_or(0) as u16;
+            match npamp::bridge::decode_bridge_frame(ft, &payload) {
+                Ok(f) => {
+                    let mut fields: Vec<(&str, OutVal)> = vec![
+                        ("protocol_id", OutVal::Int(f.envelope.protocol as i64)),
+                        ("message_kind", OutVal::Int(f.envelope.kind as i64)),
+                        ("content_type", OutVal::Int(f.envelope.content_type as i64)),
+                        ("flags", OutVal::Int(f.envelope.flags as i64)),
+                        ("final", OutVal::Bool(f.envelope.final_flag())),
+                        ("corr", OutVal::Str(hex_encode(&f.envelope.correlation_id))),
+                        ("method", OutVal::Str(bytes_to_utf8(&f.envelope.method))),
+                        ("foreign", OutVal::Str(hex_encode(&f.foreign))),
+                    ];
+                    fields.push((
+                        "safety",
+                        match &f.safety {
+                            Some(s) => OutVal::Obj(vec![
+                                ("effect", OutVal::Int(s.effect as i64)),
+                                ("scope", OutVal::Str(bytes_to_utf8(&s.scope))),
+                            ]),
+                            None => OutVal::Null,
+                        },
+                    ));
+                    serialize_out(&fields)
+                }
+                Err(e) => serialize_error(&e.0),
+            }
+        }
+
+        // --- bridge.envelope.encode: build a Bridge payload from the oracle's declared
+        //     `fields` (a nested object; `corr`/`foreign` are hex, `method`/
+        //     `safety.scope` are plain UTF-8 text) via npamp::bridge; the canonical
+        //     bytes MUST match the vector's expected payload. ---
+        "bridge.envelope.encode" => {
+            let fields = match req.get_obj("fields") {
+                Some(f) => f,
+                None => return serialize_error("missing fields"),
+            };
+            let corr = match field_str(fields, "corr").map(hex_decode) {
+                Some(Ok(b)) => b,
+                Some(Err(e)) => return serialize_error(&format!("bad corr hex: {}", e)),
+                None => Vec::new(),
+            };
+            let foreign = match field_str(fields, "foreign").map(hex_decode) {
+                Some(Ok(b)) => b,
+                Some(Err(e)) => return serialize_error(&format!("bad foreign hex: {}", e)),
+                None => Vec::new(),
+            };
+            let method = field_str(fields, "method").unwrap_or("").as_bytes().to_vec();
+            let env = npamp::bridge::BridgeEnvelope {
+                protocol: field_int(fields, "protocol_id").unwrap_or(0) as u16,
+                kind: field_int(fields, "message_kind").unwrap_or(0) as u8,
+                content_type: field_int(fields, "content_type").unwrap_or(0) as u8,
+                flags: field_int(fields, "flags").unwrap_or(0) as u8,
+                correlation_id: corr,
+                method,
+            };
+            let safety = field_obj(fields, "safety").map(|sf| npamp::bridge::SafetyLabel {
+                effect: field_int(sf, "effect").unwrap_or(0) as u8,
+                scope: field_str(sf, "scope").unwrap_or("").as_bytes().to_vec(),
+            });
+            let payload = npamp::bridge::encode_bridge_payload(&env, safety.as_ref(), &foreign);
+            serialize_out(&[("payload", OutVal::Str(hex_encode(&payload)))])
+        }
+
+        // --- bridge.correlate: §5 match-by-identifier -- a reply correlates iff its
+        //     correlation_id byte-equals the request's (both non-empty). Decode both
+        //     envelopes via npamp::bridge and return the boolean. ---
+        "bridge.correlate" => {
+            let req_payload = match req.get_str("requestPayload") {
+                Some(h) => match hex_decode(h) {
+                    Ok(b) => b,
+                    Err(e) => return serialize_error(&format!("bad request hex: {}", e)),
+                },
+                None => return serialize_error("missing requestPayload"),
+            };
+            let rep_payload = match req.get_str("replyPayload") {
+                Some(h) => match hex_decode(h) {
+                    Ok(b) => b,
+                    Err(e) => return serialize_error(&format!("bad reply hex: {}", e)),
+                },
+                None => return serialize_error("missing replyPayload"),
+            };
+            let req_ft = req.get_int("requestFrameType").unwrap_or(0) as u16;
+            let rep_ft = req.get_int("replyFrameType").unwrap_or(0) as u16;
+            let req_env = match npamp::bridge::decode_bridge_envelope(req_ft, &req_payload) {
+                Ok(e) => e,
+                Err(e) => return serialize_error(&e.0),
+            };
+            let rep_env = match npamp::bridge::decode_bridge_envelope(rep_ft, &rep_payload) {
+                Ok(e) => e,
+                Err(e) => return serialize_error(&e.0),
+            };
+            serialize_out(&[(
+                "match",
+                OutVal::Bool(npamp::bridge::correlate_bridge_reply(&req_env, &rep_env)),
+            )])
         }
 
         other => serialize_skipped(&format!("op not implemented: {}", other)),

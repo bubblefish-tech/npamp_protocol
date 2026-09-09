@@ -55,21 +55,35 @@ const (
 )
 
 // BridgeProtocol is the §4 `protocol_id` — the foreign agentic protocol a Bridge
-// frame carries. 0x10–0x7F are experimental and 0x80–0xFF are private use; a structural
-// decoder accepts any value (whether a given protocol is CARRIED is a per-peer
-// capability reported as ProtocolUnsupported, §6, not a wire malformation).
-type BridgeProtocol uint8
+// frame carries. It is a two-octet (u16, big-endian) field on the wire (NPAMP-REG
+// 30_protocol_registry.md §8.4; one octet before that widening — a pre-widening
+// value 0xNN migrates losslessly to 0x00NN, unchanged numerically). 0x0010–0x007F
+// are experimental and 0x0080–0x00FF are private use; a structural decoder accepts
+// any value (whether a given protocol is CARRIED is a per-peer capability reported
+// as ProtocolUnsupported, §6, not a wire malformation).
+type BridgeProtocol uint16
 
 const (
-	BridgeProtoMCP       BridgeProtocol = 0x01
-	BridgeProtoA2A       BridgeProtocol = 0x02
-	BridgeProtoHTTP2     BridgeProtocol = 0x03
-	BridgeProtoWebSocket BridgeProtocol = 0x04
+	BridgeProtoMCP       BridgeProtocol = 0x0001
+	BridgeProtoA2A       BridgeProtocol = 0x0002
+	BridgeProtoHTTP2     BridgeProtocol = 0x0003
+	BridgeProtoWebSocket BridgeProtocol = 0x0004
+	// Wave-1 standards-assigned protocol_id values (NPAMP-REG 30_protocol_registry.md §6; the first
+	// registrations made under the §8 procedure, assigned together per the registry's own note). Each
+	// is carried by the same generic envelope machinery as 0x0001-0x0004 above (see the BridgeProtocol
+	// doc comment); no per-protocol codec branch exists or is needed.
+	BridgeProtoNLIP   BridgeProtocol = 0x0006 // NLIP - Natural Language Interaction Protocol (70_map_nlip.md)
+	BridgeProtoANP    BridgeProtocol = 0x0007 // ANP - Agent Network Protocol (63_map_anp.md)
+	BridgeProtoAGNTCY BridgeProtocol = 0x0008 // AGNTCY - Internet of Agents collective (6f_map_agntcy.md)
+	BridgeProtoAP2    BridgeProtocol = 0x0009 // AP2 - Agent Payments Protocol (65_map_ap2.md)
+	BridgeProtoX402   BridgeProtocol = 0x000A // x402 - internet-native HTTP payments (71_map_x402.md)
 )
 
 var bridgeProtocolNames = map[BridgeProtocol]string{
 	BridgeProtoMCP: "MCP", BridgeProtoA2A: "A2A",
 	BridgeProtoHTTP2: "HTTP/2", BridgeProtoWebSocket: "WebSocket",
+	BridgeProtoNLIP: "NLIP", BridgeProtoANP: "ANP", BridgeProtoAGNTCY: "AGNTCY",
+	BridgeProtoAP2: "AP2", BridgeProtoX402: "x402",
 }
 
 // Name returns the registered foreign-protocol name, or "" if p is experimental,
@@ -98,6 +112,12 @@ const (
 	BridgeContentJSON      BridgeContentType = 0x01 // application/json
 	BridgeContentCBOR      BridgeContentType = 0x02 // application/cbor
 	BridgeContentGRPCProto BridgeContentType = 0x03 // application/grpc+proto
+	// BridgeContentOpaqueTLV means the foreign message's media type is carried in the
+	// OpaqueContentType TLV (NPAMP-CC-OPAQUE, spec/companion/25_carriage_opaque.md §4.4) rather than
+	// by one of the three enumerated values above -- used, for example, by an SD-JWT verifiable
+	// credential, for which the core content_type registry does not yet define a dedicated value
+	// (spec 10 §4; 65_map_ap2.md §3).
+	BridgeContentOpaqueTLV BridgeContentType = 0x04
 )
 
 // BridgeEffect is the §7 SafetyLabel `effect` — the side-effect class of a request.

@@ -13,6 +13,12 @@ use sha2::{Sha256, Sha384};
 /// Capability, Immune, Settlement, Telemetry, Commerce, Interaction, Workflow, Knowledge).
 pub mod bodies;
 
+/// NPAMP-BRIDGE frame codec (Bridge channel 0x000D; companion spec 10) — the
+/// BridgeEnvelope TLV, the optional SafetyLabel TLV, and the verbatim foreign-message
+/// carriage. See the module docs for the exact scope (envelope/safety-label layer
+/// only; no per-foreign-protocol parsing).
+pub mod bridge;
+
 /// NPAMP-CC carriage-object codecs (companion specs 20/21/23: JSON-RPC, HTTP,
 /// STREAM) — E2.22/R14.5's octet-exact carriage round-trip layer. See the module
 /// docs for the exact scope (carriage-object layer only, no Bridge frame/envelope).

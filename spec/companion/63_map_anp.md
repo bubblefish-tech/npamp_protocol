@@ -20,8 +20,9 @@
 > pins only the ANP facts that its own current published specification confirms
 > (§4, §5, §6), carries ANP over Class OPAQUE and NPAMP-CC-HTTP today, and marks
 > every fact that the source leaves unsettled as **unconfirmed** (§2.3, §9) rather
-> than fixing it by assumption. A later revision pins the remaining specifics once
-> ANP's message framing and its `protocol_id` are confirmed.
+> than fixing it by assumption. ANP's N-PAMP `protocol_id` is confirmed: NPAMP-REG
+> §6 assigns ANP the code point `0x07`. A later revision pins the remaining
+> specifics once ANP's message framing is confirmed.
 
 ## 1. Scope
 
@@ -31,7 +32,7 @@ This document defines how an ANP endpoint interoperates over an N-PAMP associati
 without bespoke adaptation. Against ANP's own published specification (§11), it pins
 only the ANP specifics the carriage classes leave to a per-protocol mapping:
 
-- The ANP **protocol identifier** and its **PROVISIONAL** status, and the
+- The ANP **protocol identifier** (`0x07`, assigned under NPAMP-REG §6) and the
   foreign-message `content_type` (§2);
 - How ANP's **HTTP-semantics** request/response traffic — did:wba-authenticated
   agent invocation, Agent Description retrieval, agent discovery, and meta-protocol
@@ -85,17 +86,16 @@ The following are explicitly NOT defined by this document:
 | Property | Value |
 |---|---|
 | Protocol | Agent Network Protocol (ANP). |
-| `protocol_id` | **PROVISIONAL.** NPAMP-REG §6 assigns ANP **no** standards code point (`0x01`–`0x0F`). Until one is registered under NPAMP-REG §8, ANP MUST be carried under an **experimental** `protocol_id` (`0x10`–`0x7F`) agreed out of band by the two peers (NPAMP-REG §7.1). This document does not fix a specific value; an experimental value carries no cross-domain meaning. |
+| `protocol_id` | **`0x07`, assigned.** NPAMP-REG §6 assigns ANP the standards code point `0x07`, as part of the first wave of agent-protocol registrations under §8. A sender MUST set `protocol_id` to `0x07` on every Bridge frame carrying ANP. |
 | Carriage class | **HTTP** (NPAMP-CC-HTTP) for ANP's HTTP request/response traffic; **OPAQUE** (NPAMP-CC-OPAQUE) as the universal fallback that carries any ANP payload today with no protocol-specific mapping. |
 | `content_type` | Under NPAMP-CC-HTTP, `0x02` (application/cbor) for the HTTP-Carriage Object container (NPAMP-CC-HTTP §2.3). Under Class OPAQUE, the payload's own media type: `0x01` (application/json) for a JSON body, or `application/ld+json` declared via the OpaqueContentType TLV once its code point is assigned (NPAMP-CC-OPAQUE §4; §2.3, §9 below). |
 | Foreign-message form | An ANP HTTP request/response (method, target, headers, JSON/JSON-LD body), carried as the NPAMP-CC-HTTP HTTP-Carriage Object; or, under Class OPAQUE, the ANP payload octets carried octet-for-octet (NPAMP-BRIDGE §1). |
 
-A sender MUST set the agreed experimental `protocol_id` on every Bridge frame
-carrying ANP, and a receiver that does not carry that value MUST reply to a
-BRIDGE_REQUEST with `ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9), never
-inferring ANP from any other envelope field. An implementation MUST NOT emit ANP
-under a `protocol_id` that NPAMP-REG has assigned to a different protocol
-(NPAMP-REG §7.1).
+A sender MUST set `protocol_id` to `0x07` on every Bridge frame carrying ANP, and a
+receiver that does not carry that value MUST reply to a BRIDGE_REQUEST with
+`ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9), never inferring ANP from any
+other envelope field. An implementation MUST NOT emit ANP under a `protocol_id`
+that NPAMP-REG has assigned to a different protocol (NPAMP-REG §6).
 
 ### 2.2 What is confirmed
 
@@ -111,6 +111,9 @@ The following ANP facts are confirmed from ANP's own current published specifica
   `interfaces` array and a `proof` member (§6); the **agent-discovery** document is a
   JSON-LD `CollectionPage` served at `https://{domain}/.well-known/agent-descriptions`
   per RFC 8615 (§6).
+- ANP's **N-PAMP `protocol_id`** is assigned: NPAMP-REG §6 assigns ANP the code
+  point `0x07`, as part of the first wave of agent-protocol registrations under §8
+  (§2.1).
 
 ### 2.3 What is unconfirmed (OPAQUE-READY)
 
@@ -124,7 +127,6 @@ unsettled at the time of writing; each is marked, not assumed (§9):
 - ANP's **meta-protocol method and error vocabulary**. ANP's meta-protocol
   specification is a Draft; the negotiation is carried as ordinary ANP HTTP traffic
   regardless of its exact method names or error codes (§4, §9).
-- ANP's **`protocol_id`**, which remains PROVISIONAL until registered (§2.1).
 
 Because Class OPAQUE and NPAMP-CC-HTTP both carry ANP payloads without depending on
 any of the above, ANP is carriable today; the unconfirmed items affect only a future
@@ -316,11 +318,7 @@ specifications (white paper; did:wba method; agent communication meta-protocol; 
 description protocol; agent discovery protocol) plus application-layer drafts (§11).
 This mapping pins only what those sources confirm and marks the rest:
 
-1. **`protocol_id` is PROVISIONAL.** NPAMP-REG assigns ANP no standards code point;
-   ANP is carried under an out-of-band-agreed experimental `protocol_id` until one is
-   registered (§2.1). An implementer MUST NOT rely on any particular experimental
-   value for cross-domain interoperation (NPAMP-REG §7.1).
-2. **Meta-protocol method and error vocabulary are not pinned.** ANP's meta-protocol
+1. **Meta-protocol method and error vocabulary are not pinned.** ANP's meta-protocol
    specification is a Draft; its negotiation is reported to run as request/response
    messages over ANP HTTP endpoints. This mapping deliberately does **not** fix any
    negotiation method name, profile string, or error-code set as a normative N-PAMP
@@ -328,11 +326,11 @@ This mapping pins only what those sources confirm and marks the rest:
    message (§3, §4) and a change to them does not change the carriage. An implementer
    MUST confirm the exact negotiation vocabulary against the ANP meta-protocol
    specification revision they target (§11).
-3. **AD/discovery media type is not asserted.** ANP recommends JSON and describes
+2. **AD/discovery media type is not asserted.** ANP recommends JSON and describes
    JSON-LD but does not, in the sources consulted, register a normative media type;
    this mapping treats the documents as JSON-LD without asserting a media-type string
    (§2.3, §6).
-4. **AD retrieval path is not universally fixed.** The DID document
+3. **AD retrieval path is not universally fixed.** The DID document
    (`/.well-known/did.json`) and the discovery CollectionPage
    (`/.well-known/agent-descriptions`) have confirmed well-known paths (§5, §6); the
    Agent Description document is retrieved by its declared `url`, and this mapping
@@ -415,8 +413,8 @@ N-PAMP documents built on:
   fallback; transport-bound-authentication and content-type-declaration rules).
 - NPAMP-CC-DOC (`24_carriage_documents.md`) — capability/schema document carriage
   referenced in §6.
-- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry
-  (ANP has no standards code point; experimental/private ranges).
+- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry,
+  which assigns ANP the code point `0x07` (§2).
 - NPAMP-DISC (`40_discovery.md`) — Discovery-channel advertisement referenced in §8.
 - BCP 14 (RFC 2119, RFC 8174) — requirement key words.
 
@@ -427,10 +425,9 @@ NPAMP-BRIDGE and to the carriage class it uses (NPAMP-CC-HTTP, and/or NPAMP-CC-O
 and NPAMP-CC-DOC where §6 applies) for the frames it emits and parses, and, for ANP
 traffic, it:
 
-1. Carries ANP under an out-of-band-agreed experimental `protocol_id` (`0x10`–`0x7F`)
-   because NPAMP-REG assigns ANP no standards code point, never emits ANP under a
-   `protocol_id` NPAMP-REG assigned to another protocol, and selects the foreign
-   protocol solely by `protocol_id` (§2);
+1. Carries ANP under `protocol_id 0x07` (assigned by NPAMP-REG §6), never emits ANP
+   under a `protocol_id` NPAMP-REG assigned to another protocol, and selects the
+   foreign protocol solely by `protocol_id` (§2);
 2. Carries each ANP HTTP exchange under NPAMP-CC-HTTP (or Class OPAQUE) — the request
    as a BRIDGE_REQUEST with the HTTP method/target as the BridgeEnvelope routing key,
    an ANP `4xx`/`5xx` result preserved as a BRIDGE_RESPONSE rather than a transport
@@ -465,5 +462,3 @@ the SafetyLabel omitted, verified to be treated as `destructive`; an ANP `4xx` r
 carried as a BRIDGE_RESPONSE preserving the ANP status and body; and an Agent
 Description document set with one detached `proof` carried under NPAMP-CC-DOC on both
 the Bridge and the Discovery channel.
-</content>
-</invoke>

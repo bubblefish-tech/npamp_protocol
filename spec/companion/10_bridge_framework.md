@@ -60,7 +60,7 @@ Value layout (multi-octet integers big-endian):
 
 | Field | Size | Meaning |
 |---|---|---|
-| `protocol_id` | u8 | Foreign protocol. 0x01 = MCP, 0x02 = A2A, 0x03 = HTTP/2, 0x04 = WebSocket; 0x10–0x7F experimental; 0x80–0xFF private use. |
+| `protocol_id` | u16 | Foreign protocol. 0x0001 = MCP, 0x0002 = A2A, 0x0003 = HTTP/2, 0x0004 = WebSocket; the full range partition (standards-assigned, experimental, private-use) is owned by NPAMP-REG (spec/companion/30_protocol_registry.md §4). A u8-era value `0xNN` migrates losslessly to `0x00NN` (NPAMP-REG §8.4). |
 | `message_kind` | u8 | 0x01 request, 0x02 response, 0x03 notification, 0x04 error, 0x05 stream_data, 0x06 stream_end. MUST agree with the frame type. |
 | `content_type` | u8 | Foreign-message encoding. 0x01 application/json, 0x02 application/cbor, 0x03 application/grpc+proto, 0x04 the media type is carried in the OpaqueContentType TLV (NPAMP-CC-OPAQUE, spec/companion/25_carriage_opaque.md §4.4). |
 | `flags` | u8 | Bit 0 `final` (streams). Bits 1–7 reserved; senders MUST set 0 and receivers MUST ignore. |

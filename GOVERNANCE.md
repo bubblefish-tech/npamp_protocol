@@ -216,7 +216,7 @@ distinction exists to prevent.
 > gate this project treats as non-negotiable: a Standards Track NEP **MUST NOT**
 > reach *Final* until a working reference implementation and machine-gradable,
 > non-circular conformance vectors exist for it ([§7](#7-conformance-gates-done)).
-> A single additive registration in an existing *Specification Required* range does
+> A single additive registration in an existing *First Come First Served* range does
 > **not** need a NEP — it follows the code-point procedure of [§6.2](#62-how-a-code-point-is-assigned).
 
 ### 4.3 Wire-compatibility consequence
@@ -297,7 +297,7 @@ the worked example, the bands are:
 
 | Band | Policy (RFC 8126) | Who assigns | What it means |
 |---|---|---|---|
-| **Managed / assigned** (e.g. `0x01`–`0x0F`) | **Specification Required** (RFC 8126 §4.6) | Author/Editor, via the companion registry procedure | A permanent, readily available public specification with enough detail for interoperable independent implementations is required before a value is assigned; the assignment is recorded and MUST NOT be reassigned. |
+| **Managed / assigned** (e.g. `0x01`–`0x0F`) | **First Come First Served** (RFC 8126 §4.4) | The NPAMP-REG maintainer, via the companion registry procedure | The maintainer assigns the requested (or next available) code point on a first-come basis — not a substantive-review gate; a registration request carrying the NPAMP-REG §8.2 fields (for a bridge mapping, the mapping document) is recorded, and the assignment MUST NOT be reassigned. |
 | **Experimental** (e.g. `0x10`–`0x7F`) | **Experimental Use** (RFC 8126 §4.2) | No one — unregistered | Usable without registration for experiments; carries no guaranteed cross-domain meaning; MUST NOT be emitted toward a peer without out-of-band agreement. IANA/the project record nothing here. |
 | **Private use** (e.g. `0x80`–`0xFF`) | **Private Use** (RFC 8126 §4.1) | No one — unregistered | Usable inside a single administrative domain without registration; never assigned by this registry; MUST NOT be emitted toward a peer outside that domain. |
 
@@ -310,11 +310,11 @@ assignable.
 
 1. Open an issue proposing the registration, labeled `design` (a code-point
    assignment is normative, [§4.1](#41-what-makes-a-change-normative)).
-2. Provide the **Specification Required** material: a stable, public description
-   detailed enough for two independent implementations to interoperate — for a
-   bridge mapping, this is the mapping document written against the foreign
-   protocol's own published specification; for a suite, the construction and its
-   standards anchor.
+2. Provide the registration-request material (the NPAMP-REG §8.2 fields): for a
+   bridge mapping, the mapping document written against the foreign protocol's own
+   published specification; for a suite, the construction and its standards anchor.
+   Under First Come First Served this material is recorded, not substantively
+   reviewed — the maintainer MUST NOT withhold assignment pending an evaluation.
 3. Reach rough consensus ([§3](#3-how-decisions-are-made)); the Author/Editor
    assigns the next value in the managed band and records an ADR plus the CSV row.
 4. If no specification is ready yet, the proposer uses the **experimental** band
@@ -454,9 +454,8 @@ primary sources (consulted directly, not from memory):
   voting.
 - **RFC 8126 — "Guidelines for Writing an IANA Considerations Section in RFCs."**
   The registration-policy vocabulary of [§6](#6-code-point-governance):
-  Specification Required (§4.6), Experimental Use (§4.2), Private Use (§4.1), and
-  the Expert Review / First Come First Served policies of the IANA-managed
-  identifiers.
+  First Come First Served (§4.4), Experimental Use (§4.2), Private Use (§4.1), and
+  the Expert Review policy of the IANA-managed identifiers (the ALPN identifier).
 - **RFC 4846 — "Independent Submissions to the RFC Editor."** The
   repository-vs-submission relationship of [§5](#5-relationship-to-the-ietf--ise-submission-track):
   an independent-stream document is not an IETF-consensus document, the author

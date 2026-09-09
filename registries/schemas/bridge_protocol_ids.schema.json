@@ -20,7 +20,7 @@
       "name": { "type": "string", "minLength": 1, "description": "Protocol name or marker such as (reserved) / (unassigned) / (experimental) / (private use); MUST be non-empty." },
       "carriage_class": { "type": "string", "minLength": 1, "description": "Carriage class (JSONRPC, HTTP, STREAM, ...) or '--' for reserved/range rows; MUST be non-empty." },
       "mapping_reference": { "type": "string", "minLength": 1, "description": "Mapping-document reference (e.g. NPAMP-MAP-MCP) or '--'; MUST be non-empty." },
-      "assignment_policy": { "type": "string", "enum": ["Not assignable", "Specification Required", "No registration"], "description": "RFC 8126 assignment policy governing this id or range." },
+      "assignment_policy": { "type": "string", "enum": ["Not assignable", "First Come First Served", "No registration"], "description": "RFC 8126 assignment policy governing this id or range." },
       "description": { "type": "string", "minLength": 1, "description": "Human-readable description; MUST be non-empty." }
     }
   }

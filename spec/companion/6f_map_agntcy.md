@@ -10,12 +10,12 @@
 > concrete AGNTCY protocol surface it maps (§2) and then pins how that surface rides
 > N-PAMP carriage. **Carriage posture: OPAQUE-READY.** AGNTCY's own wire surfaces —
 > the SLIM messaging substrate and the (archived) Agent Connect Protocol — are
-> carried **today** under Class OPAQUE (`25_carriage_opaque.md`) with a **PROVISIONAL**
-> experimental `protocol_id`; native mappings onto the streaming carriage class
-> (`23_carriage_streaming.md`) for SLIM and the HTTP-semantics class
+> carried **today** under Class OPAQUE (`25_carriage_opaque.md`) under the assigned
+> `protocol_id 0x08` (NPAMP-REG §6); native mappings onto the streaming carriage
+> class (`23_carriage_streaming.md`) for SLIM and the HTTP-semantics class
 > (`21_carriage_http.md`) for ACP are described here as the confirmed target, to be
-> marked DRAFT once a standards `protocol_id` is assigned and the SLIM wire format
-> stabilizes (§6, §9). It builds on **NPAMP-BRIDGE** (`10_bridge_framework.md`), the
+> marked DRAFT once the SLIM wire format stabilizes (§6, §9). It builds on
+> **NPAMP-BRIDGE** (`10_bridge_framework.md`), the
 > named carriage classes, and the N-PAMP core specification
 > (draft-bubblefish-npamp-01, the "core specification"). It consumes only code points
 > those documents already reserve; it defines no new frame type, no new TLV, and no
@@ -31,9 +31,9 @@ AGNTCY specifics that the carriage classes leave to a per-protocol mapping:
 - The concrete AGNTCY **protocol surface** this mapping addresses — the SLIM messaging
   substrate and the Agent Connect Protocol (ACP) — and the AGNTCY components mapped
   elsewhere or out of scope (§2);
-- AGNTCY's **carriage posture** — Class OPAQUE today, under a PROVISIONAL experimental
-  `protocol_id`, because AGNTCY has no standards-assigned Bridge Protocol Identifier
-  and the SLIM wire format is not yet stably specified (§3, §4, §5);
+- AGNTCY's **carriage posture** — Class OPAQUE today, under the assigned
+  `protocol_id 0x08` (NPAMP-REG §6), because the SLIM wire format is not yet stably
+  specified (§3, §4, §5);
 - The **anticipated native carriage** for each AGNTCY surface once its code point and
   wire format are confirmed — SLIM under NPAMP-CC-STREAM, ACP under NPAMP-CC-HTTP,
   OASF under NPAMP-CC-DOC — with an explicit statement of what is **confirmed** versus
@@ -109,7 +109,7 @@ AGNTCY-specific facts, and it lets the carriage classes do the structural work.
 | Streaming carriage | NPAMP-CC-STREAM (`23_carriage_streaming.md`) | Native target for SLIM's streamed / pub-sub messaging (§6). |
 | HTTP-semantics carriage | NPAMP-CC-HTTP (`21_carriage_http.md`) | Native target for ACP's REST + SSE surface (§6). |
 | Document carriage | NPAMP-CC-DOC (`24_carriage_documents.md`) | OASF and directory records (via `69_map_oasf.md`; §8). |
-| Bridge Protocol Identifier registry | NPAMP-REG (`30_protocol_registry.md`) | The `protocol_id` partition and the PROVISIONAL experimental value used here (§4). |
+| Bridge Protocol Identifier registry | NPAMP-REG (`30_protocol_registry.md`) | The `protocol_id` partition and the assigned value `0x08` used here (§4). |
 | BridgeEnvelope / SafetyLabel TLVs | Core specification; NPAMP-BRIDGE | Carried unchanged on every AGNTCY frame (§4, §7). |
 
 Because every carriage class carries the foreign message **verbatim** and selects the
@@ -124,18 +124,16 @@ future AGNTCY revision may change.
 | Property | Value |
 |---|---|
 | Protocol | AGNTCY — Internet of Agents collective; concretely, the SLIM messaging substrate and the Agent Connect Protocol (§2). |
-| `protocol_id` | **PROVISIONAL.** No value is assigned to AGNTCY by NPAMP-REG §6 (which assigns `0x01`–`0x04` and leaves `0x05`–`0x0F` unassigned). Until a standards value is assigned in `0x05`–`0x0F` under NPAMP-REG §8, AGNTCY traffic MUST use an **experimental** `protocol_id` in the range `0x10`–`0x7F` (NPAMP-REG §7.1), agreed out-of-band between the peers. This document uses `0x10` illustratively; it carries **no** cross-domain meaning and two deployments MAY assign it differently (NPAMP-REG §7.1). |
+| `protocol_id` | **`0x08`, assigned.** NPAMP-REG §6 assigns AGNTCY the standards code point `0x08`, as part of the first wave of agent-protocol registrations under §8. A sender MUST set `protocol_id` to `0x08` on every Bridge frame carrying AGNTCY traffic. |
 | `content_type` | `0x03` (application/grpc+proto) for SLIM's protobuf messages; `0x01` (application/json) for ACP's JSON bodies (NPAMP-BRIDGE §4). A payload of a non-enumerated media type MUST be declared via the OpaqueContentType TLV per NPAMP-CC-OPAQUE §4. |
 | Carriage class | **OPAQUE today** (NPAMP-CC-OPAQUE); native targets STREAM (SLIM) and HTTP (ACP) once §6 is confirmed. |
 | Foreign-message form | A SLIM message (protobuf) or an ACP HTTP request/response with a JSON body, carried octet-for-octet as the foreign message (NPAMP-BRIDGE §1). |
 
 A sender MUST NOT emit AGNTCY traffic under a `protocol_id` that NPAMP-REG has assigned
-to a different protocol (for example `0x01` MCP or `0x02` A2A), and MUST NOT use an
-experimental AGNTCY `protocol_id` on an association without out-of-band agreement on
-its meaning (NPAMP-REG §7.1). A receiver that does not carry the agreed AGNTCY
-`protocol_id` MUST reply to a BRIDGE_REQUEST bearing it with `ProtocolUnsupported`
-(NPAMP-BRIDGE §6; NPAMP-REG §9), and MUST NOT infer AGNTCY from any other envelope
-field (NPAMP-REG §9).
+to a different protocol (for example `0x01` MCP or `0x02` A2A). A receiver that does
+not carry `protocol_id 0x08` MUST reply to a BRIDGE_REQUEST bearing it with
+`ProtocolUnsupported` (NPAMP-BRIDGE §6; NPAMP-REG §9), and MUST NOT infer AGNTCY
+from any other envelope field (NPAMP-REG §9).
 
 ## 5. Carriage today via Class OPAQUE
 
@@ -165,8 +163,9 @@ transport-bound authentication the AGNTCY surface binds to its native transport
 
 This section states the target native carriage for each AGNTCY surface and marks
 precisely what is confirmed against AGNTCY's published specifications (§11) and what is
-not yet confirmable. Nothing in this section is on the wire until a standards
-`protocol_id` is assigned (§4) and this section is promoted to DRAFT.
+not yet confirmable. The standards `protocol_id` 0x08 is assigned (§4, NPAMP-REG §6);
+nothing in this section is on the wire until this section is promoted to DRAFT (which
+remains gated on SLIM wire-format stabilization, §6.1).
 
 ### 6.1 SLIM → NPAMP-CC-STREAM (target)
 
@@ -302,9 +301,10 @@ AGNTCY component and version they target rather than relying on a single renderi
    only when SLIM *transports* a JSON-RPC protocol such as A2A, which over N-PAMP is
    NPAMP-MAP-A2A, not this mapping (§1.2, §2). An implementer MUST NOT invent a JSON-RPC
    method namespace for AGNTCY.
-4. **No standards `protocol_id`.** The experimental value used here (§4) is PROVISIONAL
-   and carries no cross-domain meaning; a standards assignment in `0x05`–`0x0F`
-   (NPAMP-REG §8) is required before AGNTCY interoperates across independent deployments.
+4. **Standards `protocol_id` assigned.** NPAMP-REG §6 assigns AGNTCY the code point
+   `0x08` (§4), as part of the first wave of agent-protocol registrations under §8;
+   this mapping carries AGNTCY under that identifier and no longer relies on an
+   experimental value for cross-domain interoperation.
 
 No value in this document is asserted beyond what §11's sources support; where a fact
 was version-dependent or not confirmable from the primary source, it is marked above
@@ -378,8 +378,8 @@ N-PAMP documents built on:
 - NPAMP-CC-STREAM (`23_carriage_streaming.md`) — streaming carriage; SLIM native target (§6.1).
 - NPAMP-CC-HTTP (`21_carriage_http.md`) — HTTP-semantics carriage; ACP native target (§6.2).
 - NPAMP-CC-DOC (`24_carriage_documents.md`) — capability/schema document carriage; OASF (§6.3).
-- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry and its
-  experimental range (§4).
+- NPAMP-REG (`30_protocol_registry.md`) — the Bridge Protocol Identifier registry,
+  which assigns AGNTCY the code point `0x08` (§4).
 - NPAMP-DISC (`40_discovery.md`) — Discovery-channel advertisement referenced in §6.3, §8.
 - NPAMP-MAP-A2A (`61_map_a2a.md`) and NPAMP-MAP-MCP (`60_map_mcp.md`) — the mappings that
   carry A2A and MCP, including when hosted over SLIM (§1.2).
@@ -393,11 +393,9 @@ NPAMP-BRIDGE and to the carriage class it uses (NPAMP-CC-OPAQUE today; NPAMP-CC-
 NPAMP-CC-HTTP, or NPAMP-CC-DOC where a native mapping of §6 is in force), and, for
 AGNTCY traffic, it:
 
-1. Carries AGNTCY traffic under a `protocol_id` on which the peers have agreed — a
-   standards value once NPAMP-REG assigns one in `0x05`–`0x0F`, otherwise an experimental
-   value in `0x10`–`0x7F` agreed out-of-band — never squats on a value NPAMP-REG has
-   assigned to another protocol, and selects the foreign protocol solely by `protocol_id`
-   (§4);
+1. Carries AGNTCY traffic under `protocol_id 0x08` (assigned by NPAMP-REG §6), never
+   squats on a value NPAMP-REG has assigned to another protocol, and selects the
+   foreign protocol solely by `protocol_id` (§4);
 2. Treats the AGNTCY mapping as **OPAQUE-READY**: absent a native mapping of §6 marked
    DRAFT, it carries SLIM and ACP payloads under Class OPAQUE — octet-for-octet, with the
    content type declared (`0x03` application/grpc+proto for SLIM, `0x01` application/json
