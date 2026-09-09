@@ -27,6 +27,29 @@ This repository is the **public reference home** of N-PAMP: the Internet-Draft, 
 
 ---
 
+## Highlights
+
+- **Post-quantum on the wire, before any application semantics.** A fixed 36-octet binary frame with hybrid ECDH+ML-KEM key establishment (X25519MLKEM768 and SecP384r1MLKEM1024, [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final)) and ML-DSA-87 / Ed25519 signatures, in a 1.5-RTT mutually-authenticated handshake with transcript-bound downgrade refusal. *(Graded against NIST ACVP / RFC-anchored KATs across ten ports; ALPN `n-pamp/3` requested at publication.)*
+- **Three profiles, forward-secure, self-healing.** Standard / High / Sovereign profiles escalate KEM + signature + hash strength under one wire format, and a Hybrid Tree Ratchet adds forward secrecy plus periodic re-KEM self-heal after the handshake. *(Graded by non-circular KATs.)*
+- **Carry any agent protocol under a PQC session.** A protocol-agnostic bridge framework (channel `0x000D`) encapsulates a foreign agent protocol octet-for-octet with correlation, structured errors, and a fail-safe safety label, over six carriage classes, with an assigned protocol-id registry (MCP / A2A / HTTP/2 / WebSocket / gRPC and more). *(Bridge framework graded; carriage classes JSON-RPC / HTTP / STREAM / OPAQUE implemented; per-protocol mappings specified.)*
+- **Zero-app-change ambient deployment.** A per-node data-plane agent terminates and originates N-PAMP PQC sessions for every workload with per-workload (never node-global) key isolation and SPIFFE/SPIRE identity, and an eBPF sockmap fast path steers workload traffic into the tunnel with no application change — plus a live-witnessed integration with the Linux-Foundation agentgateway. *(Built reference components; the eBPF datapath is live-benchmarked.)*
+- **Native semantic channel operations.** Deterministic-CBOR operations for ten of the twenty channels — memory, streaming, capability, immune, settlement, telemetry, commerce, interaction, workflow, and knowledge — governed at the wire, not bolted on above it. *(Body-decode graded in six ports; Sensory and Spatial robotics channels specified.)*
+- **Standards-anchored conformance + a machine-verified handshake.** A 470-vector byte-identical corpus + 8 NIST/RFC-anchored KAT sets grade every port, and the handshake is machine-verified by two independent formal tools. *(Corpus graded; formal status table public.)*
+
+---
+
+## What's New
+
+*draft-bubblefish-npamp-02; current as of 2026-09-07.*
+
+- **Crypto generation 3** — the wire advances to `n-pamp/3` (ALPN requested at publication; `n-pamp/2` superseded), with the per-group hybrid-KEM combiner, the Hybrid Tree Ratchet, and LearnLib automata-learned state-machine conformance.
+- **Ambient mesh data plane** — a per-node PQC agent with per-workload key isolation + SPIRE, an eBPF sockmap datapath, an Envoy `ext_authz` server, a Kubernetes Gateway API controller, and a live-witnessed agentgateway underlay integration. *(Built reference components.)*
+- **Native semantic channel operations** — memory / stream / capability / immune / settlement / telemetry / commerce / interaction / workflow / knowledge, body-decode graded in six ports.
+- **Bridge framework + first-wave protocol maps** — a u16 protocol-id registry (First Come First Served) with the Bridge envelope codec at Go/Rust byte parity, plus first-wave protocol-id assignments and per-protocol mapping documents.
+- **Third-party interop / hackathon kit** — a quickstart, a run-against-peer harness, and an RFC-7942 implementation-status template.
+
+---
+
 ## Why you can trust this
 
 N-PAMP is not a whitepaper with aspirational code. Every claim in this repository is backed by an external authority, an executable gate, or a documented decision.
