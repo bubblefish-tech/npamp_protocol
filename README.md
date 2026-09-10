@@ -186,7 +186,7 @@ The [`test-vectors/`](test-vectors/) tree is the **canonical** conformance oracl
 
 | Vector set | What it pins | Standards anchor |
 |---|---|---|
-| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 470 conformance vectors spanning primitives, frame / codec / reject, channels, and profiles (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / channel / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 and draft-01 (the draft-01 KEM-combiner change is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
+| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 470 conformance vectors spanning primitives, frame / codec / reject, channels, and profiles (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / channel / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 through draft-02 (the hybrid-KEM combiner byte-order is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
 | [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 — ADR-0005 / ADR-0007 |
 | [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 — ADR-0008 |
 | [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor — ADR-0009 |
@@ -271,7 +271,7 @@ The pieces that tie mappings and carriage together live in [`spec/companion/`](s
 | [`test-vectors/v1/`](test-vectors/v1/) | The canonical conformance corpus + 5 KAT vector sets |
 | [`test-vectors/schemas/`](test-vectors/schemas/) | One draft-2020-12 JSON Schema per vector set |
 | [`scripts/`](scripts/) | Gate scripts: [`verify-pins.ps1`](scripts/verify-pins.ps1), [`validate-schemas.py`](scripts/validate-schemas.py) |
-| [`formal/`](formal/) | Link-out stub for external formal-analysis models (re-targeting to the draft-01 binding is pending; no proof is vendored here yet) |
+| [`formal/`](formal/) | Link-out stub for external formal-analysis models (re-targeting to the draft-02 binding is pending; no proof is vendored here yet) |
 | [`.github/`](.github/) | Issue/PR templates, labels, and the conformance CI workflow |
 
 ---
