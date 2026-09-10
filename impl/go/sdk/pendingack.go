@@ -6,11 +6,17 @@ import npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 
 // Pending-ACK correlation for the two control-frame acknowledgements —
 // KEY_UPDATE_ACK (per channel, keyed by the announced epoch) and MASTER_RATCHET_ACK
-// (conn-scope Control, keyed by the announced generation). Each is a SET, not a queue:
-// the peer emits each ACK from its own goroutine (sendKeyUpdateAck / sendMasterRatchetAck),
-// which race for wmu, so ACKs for two rapidly-pipelined updates can legitimately reach the
-// wire out of order. Matching by epoch/generation (delete-from-set) tolerates that
-// reordering, where a FIFO or single-slot tracker would flag a conformant peer.
+// (conn-scope Control, keyed by the announced generation). KEY_UPDATE_ACK is a per-epoch
+// COUNT (a multiset); MASTER_RATCHET_ACK is a SET; neither is a queue. The peer emits each
+// ACK from its own goroutine (sendKeyUpdateAck / sendMasterRatchetAck), which race for wmu,
+// so ACKs for two rapidly-pipelined updates can legitimately reach the wire out of order;
+// matching by epoch/generation tolerates that reordering, where a FIFO or single-slot tracker
+// would flag a conformant peer. The KEY_UPDATE_ACK tracker MUST be a COUNT, not a set: a
+// master-ratchet resets each channel's leaf epoch to 0 (dropSendKeys), so a KeyUpdate in
+// generation G and one in G+1 both announce the SAME epoch and their (async) ACKs can be
+// outstanding simultaneously — a set would collapse them and misread the second ACK as
+// unsolicited (the loopback ratchet race). MASTER_RATCHET_ACK keys by generation, which is
+// globally monotonic, so a set suffices there.
 //
 // An ACK that matches a set entry was SOLICITED (this endpoint sent the corresponding
 // KEY_UPDATE / MASTER_RATCHET): it is consumed and the receive path stays SILENT. An ACK
@@ -29,14 +35,19 @@ func (c *Conn) addPendingKeyUpdateAck(channel npamp.ChannelID, epoch uint64) {
 	c.pmu.Lock()
 	defer c.pmu.Unlock()
 	if c.pendingKUAck == nil {
-		c.pendingKUAck = make(map[npamp.ChannelID]map[uint64]struct{})
+		c.pendingKUAck = make(map[npamp.ChannelID]map[uint64]int)
 	}
 	set := c.pendingKUAck[channel]
 	if set == nil {
-		set = make(map[uint64]struct{})
+		set = make(map[uint64]int)
 		c.pendingKUAck[channel] = set
 	}
-	set[epoch] = struct{}{}
+	// COUNT, not set-membership: a master-ratchet resets each channel's leaf epoch to 0
+	// (dropSendKeys), so KeyUpdates in adjacent generations both announce the same epoch and
+	// can be outstanding simultaneously. A set would collapse them (the second ACK would read
+	// as unsolicited); the count tolerates N outstanding same-epoch ACKs while still rejecting
+	// one when the count is 0.
+	set[epoch]++
 }
 
 // removePendingKeyUpdateAck rolls back a registration when the KEY_UPDATE write failed (the
@@ -45,7 +56,12 @@ func (c *Conn) removePendingKeyUpdateAck(channel npamp.ChannelID, epoch uint64) 
 	c.pmu.Lock()
 	defer c.pmu.Unlock()
 	if set := c.pendingKUAck[channel]; set != nil {
-		delete(set, epoch)
+		if set[epoch] > 0 {
+			set[epoch]--
+			if set[epoch] == 0 {
+				delete(set, epoch)
+			}
+		}
 		if len(set) == 0 {
 			delete(c.pendingKUAck, channel)
 		}
@@ -62,10 +78,13 @@ func (c *Conn) consumePendingKeyUpdateAck(channel npamp.ChannelID, epoch uint64)
 	if set == nil {
 		return false
 	}
-	if _, ok := set[epoch]; !ok {
+	if set[epoch] == 0 {
 		return false
 	}
-	delete(set, epoch)
+	set[epoch]--
+	if set[epoch] == 0 {
+		delete(set, epoch)
+	}
 	if len(set) == 0 {
 		delete(c.pendingKUAck, channel)
 	}

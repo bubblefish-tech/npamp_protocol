@@ -193,7 +193,7 @@ type Conn struct {
 	// owed (they are cleared at Zeroize only to free the maps).
 	pmu          sync.Mutex
 	pendingReKEM *pendingReKEM
-	pendingKUAck map[npamp.ChannelID]map[uint64]struct{}
+	pendingKUAck map[npamp.ChannelID]map[uint64]int
 	pendingMRAck map[uint64]struct{}
 
 	// droppedUnauthenticated / droppedOutOfSequence count frames the receive loop DROPPED
