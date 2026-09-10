@@ -28,10 +28,25 @@ from __future__ import annotations
 
 _MAX_INT64 = (1 << 63) - 1
 
+# Bounds how deeply _decode() will recurse into an untrusted CBOR item (RFC 8949
+# §10 decoder implementation-limits guidance). Mirrors the Go reference's
+# cborMaxNestingDepth (impl/go/memory_cbor.go). The outermost item is depth 1;
+# each array element and each map key/value is one level deeper than its
+# container. An item that would sit at depth CBOR_MAX_NESTING_DEPTH+1 is rejected
+# with CborDepthExceededError before it is materialized — a resource-exhaustion /
+# stack-overflow DoS guard against a minimally-sized, pathologically deeply-nested
+# input (e.g. a run of array-of-one headers 0x81 0x81 0x81 ...).
+CBOR_MAX_NESTING_DEPTH = 8
+
 
 class CborError(Exception):
     """A deterministic-CBOR decode fault (non-shortest, indefinite, tag, float,
     out-of-order/duplicate key, truncation, or trailing bytes)."""
+
+
+class CborDepthExceededError(CborError):
+    """A CBOR item would be decoded at a nesting depth deeper than
+    CBOR_MAX_NESTING_DEPTH (resource-exhaustion guard)."""
 
 
 class BodyError(CborError):
@@ -115,9 +130,14 @@ def _decode_arg(ai: int, b: bytes, off: int):
     raise CborError("unsupported additional information (reserved)")  # 28,29,30
 
 
-def _decode(b: bytes, off: int):
-    """Decode one item from b at off. Returns (value, next_off). Enforces the
-    deterministic subset strictly."""
+def _decode(b: bytes, off: int, depth: int = 1):
+    """Decode one item from b at off, at the given nesting depth (the top-level
+    item passed by cbor_decode_top() is depth 1). Returns (value, next_off).
+    Enforces the deterministic subset strictly, and enforces
+    CBOR_MAX_NESTING_DEPTH as a resource-exhaustion guard against unbounded
+    recursion."""
+    if depth > CBOR_MAX_NESTING_DEPTH:
+        raise CborDepthExceededError("nesting depth exceeds limit (resource-exhaustion guard)")
     if off >= len(b):
         raise CborError("truncated input")
     ib = b[off]
@@ -158,7 +178,7 @@ def _decode(b: bytes, off: int):
         out = []
         cur = start
         for _ in range(arg):
-            el, cur = _decode(b, cur)
+            el, cur = _decode(b, cur, depth + 1)
             out.append(el)
         return out, cur
     if major == 5:  # map
@@ -169,14 +189,14 @@ def _decode(b: bytes, off: int):
         prev_key_enc = None
         for _ in range(arg):
             key_start = cur
-            key, cur = _decode(b, cur)
+            key, cur = _decode(b, cur, depth + 1)
             key_enc = b[key_start:cur]
             # Canonical order: each key MUST sort strictly after the previous one.
             # This rejects both out-of-order keys and duplicates.
             if prev_key_enc is not None and not _byte_less(prev_key_enc, key_enc):
                 raise CborError("map keys not in canonical ascending order (or duplicate)")
             prev_key_enc = key_enc
-            val, cur = _decode(b, cur)
+            val, cur = _decode(b, cur, depth + 1)
             m._add(key, val)
         return m, cur
     # major 6 (tags): unsupported

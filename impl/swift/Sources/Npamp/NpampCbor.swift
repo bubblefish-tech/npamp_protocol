@@ -28,6 +28,14 @@ public struct CBORError: Error {
     public init(_ message: String) { self.message = message }
 }
 
+/// A CBOR item would be decoded at a nesting depth deeper than
+/// `NpampCbor.maxNestingDepth` (resource-exhaustion guard). Mirrors the Go
+/// reference's errCBORDepthExceeded (impl/go/memory_cbor.go).
+public struct CBORDepthExceededError: Error {
+    public let message: String
+    public init(_ message: String) { self.message = message }
+}
+
 /// One decoded N-PAMP CBOR value.
 public indirect enum CBOR {
     case uint(UInt64)
@@ -74,11 +82,22 @@ public struct CBORMap {
 /// Deterministic (canonical) CBOR decoder for the N-PAMP native operation bodies.
 public enum NpampCbor {
 
+    /// Bounds how deeply `decode` will recurse into an untrusted CBOR item (RFC
+    /// 8949 §10 decoder implementation-limits guidance). Mirrors the Go
+    /// reference's cborMaxNestingDepth (impl/go/memory_cbor.go). The outermost
+    /// item is depth 1; each array element and each map key/value is one level
+    /// deeper than its container. An item that would sit at depth
+    /// maxNestingDepth+1 is rejected with CBORDepthExceededError before it is
+    /// materialized -- a resource-exhaustion / stack-overflow DoS guard against a
+    /// minimally-sized, pathologically deeply-nested input (e.g. a run of
+    /// array-of-one headers 0x81 0x81 0x81 ...).
+    public static let maxNestingDepth = 8
+
     /// Decodes a single canonical CBOR item and requires that it consumes all of
     /// `b` (no trailing bytes) -- the shape of a frame payload.
     public static func decodeTop(_ b: [UInt8]) throws -> CBOR {
         var pos = 0
-        let v = try decode(b, &pos)
+        let v = try decode(b, &pos, 1)
         if pos != b.count {
             throw CBORError("npamp/cbor: trailing bytes after top-level item")
         }
@@ -93,7 +112,14 @@ public enum NpampCbor {
         return false
     }
 
-    private static func decode(_ b: [UInt8], _ pos: inout Int) throws -> CBOR {
+    /// Decodes one item from `b` at `pos`, at the given nesting `depth` (the
+    /// top-level item passed by `decodeTop` is depth 1). Enforces the
+    /// deterministic subset strictly, and enforces `maxNestingDepth` as a
+    /// resource-exhaustion guard against unbounded recursion.
+    private static func decode(_ b: [UInt8], _ pos: inout Int, _ depth: Int) throws -> CBOR {
+        if depth > maxNestingDepth {
+            throw CBORDepthExceededError("npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)")
+        }
         if pos >= b.count { throw CBORError("npamp/cbor: truncated input") }
         let ib = Int(b[pos])
         let major = ib >> 5
@@ -138,7 +164,7 @@ public enum NpampCbor {
             let count = Int(arg)
             var out: [CBOR] = []
             out.reserveCapacity(count)
-            for _ in 0..<count { out.append(try decode(b, &pos)) }
+            for _ in 0..<count { out.append(try decode(b, &pos, depth + 1)) }
             return .array(out)
         case 5:
             // map. Each entry is >= 2 bytes, so a declared count larger than the
@@ -151,14 +177,14 @@ public enum NpampCbor {
             var prevKeyEnc: [UInt8]? = nil
             for _ in 0..<count {
                 let keyStart = pos
-                let key = try decode(b, &pos)
+                let key = try decode(b, &pos, depth + 1)
                 let keyEnc = Array(b[keyStart..<pos])
                 // Canonical order: each key MUST sort strictly after the previous one.
                 if let prev = prevKeyEnc, !byteLess(prev, keyEnc) {
                     throw CBORError("npamp/cbor: map keys not in canonical ascending order (or duplicate)")
                 }
                 prevKeyEnc = keyEnc
-                let value = try decode(b, &pos)
+                let value = try decode(b, &pos, depth + 1)
                 entries.append(CBORMap.Entry(keyEnc: keyEnc, key: key, value: value))
             }
             return .map(CBORMap(entries: entries))

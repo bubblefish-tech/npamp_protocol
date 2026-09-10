@@ -30,6 +30,27 @@ export class CborError extends Error {
   }
 }
 
+// CborDepthExceededError is thrown when a CBOR item would be decoded at a nesting
+// depth deeper than CBOR_MAX_NESTING_DEPTH (resource-exhaustion guard). Mirrors
+// the Go reference's errCBORDepthExceeded (impl/go/memory_cbor.go).
+export class CborDepthExceededError extends CborError {
+  constructor(message: string) {
+    super(message);
+    this.name = "CborDepthExceededError";
+  }
+}
+
+// CBOR_MAX_NESTING_DEPTH bounds how deeply decode() will recurse into an
+// untrusted CBOR item (RFC 8949 §10 decoder implementation-limits guidance).
+// Mirrors the Go reference's cborMaxNestingDepth. The outermost item is depth 1;
+// each array element and each map key/value is one level deeper than its
+// container. An item that would sit at depth CBOR_MAX_NESTING_DEPTH+1 is
+// rejected with CborDepthExceededError before it is materialized — a
+// resource-exhaustion / stack-overflow DoS guard against a minimally-sized,
+// pathologically deeply-nested input (e.g. a run of array-of-one headers
+// 0x81 0x81 0x81 ...).
+export const CBOR_MAX_NESTING_DEPTH = 8;
+
 // byteLess reports whether a sorts strictly before b in bytewise (shorter-prefix-
 // first, then lexicographic) order — RFC 8949 §4.2.1 canonical map-key ordering.
 export function byteLess(a: Buffer, b: Buffer): boolean {
@@ -117,16 +138,22 @@ export function encodeHead(major: number, arg: bigint): Buffer {
 // decodeTop decodes a single canonical CBOR item and requires that it consumes
 // all of b (no trailing bytes) — the shape of a frame payload.
 export function decodeTop(b: Buffer): CborValue {
-  const [v, n] = decode(b, 0);
+  const [v, n] = decode(b, 0, 1);
   if (n !== b.length) {
     throw new CborError("npamp/cbor: trailing bytes after top-level item");
   }
   return v;
 }
 
-// decode decodes one item from b starting at off, returning the value and the
-// absolute offset just past it. It enforces the deterministic subset strictly.
-function decode(b: Buffer, off: number): [CborValue, number] {
+// decode decodes one item from b starting at off, at the given nesting depth
+// (the top-level item passed by decodeTop is depth 1), returning the value and
+// the absolute offset just past it. It enforces the deterministic subset
+// strictly, and enforces CBOR_MAX_NESTING_DEPTH as a resource-exhaustion guard
+// against unbounded recursion.
+function decode(b: Buffer, off: number, depth: number): [CborValue, number] {
+  if (depth > CBOR_MAX_NESTING_DEPTH) {
+    throw new CborDepthExceededError("npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)");
+  }
   if (off >= b.length) {
     throw new CborError("npamp/cbor: truncated input");
   }
@@ -183,7 +210,7 @@ function decode(b: Buffer, off: number): [CborValue, number] {
       const out: CborValue[] = [];
       let cur = n;
       for (let i = 0; i < count; i++) {
-        const [el, en] = decode(b, cur);
+        const [el, en] = decode(b, cur, depth + 1);
         out.push(el);
         cur = en;
       }
@@ -201,7 +228,7 @@ function decode(b: Buffer, off: number): [CborValue, number] {
       let prevKeyEnc: Buffer | null = null;
       for (let i = 0; i < count; i++) {
         const keyStart = cur;
-        const [key, kn] = decode(b, cur);
+        const [key, kn] = decode(b, cur, depth + 1);
         const keyEnc = Buffer.from(b.subarray(keyStart, kn));
         // Canonical order: each key MUST sort strictly after the previous one.
         if (prevKeyEnc !== null && !byteLess(prevKeyEnc, keyEnc)) {
@@ -209,7 +236,7 @@ function decode(b: Buffer, off: number): [CborValue, number] {
         }
         prevKeyEnc = keyEnc;
         cur = kn;
-        const [val, vn] = decode(b, cur);
+        const [val, vn] = decode(b, cur, depth + 1);
         cur = vn;
         entries.push({ keyEnc, key, val });
       }

@@ -79,12 +79,26 @@ object NpampCbor {
     }
 
     /**
+     * Bounds how deeply [Dec.item] will recurse into an untrusted CBOR item (RFC 8949
+     * §10 decoder implementation-limits guidance; mirrors the Go reference's
+     * `cborMaxNestingDepth`). A minimally-sized, pathologically deeply-nested input (a
+     * run of array-of-one headers `0x81 0x81 0x81 ...`) costs only one byte per nesting
+     * level, so without a depth bound an attacker-controlled payload can drive
+     * unbounded recursion -- a resource-exhaustion / stack-overflow DoS -- using a
+     * vanishingly small number of wire bytes. The outermost item is depth 1; each array
+     * element, and each map key and value, is one level deeper than its container. An
+     * item that would sit at depth `MAX_NESTING_DEPTH + 1` is rejected before it is
+     * materialized.
+     */
+    private const val MAX_NESTING_DEPTH = 8
+
+    /**
      * Decodes a single canonical CBOR item and requires that it consumes all of [b]
      * (no trailing bytes) -- the shape of a frame payload.
      */
     fun decodeTop(b: ByteArray): Any? {
         val d = Dec(b)
-        val v = d.item()
+        val v = d.item(1)
         if (d.pos != b.size) throw CborException("npamp/cbor: trailing bytes after top-level item")
         return v
     }
@@ -98,7 +112,13 @@ object NpampCbor {
     private class Dec(val b: ByteArray) {
         var pos = 0
 
-        fun item(): Any? {
+        // item decodes one item at the given nesting depth (the top-level item passed
+        // by decodeTop is depth 1). Enforces MAX_NESTING_DEPTH as a resource-exhaustion
+        // guard against unbounded recursion.
+        fun item(depth: Int): Any? {
+            if (depth > MAX_NESTING_DEPTH) {
+                throw CborException("npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)")
+            }
             if (pos >= b.size) throw CborException("npamp/cbor: truncated input")
             val ib = b[pos].toInt() and 0xff
             val major = ib ushr 5
@@ -141,7 +161,7 @@ object NpampCbor {
                     }
                     val count = argBits.toInt()
                     val out = ArrayList<Any?>(count)
-                    repeat(count) { out.add(item()) }
+                    repeat(count) { out.add(item(depth + 1)) }
                     out
                 }
                 5 -> {
@@ -156,7 +176,7 @@ object NpampCbor {
                     var prevKeyEnc: ByteArray? = null
                     repeat(count) {
                         val keyStart = pos
-                        val key = item()
+                        val key = item(depth + 1)
                         val keyEnc = b.copyOfRange(keyStart, pos)
                         // Canonical order: each key MUST sort strictly after the previous one.
                         val prev = prevKeyEnc
@@ -166,7 +186,7 @@ object NpampCbor {
                             )
                         }
                         prevKeyEnc = keyEnc
-                        val value = item()
+                        val value = item(depth + 1)
                         entries.add(Entry(keyEnc, key, value))
                     }
                     CborMap(entries)

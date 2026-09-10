@@ -118,13 +118,27 @@ public static class NpampCbor
     }
 
     /// <summary>
+    /// Bounds how deeply <see cref="Decode"/> will recurse into an untrusted CBOR item
+    /// (RFC 8949 §10 decoder implementation-limits guidance; mirrors the Go reference's
+    /// <c>cborMaxNestingDepth</c>). A minimally-sized, pathologically deeply-nested input
+    /// (a run of array-of-one headers <c>0x81 0x81 0x81 ...</c>) costs only one byte per
+    /// nesting level, so without a depth bound an attacker-controlled payload can drive
+    /// unbounded recursion -- a resource-exhaustion / stack-overflow DoS -- using a
+    /// vanishingly small number of wire bytes. The outermost item is depth 1; each array
+    /// element, and each map key and value, is one level deeper than its container. An
+    /// item that would sit at depth <c>MaxNestingDepth + 1</c> is rejected before it is
+    /// materialized.
+    /// </summary>
+    private const int MaxNestingDepth = 8;
+
+    /// <summary>
     /// Decodes a single canonical CBOR item and requires that it consumes all of
     /// <paramref name="b"/> (no trailing bytes) -- the shape of a frame payload.
     /// </summary>
     public static object? DecodeTop(byte[] b)
     {
         int pos = 0;
-        object? v = Decode(b, ref pos);
+        object? v = Decode(b, ref pos, 1);
         if (pos != b.Length)
         {
             throw new CborException("npamp/cbor: trailing bytes after top-level item");
@@ -132,8 +146,16 @@ public static class NpampCbor
         return v;
     }
 
-    private static object? Decode(byte[] b, ref int pos)
+    // Decode decodes one item from b at the given nesting depth (the top-level item
+    // passed by DecodeTop is depth 1). Enforces MaxNestingDepth as a resource-exhaustion
+    // guard against unbounded recursion.
+    private static object? Decode(byte[] b, ref int pos, int depth)
     {
+        if (depth > MaxNestingDepth)
+        {
+            throw new CborException(
+                "npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)");
+        }
         if (pos >= b.Length)
         {
             throw new CborException("npamp/cbor: truncated input");
@@ -203,7 +225,7 @@ public static class NpampCbor
                 var outList = new List<object?>(count);
                 for (int i = 0; i < count; i++)
                 {
-                    outList.Add(Decode(b, ref pos));
+                    outList.Add(Decode(b, ref pos, depth + 1));
                 }
                 return outList;
             }
@@ -222,7 +244,7 @@ public static class NpampCbor
                 for (int i = 0; i < count; i++)
                 {
                     int keyStart = pos;
-                    object? key = Decode(b, ref pos);
+                    object? key = Decode(b, ref pos, depth + 1);
                     byte[] keyEnc = new byte[pos - keyStart];
                     Array.Copy(b, keyStart, keyEnc, 0, pos - keyStart);
                     // Canonical order: each key MUST sort strictly after the previous one.
@@ -232,7 +254,7 @@ public static class NpampCbor
                             "npamp/cbor: map keys not in canonical ascending order (or duplicate)");
                     }
                     prevKeyEnc = keyEnc;
-                    object? val = Decode(b, ref pos);
+                    object? val = Decode(b, ref pos, depth + 1);
                     entries.Add(new CborMap.Entry(keyEnc, key, val));
                 }
                 return new CborMap(entries);

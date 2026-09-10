@@ -39,6 +39,15 @@ final class CborException extends \RuntimeException
 }
 
 /**
+ * Raised when a CBOR item would be decoded at a nesting depth deeper than
+ * Cbor::MAX_NESTING_DEPTH (resource-exhaustion guard). Mirrors the Go reference's
+ * errCBORDepthExceeded (impl/go/memory_cbor.go).
+ */
+final class CborDepthExceededException extends \RuntimeException
+{
+}
+
+/**
  * Raised when a payload is well-formed deterministic CBOR but violates a channel
  * body contract: not a map, a frame_kind that contradicts the frame type, a
  * missing/mistyped corr, a missing required field, a field of the wrong CBOR
@@ -165,12 +174,25 @@ final class CMap
 final class Cbor
 {
     /**
+     * Bounds how deeply decode() will recurse into an untrusted CBOR item (RFC
+     * 8949 §10 decoder implementation-limits guidance). Mirrors the Go reference's
+     * cborMaxNestingDepth (impl/go/memory_cbor.go). The outermost item is depth 1;
+     * each array element and each map key/value is one level deeper than its
+     * container. An item that would sit at depth MAX_NESTING_DEPTH+1 is rejected
+     * with CborDepthExceededException before it is materialized — a resource-
+     * exhaustion / stack-overflow DoS guard against a minimally-sized,
+     * pathologically deeply-nested input (e.g. a run of array-of-one headers
+     * 0x81 0x81 0x81 ...).
+     */
+    private const MAX_NESTING_DEPTH = 8;
+
+    /**
      * Decode a single deterministic-CBOR item and require that it consumes all of
      * $b (no trailing bytes) — the shape of a frame payload.
      */
     public static function decodeTop(string $b): mixed
     {
-        [$v, $n] = self::decode($b, 0);
+        [$v, $n] = self::decode($b, 0, 1);
         if ($n !== strlen($b)) {
             throw new CborException('npamp/cbor: trailing bytes after top-level item');
         }
@@ -178,13 +200,19 @@ final class Cbor
     }
 
     /**
-     * Decode one item at offset $off. Returns [value, nextOffset]. Enforces the
-     * deterministic subset strictly.
+     * Decode one item at offset $off, at the given nesting depth (the top-level
+     * item passed by decodeTop() is depth 1). Returns [value, nextOffset].
+     * Enforces the deterministic subset strictly, and enforces
+     * MAX_NESTING_DEPTH as a resource-exhaustion guard against unbounded
+     * recursion.
      *
      * @return array{0:mixed,1:int}
      */
-    private static function decode(string $b, int $off): array
+    private static function decode(string $b, int $off, int $depth): array
     {
+        if ($depth > self::MAX_NESTING_DEPTH) {
+            throw new CborDepthExceededException('npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)');
+        }
         $len = strlen($b);
         if ($off >= $len) {
             throw new CborException('npamp/cbor: truncated input');
@@ -240,7 +268,7 @@ final class Cbor
                 $items = [];
                 $o = $n;
                 for ($i = 0; $i < $arg; $i++) {
-                    [$el, $eo] = self::decode($b, $o);
+                    [$el, $eo] = self::decode($b, $o, $depth + 1);
                     $items[] = $el;
                     $o = $eo;
                 }
@@ -254,7 +282,7 @@ final class Cbor
                 $prevKeyEnc = null;
                 for ($i = 0; $i < $arg; $i++) {
                     $keyStart = $o;
-                    [$key, $ko] = self::decode($b, $o);
+                    [$key, $ko] = self::decode($b, $o, $depth + 1);
                     $keyEnc = substr($b, $keyStart, $ko - $keyStart);
                     // Canonical order: each key MUST sort strictly after the previous
                     // one (this also rejects a duplicate key).
@@ -263,7 +291,7 @@ final class Cbor
                     }
                     $prevKeyEnc = $keyEnc;
                     $o = $ko;
-                    [$val, $vo] = self::decode($b, $o);
+                    [$val, $vo] = self::decode($b, $o, $depth + 1);
                     $o = $vo;
                     $entries[] = new CborEntry($keyEnc, $key, $val);
                 }

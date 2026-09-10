@@ -20,6 +20,21 @@ module Npamp
     # the decode-time signal that a frame body MUST be rejected.
     class Error < StandardError; end
 
+    # DepthExceededError is raised when a CBOR item would be decoded at a nesting depth
+    # deeper than MAX_NESTING_DEPTH (resource-exhaustion guard). Mirrors the Go
+    # reference's errCBORDepthExceeded (impl/go/memory_cbor.go).
+    class DepthExceededError < Error; end
+
+    # MAX_NESTING_DEPTH bounds how deeply decode() will recurse into an untrusted CBOR
+    # item (RFC 8949 §10 decoder implementation-limits guidance). Mirrors the Go
+    # reference's cborMaxNestingDepth. The outermost item is depth 1; each array element
+    # and each map key/value is one level deeper than its container. An item that would
+    # sit at depth MAX_NESTING_DEPTH+1 is rejected with DepthExceededError before it is
+    # materialized — a resource-exhaustion / stack-overflow DoS guard against a
+    # minimally-sized, pathologically deeply-nested input (e.g. a run of array-of-one
+    # headers 0x81 0x81 0x81 ...).
+    MAX_NESTING_DEPTH = 8
+
     # Bytes wraps a CBOR byte string (major 2). It is a distinct type from a Ruby
     # String (which represents a CBOR text string, major 3) so a schema can require one
     # and reject the other — the memory_cbor.go []byte-vs-string distinction.
@@ -90,15 +105,18 @@ module Npamp
     # buf (no trailing bytes) — the shape of a frame payload.
     def self.decode_top(buf)
       buf = buf.b
-      value, off = decode(buf, 0)
+      value, off = decode(buf, 0, 1)
       raise Error, "trailing bytes after top-level item" if off != buf.bytesize
 
       value
     end
 
-    # decode decodes one item from buf starting at off, returning [value, next_off]. It
-    # enforces the deterministic subset strictly.
-    def self.decode(buf, off)
+    # decode decodes one item from buf starting at off, at the given nesting depth (the
+    # top-level item passed by decode_top is depth 1). Returns [value, next_off]. It
+    # enforces the deterministic subset strictly, and enforces MAX_NESTING_DEPTH as a
+    # resource-exhaustion guard against unbounded recursion.
+    def self.decode(buf, off, depth)
+      raise DepthExceededError, "nesting depth exceeds limit (resource-exhaustion guard)" if depth > MAX_NESTING_DEPTH
       raise Error, "truncated input" if off >= buf.bytesize
 
       ib = buf.getbyte(off)
@@ -146,7 +164,7 @@ module Npamp
         out = []
         o = n
         arg.times do
-          el, o = decode(buf, o)
+          el, o = decode(buf, o, depth + 1)
           out << el
         end
         [out, o]
@@ -160,7 +178,7 @@ module Npamp
         prev_key_enc = nil
         arg.times do
           key_start = o
-          key, o = decode(buf, o)
+          key, o = decode(buf, o, depth + 1)
           key_enc = buf[key_start...o]
           # Canonical order: each key MUST sort strictly after the previous one. A key
           # that does not is either out of order or a duplicate — both rejected.
@@ -169,7 +187,7 @@ module Npamp
           end
 
           prev_key_enc = key_enc
-          val, o = decode(buf, o)
+          val, o = decode(buf, o, depth + 1)
           m.add(key, key_enc, val)
         end
         [m, o]

@@ -106,6 +106,8 @@ pub enum DecodeError {
     Unsupported,
     /// Map keys were not in strictly ascending canonical order (or a duplicate key).
     MapOrder,
+    /// Nesting depth exceeds `CBOR_MAX_NESTING_DEPTH` (resource-exhaustion guard).
+    DepthExceeded,
 }
 
 impl fmt::Display for DecodeError {
@@ -117,6 +119,7 @@ impl fmt::Display for DecodeError {
             DecodeError::Indefinite => "indefinite-length item (non-deterministic)",
             DecodeError::Unsupported => "unsupported major type or simple value",
             DecodeError::MapOrder => "map keys not in canonical ascending order (or duplicate)",
+            DecodeError::DepthExceeded => "nesting depth exceeds limit (resource-exhaustion guard)",
         };
         write!(f, "npamp/cbor: {s}")
     }
@@ -257,10 +260,22 @@ fn encode_head(major: u8, arg: u64) -> Vec<u8> {
 // Deterministic-CBOR decoder
 // ------------------------------------------------------------------------------------
 
+/// Bounds how deeply [`decode`] will recurse into an untrusted CBOR item (RFC 8949 §10
+/// decoder implementation-limits guidance; mirrors the Go reference's
+/// `cborMaxNestingDepth`). A minimally-sized, pathologically deeply-nested input (a run
+/// of array-of-one headers `0x81 0x81 0x81 ...`) costs only one byte per nesting level,
+/// so without a depth bound an attacker-controlled payload can drive unbounded recursion
+/// — a resource-exhaustion / stack-overflow DoS — using a vanishingly small number of
+/// wire bytes. The outermost item is depth 1; each array element, and each map key and
+/// value, is one level deeper than its container. An item that would sit at depth
+/// `CBOR_MAX_NESTING_DEPTH + 1` is rejected with `DecodeError::DepthExceeded` before it
+/// is materialized.
+const CBOR_MAX_NESTING_DEPTH: u32 = 8;
+
 /// Decodes a single canonical CBOR item and requires it to consume all of `b` (the shape
 /// of a frame payload). Enforces the deterministic subset strictly.
 pub fn decode_top(b: &[u8]) -> Result<CborValue, DecodeError> {
-    let (v, n) = decode(b)?;
+    let (v, n) = decode(b, 1)?;
     if n != b.len() {
         return Err(DecodeError::Trailing);
     }
@@ -281,8 +296,14 @@ fn byte_less(a: &[u8], b: &[u8]) -> bool {
     false
 }
 
-/// Decodes one item from `b`, returning the value and the number of bytes consumed.
-fn decode(b: &[u8]) -> Result<(CborValue, usize), DecodeError> {
+/// Decodes one item from `b` at the given nesting depth (the top-level item passed by
+/// `decode_top` is depth 1), returning the value and the number of bytes consumed.
+/// Enforces `CBOR_MAX_NESTING_DEPTH` as a resource-exhaustion guard against unbounded
+/// recursion.
+fn decode(b: &[u8], depth: u32) -> Result<(CborValue, usize), DecodeError> {
+    if depth > CBOR_MAX_NESTING_DEPTH {
+        return Err(DecodeError::DepthExceeded);
+    }
     if b.is_empty() {
         return Err(DecodeError::Truncated);
     }
@@ -339,7 +360,7 @@ fn decode(b: &[u8]) -> Result<(CborValue, usize), DecodeError> {
             let mut out = Vec::with_capacity(arg as usize);
             let mut off = n;
             for _ in 0..arg {
-                let (el, en) = decode(&b[off..])?;
+                let (el, en) = decode(&b[off..], depth + 1)?;
                 out.push(el);
                 off += en;
             }
@@ -356,7 +377,7 @@ fn decode(b: &[u8]) -> Result<(CborValue, usize), DecodeError> {
             let mut prev_key_enc: Option<Vec<u8>> = None;
             for _ in 0..arg {
                 let key_start = off;
-                let (key, kn) = decode(&b[off..])?;
+                let (key, kn) = decode(&b[off..], depth + 1)?;
                 let key_enc = &b[key_start..key_start + kn];
                 // Canonical order: each key MUST sort strictly after the previous one.
                 if let Some(prev) = &prev_key_enc {
@@ -366,7 +387,7 @@ fn decode(b: &[u8]) -> Result<(CborValue, usize), DecodeError> {
                 }
                 prev_key_enc = Some(key_enc.to_vec());
                 off += kn;
-                let (val, vn) = decode(&b[off..])?;
+                let (val, vn) = decode(&b[off..], depth + 1)?;
                 off += vn;
                 entries.push((key, val));
             }
@@ -1145,6 +1166,20 @@ mod encoder_tests {
         assert_eq!(encode(&CborValue::Bool(true)), vec![0xf5]);
         assert_eq!(encode(&CborValue::Bool(false)), vec![0xf4]);
         assert_eq!(encode(&CborValue::Null), vec![0xf6]);
+    }
+
+    /// RFC 8949 array-encoding + the depth-8 nesting rule (spec-derived, non-circular):
+    /// eight `0x81` (array-of-one) headers wrapping a `0x00` scalar puts the scalar at
+    /// depth 9 (the outermost array is depth 1) and MUST be rejected as
+    /// `DecodeError::DepthExceeded`; seven `0x81` headers plus the scalar puts it at
+    /// depth 8 and MUST decode cleanly.
+    #[test]
+    fn decode_top_enforces_max_nesting_depth() {
+        let reject = [0x81u8, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x00];
+        assert_eq!(decode_top(&reject), Err(DecodeError::DepthExceeded));
+
+        let accept = [0x81u8, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x00];
+        assert!(decode_top(&accept).is_ok());
     }
 
     #[test]

@@ -123,12 +123,26 @@ public final class NpampCbor {
     }
 
     /**
+     * Bounds how deeply {@link Dec#item(int)} will recurse into an untrusted CBOR item
+     * (RFC 8949 §10 decoder implementation-limits guidance; mirrors the Go reference's
+     * {@code cborMaxNestingDepth}). A minimally-sized, pathologically deeply-nested
+     * input (a run of array-of-one headers {@code 0x81 0x81 0x81 ...}) costs only one
+     * byte per nesting level, so without a depth bound an attacker-controlled payload
+     * can drive unbounded recursion -- a resource-exhaustion / stack-overflow DoS --
+     * using a vanishingly small number of wire bytes. The outermost item is depth 1;
+     * each array element, and each map key and value, is one level deeper than its
+     * container. An item that would sit at depth {@code MAX_NESTING_DEPTH + 1} is
+     * rejected before it is materialized.
+     */
+    private static final int MAX_NESTING_DEPTH = 8;
+
+    /**
      * Decodes a single canonical CBOR item and requires that it consumes all of
      * {@code b} (no trailing bytes) -- the shape of a frame payload.
      */
     public static Object decodeTop(byte[] b) {
         Dec d = new Dec(b);
-        Object v = d.item();
+        Object v = d.item(1);
         if (d.pos != b.length) {
             throw new CborException("npamp/cbor: trailing bytes after top-level item");
         }
@@ -154,7 +168,14 @@ public final class NpampCbor {
             this.b = b;
         }
 
-        Object item() {
+        // item decodes one item at the given nesting depth (the top-level item passed
+        // by decodeTop is depth 1). Enforces MAX_NESTING_DEPTH as a resource-exhaustion
+        // guard against unbounded recursion.
+        Object item(int depth) {
+            if (depth > MAX_NESTING_DEPTH) {
+                throw new CborException(
+                        "npamp/cbor: nesting depth exceeds limit (resource-exhaustion guard)");
+            }
             if (pos >= b.length) {
                 throw new CborException("npamp/cbor: truncated input");
             }
@@ -217,7 +238,7 @@ public final class NpampCbor {
                     int count = (int) argBits;
                     List<Object> out = new ArrayList<>(count);
                     for (int i = 0; i < count; i++) {
-                        out.add(item());
+                        out.add(item(depth + 1));
                     }
                     return out;
                 }
@@ -233,7 +254,7 @@ public final class NpampCbor {
                     byte[] prevKeyEnc = null;
                     for (int i = 0; i < count; i++) {
                         int keyStart = pos;
-                        Object key = item();
+                        Object key = item(depth + 1);
                         int keyEnd = pos;
                         byte[] keyEnc = new byte[keyEnd - keyStart];
                         System.arraycopy(b, keyStart, keyEnc, 0, keyEnd - keyStart);
@@ -243,7 +264,7 @@ public final class NpampCbor {
                                     "npamp/cbor: map keys not in canonical ascending order (or duplicate)");
                         }
                         prevKeyEnc = keyEnc;
-                        Object val = item();
+                        Object val = item(depth + 1);
                         entries.add(new Entry(keyEnc, key, val));
                     }
                     return new CborMap(entries);
