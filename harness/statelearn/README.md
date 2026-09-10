@@ -1,12 +1,12 @@
-# T18.2 — LearnLib learned-model diff (R18.2)
+# LearnLib learned-model diff
 
 An active-automata-learning (LearnLib 0.18.0, TTT algorithm + Wp-method equivalence oracle)
 conformance check: it **learns** the N-PAMP Go SDK's actual Mealy state machine from its real
 behavior — driving the real `sdk.DialRaw` / `sdk.AcceptRaw` / `Conn.Recv` /
 `Conn.CloseGraceful` over an in-process `net.Pipe`, never a reimplementation —
 and diffs the learned machine against `harness/statemodel/npamp-state-table.json`, the
-draft-derived reference model T18.1 also uses. Any learned state or transition the table does
-not predict is a conformance defect: a spec gap or an implementation bug (R18.2).
+draft-derived reference model the by-hand deviant-trace suite also uses. Any learned state or
+transition the table does not predict is a conformance defect: a spec gap or an implementation bug.
 
 ## Why this is F3-independent (and why that is the whole point)
 
@@ -18,11 +18,11 @@ state-machine bug shared between the table's author and the implementation canno
 two sides are built from independent authorities, and a real disagreement between them is a
 genuine finding, not a tautology.
 
-T18.1 (`impl/go/sdk/statetrace_test.go`) checks the SAME table by hand-driving a short list of
-specific deviant traces. T18.2 is the complementary, EXHAUSTIVE check: LearnLib's active
-learner does not know in advance which input sequences matter — it discovers the machine's
-actual behavior over the full alphabet from scratch, so it can surface a divergence T18.1
-never thought to probe.
+The by-hand deviant-trace suite (`impl/go/sdk/statetrace_test.go`) checks the SAME table by
+hand-driving a short list of specific deviant traces. This learner is the complementary,
+EXHAUSTIVE check: LearnLib's active learner does not know in advance which input sequences
+matter — it discovers the machine's actual behavior over the full alphabet from scratch, so it
+can surface a divergence the by-hand suite never thought to probe.
 
 ## Architecture
 
@@ -45,7 +45,7 @@ NpampStateLearner.java  <──────────────────�
 
 `harness/statelearn` may not modify any file outside itself, so the SUL cannot import
 `impl/go/sdk`'s unexported test-only helpers the way `impl/go/sdk/statetrace_test.go` (the
-T18.1 template) does — those live in a different package and Go's package boundary blocks a
+deviant-trace suite) does — those live in a different package and Go's package boundary blocks a
 direct import regardless of directory layout. Instead:
 
 - The **SUT is always the real, unmodified, exported entry point**: `sdk.DialRaw` (testing the
@@ -171,7 +171,7 @@ is not actually a pure function of its input prefix):
   the committed learned models.
 - `diff-report.json` — the diff's structured output for the run that produced it.
 
-## Durable gate (T18.2-MBT): two tiers
+## Durable gate (model-based-testing): two tiers
 
 The learn above is EXPENSIVE (~14 min wallclock; needs Java + the LearnLib jar) and its SUL
 reads a timing window over `net.Pipe`, so it is NOT a per-commit gate -- a required gate that
@@ -195,11 +195,11 @@ LF-normalized content of 72 inputs (the whole `impl/go` module's non-test source
 files + the SUL + the Java harness + `learn-config.json`) + the 2 learned models; the models
 and the table are ALSO pinned in `MANIFEST.sha256` (the `verify-pins` gate).
 
-### On-demand full-learn tier (the actual MBT)
+### On-demand full-learn tier (the actual model-based test)
 
-`.github/workflows/statelearn-full.yml` (`workflow_dispatch`) runs `run.sh` -- the full
-LearnLib re-learn -- and uploads the refreshed models + provenance + diff for a maintainer to
-review and commit (no CI auto-commit, Policy P4.3). Run it whenever the freshness gate reports
+Run `./run.sh` locally (or from a manually-triggered CI job) to perform the full
+LearnLib re-learn; it produces the refreshed models + provenance + diff for a maintainer to
+review and commit (no CI auto-commit). Run it whenever the freshness gate reports
 an input change, or on a periodic cadence.
 
 ### What "m-complete" does and does NOT mean here
@@ -209,7 +209,7 @@ probabilistic up to `learn-config.json`'s bound (`eq_rnd_length=4`, `eq_bound_te
 = 2000`). It is NOT the exhaustive, absolutely m-complete Wp of Chow (1978) / Fujiwara et al.
 (1991), which is exponential in the extra-state bound and infeasible here (~145k episodes at
 depth 2 over the timeout-probed `net.Pipe`). The gates are named `state-machine` /
-`statelearn`, NOT "m-complete", by design (F4): the fast tier proves freshness +
+`statelearn`, NOT "m-complete", by design: the fast tier proves freshness +
 model<->table consistency; the full tier proves randomized-Wp equivalence to the configured
 bound. Neither claims absolute completeness.
 
@@ -229,5 +229,5 @@ The committed `learned-{initiator,responder}.json` were learned in commit `0b362
 `net.Pipe` learn) and are provably fresh: `impl/go` + `harness/statelearn` have 0 changes
 since, and the fast tier is green. Learn statistics per role are recorded in `learn-config.json`
 (5 states / 70 transitions each; ~2554 resets; ~17945 membership queries; ~500 s / ~360 s
-wallclock). This section documents the T18.2-MBT durable-gate wiring the initial T18.2 build
-left "to the orchestrator".
+wallclock). This section documents the model-based-testing durable-gate wiring that the
+initial build of this learner left as follow-up work.

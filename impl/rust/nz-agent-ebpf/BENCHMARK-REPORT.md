@@ -1,12 +1,12 @@
-# BENCHMARK-REPORT — `nz-agent-ebpf` (E2.15, R13.6: honest non-race benchmark)
+# BENCHMARK-REPORT — `nz-agent-ebpf` (honest non-race benchmark)
 
-This is the live, measured record for task E2.15 / design-doc requirement R13.6 ("the
+This is the live, measured record for this benchmark's own methodology requirement ("the
 acceleration figure SHALL be measured on a non-`-race` build ... measured number reported
 without rounding"). Every number below was read directly off a live run of
 `loader/src/bin/bench_splice.rs`, `--release`, on this session's own WSL2 host — nothing here
 is estimated, interpolated, or carried over from a different build.
 
-## Measurement conditions (named hardware/kernel, per R13.6)
+## Measurement conditions (named hardware/kernel)
 
 - **Host**: `ShawnS-A16-TUF`
 - **CPU**: AMD Ryzen 7 7735HS with Radeon Graphics, 8 logical CPUs (per `/proc/cpuinfo`), first
@@ -23,9 +23,8 @@ is estimated, interpolated, or carried over from a different build.
 
 ## What is actually compared (read this before the numbers — flagged, not decided)
 
-**`tasks.md`'s own wording for E2.15 says "non-`-race` iptables-baseline vs eBPF path" and
-`requirements.md`'s R13.6 acceptance criterion repeats "iptables baseline vs eBPF path."**
-`bench_splice.rs`, as built (by an earlier task, unmodified by this run), does NOT compare
+**This benchmark's own stated methodology calls for "non-`-race` iptables-baseline vs eBPF path."**
+`bench_splice.rs`, as built (by earlier work, unmodified by this run), does NOT compare
 against an `iptables`/`TPROXY` baseline. Its own header comment is explicit about what it
 actually measures — quoting verbatim:
 
@@ -36,17 +35,17 @@ actually measures — quoting verbatim:
 
 So the comparison actually built and run is **userspace-proxy-copy vs eBPF sockmap splice**, not
 **iptables-REDIRECT/TPROXY vs eBPF**. Both are real, honest baselines for a splice-style fast
-path, but they are not the same baseline the design doc's own acceptance criterion names, and
+path, but they are not the same baseline the stated methodology names, and
 `DatapathStrategy::IptablesTproxy` (`nz-agent/src/datapath.rs`) is a REAL strategy this crate's
 selector ladder already models — an `iptables`-arm harness reusing `capture::IptablesCapture`'s
-rule construction is buildable, but is a SEPARATE build task, not something this task
-(run-the-harness-and-record) silently substitutes or decides on its own authority.
+rule construction is buildable, but is a separate piece of work, not something this
+run-the-harness-and-record pass silently substitutes or decides on its own authority.
 
-**FLAGGED FOR THE MAINTAINER, NOT DECIDED HERE: is a literal `iptables`-baseline arm required to
-close R13.6, or does the userspace-proxy-copy baseline already built satisfy the intent (both
+**FLAGGED, NOT DECIDED HERE: is a literal `iptables`-baseline arm required to
+close this methodology gap, or does the userspace-proxy-copy baseline already built satisfy the intent (both
 measure "the cost of NOT having a kernel-resident fast path")?**
 
-Two further, smaller gaps against R13.6's exact wording, also flagged rather than silently
+Two further, smaller gaps against the stated methodology, also flagged rather than silently
 patched:
 
 - **"TCP_CRR/TCP_STREAM/P50/P99"**: this is netperf's own test-type vocabulary (`TCP_CRR` =
@@ -121,7 +120,7 @@ RESULT: splice mean latency is 0.04x the baseline mean latency (3.18us vs 85.00u
   58.14us) — consistent with occasional OS scheduling jitter on a shared WSL2 VM, not a
   systematic slowdown (p50/p95/p99 stay tight and consistent across all 5 runs).
 - The SPLICE arm's sanity check (`bench_splice.rs`'s own "confirm the redirect actually fires
-  before timing anything" gate — D3, inert-machinery-is-a-defect) passed on every run; no numbers
+  before timing anything" gate) passed on every run; no numbers
   here were collected from a datapath that silently failed to redirect.
 - Throughput scales as expected with payload size: MiB/s roughly 16x higher at 1024B than at 64B
   for the SPLICE arm (19.581 -> 307.321), consistent with a fixed per-message overhead dominating

@@ -1,6 +1,6 @@
-# Public-LLM egress: PQC-vs-classical hops and self-secured-object compensation (E2.23)
+# Public-LLM egress: PQC-vs-classical hops and self-secured-object compensation
 
-Reviewed doc, no code (per E2.23's own acceptance criterion). Scope: an
+Reviewed doc, no code. Scope: an
 N-PAMP mesh workload that must call a **public** LLM provider (a hosted
 API — e.g. `api.openai.com`, `api.anthropic.com` — outside the mesh's trust
 domain) as opposed to an in-mesh or self-hosted model reachable over N-PAMP
@@ -21,11 +21,11 @@ scoped, honest statement instead of an unbounded one.
 
 | Traffic type | Hop 1: workload -> node agent / waypoint | Hop 2: node agent -> mesh egress point | Hop 3: mesh egress -> public LLM provider |
 |---|---|---|---|
-| **In-mesh agent-to-agent** (MCP/A2A over `NPAMP-CC-JSONRPC`) | N-PAMP hybrid-PQC (`nz_agent::tunnel` mux over a live `npamp::session::Session`, R12) | N-PAMP hybrid-PQC (same session, no re-encryption) | N/A — never leaves the mesh |
+| **In-mesh agent-to-agent** (MCP/A2A over `NPAMP-CC-JSONRPC`) | N-PAMP hybrid-PQC (`nz_agent::tunnel` mux over a live `npamp::session::Session`) | N-PAMP hybrid-PQC (same session, no re-encryption) | N/A — never leaves the mesh |
 | **Agent-to-self-hosted-model** (a model the operator runs inside the mesh, `NPAMP-CC-HTTP` or `NPAMP-CC-STREAM`) | N-PAMP hybrid-PQC | N-PAMP hybrid-PQC | N/A — never leaves the mesh |
 | **Agent-to-public-LLM, request/response** (`NPAMP-CC-HTTP`) | N-PAMP hybrid-PQC | N-PAMP hybrid-PQC, to the mesh's designated egress waypoint/gateway | **Classical TLS 1.3 only** (the provider's own endpoint; no N-PAMP peer exists past this point) |
 | **Agent-to-public-LLM, streaming** (`NPAMP-CC-STREAM`, e.g. SSE token streaming) | N-PAMP hybrid-PQC | N-PAMP hybrid-PQC, to egress | **Classical TLS 1.3 only**, same boundary as above — a streamed response is still bytes over the same classical hop, not a separate risk class |
-| **Agent-to-public-LLM via agentgateway `appProtocol: npamp` backend (R14, if/when the upstream connection type from E2.19 lands)** | N-PAMP hybrid-PQC | N-PAMP hybrid-PQC to the gateway | Still **classical TLS only** past the gateway — E2.19's connection type protects the hop INTO the gateway/mesh edge, it cannot make a third-party provider speak N-PAMP it never agreed to |
+| **Agent-to-public-LLM via agentgateway `appProtocol: npamp` backend (if/when upstream connection-type support lands)** | N-PAMP hybrid-PQC | N-PAMP hybrid-PQC to the gateway | Still **classical TLS only** past the gateway — the connection type protects the hop INTO the gateway/mesh edge, it cannot make a third-party provider speak N-PAMP it never agreed to |
 
 **The one universal fact this table encodes:** the classical-TLS-only hop
 is always the LAST hop, and always exactly one hop — the mesh egress point
@@ -41,7 +41,7 @@ TLS tunnel" — it carries its own COSE-signed envelope, `effect`-class,
 `audience`, and identity fields, verified independent of whatever
 transport carried it (see `impl/rust/nz-agent/src/waypoint.rs`'s
 `EffectClass`/`AuthzHook`/`authorize()` — the same effect-class/audience
-lattice this mesh's own `ext_authz` composition, R14-Unit-A, enforces at
+lattice this mesh's own `ext_authz` composition enforces at
 the gateway). This is the property that COMPENSATES for the classical-only
 last hop:
 
@@ -68,9 +68,8 @@ last hop:
 
 - This doc does not claim any mechanism makes the classical-TLS-only hop
   PQC-safe. It cannot be, without the public provider adopting N-PAMP —
-  outside this build's control (same conclusion `_r14-agentgateway-scoping.md`
-  reached for R14-Unit-C: a native `npamp` backend on the MESH side changes
-  nothing about what the THIRD PARTY speaks).
+  outside this build's control (a native `npamp` backend on the mesh side
+  changes nothing about what the third-party provider speaks).
 - This doc does not specify a NEW wire mechanism for "self-secured-object
   compensation" — it names the EXISTING N-AALP object properties
   (signature, effect-class, audience) already carried end to end by this
@@ -89,12 +88,12 @@ last hop:
   `NPAMP-CC-JSONRPC`) are already specified (`spec/companion/{20,21,23}_*`)
   and implemented (`impl/go/proxy/carriage_*.go`).
 - The effect-class/audience lattice this doc cites as the self-secured
-  object's own authorization surface is the SAME core R14-Unit-A's
-  `ext_authz` service (`impl/rust/nz-agent-extauthz`) enforces at the
+  object's own authorization surface is the same core `ext_authz` service
+  (`impl/rust/nz-agent-extauthz`) enforces at the
   gateway boundary — this doc's "self-secured object" language is not a
-  new concept invented for E2.23, it names what that already-built,
+  new concept, it names what that already-built,
   mutation-tested authorization core already checks.
-- E2.19/E2.20 (this build) protect exactly Hop 1/Hop 2 in the table above
+- This build's connector work protects exactly Hop 1/Hop 2 in the table above
   for the `appProtocol: npamp` backend-dial case — this doc is the
   companion document naming what those hops do NOT cover (Hop 3), so the
   two pieces of work read as one coherent picture rather than two
