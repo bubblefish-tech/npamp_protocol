@@ -1,12 +1,12 @@
-# N-PAMP draft-02 — IANA Actions (T20.2)
+# N-PAMP draft-02 — IANA Actions
 
 One section per IANA-facing action this document requests. Each row states value,
 policy, and the normative reference in the draft. This is a repo-local tracking
 document; it makes no submission-status claim and records no ISE/IANA decision — see
-`GitHub/ietf/draft-bubblefish-npamp-02.xml` §IANA Considerations for the normative text
+`ietf/draft-bubblefish-npamp-02.xml` §IANA Considerations for the normative text
 that would actually be submitted.
 
-**ISE registry-strategy constraint (runbook §A.4, recorded here per T20.2):** because
+**ISE registry-strategy constraint:** because
 this document is intended for the Independent Submission stream, any NEW IANA-hosted
 registry it created would need RFC-Required or First-Come-First-Served policy (not
 Specification-Required / Expert-Review, which presumes IETF-stream review), and code
@@ -85,6 +85,6 @@ IANA action traceable to a deliberate registry-strategy decision, not an oversig
 - Consolidates the IANA Considerations section already present in
   `draft-bubblefish-npamp-02.xml`/`.md` (normative source of truth) with the
   registry-strategy decision already recorded in `docs/REGISTRATION-REQUEST.md` Part C.
-- Cross-checked against `idnits.txt` (T20.3, this pass) for reference-currency issues.
-- Written as a reconciliation/tracking artifact (T20.2); it is not itself submitted to
+- Cross-checked against `idnits` output for reference-currency issues.
+- Written as a reconciliation/tracking artifact; it is not itself submitted to
   IANA and states no external decision.
