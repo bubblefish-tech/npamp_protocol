@@ -77,26 +77,34 @@ func TestHandleInboundStreamRequest_Cancel_StopsProduction(t *testing.T) {
 	ingress, egress := connectedProxyPairForTest(t, backendURL)
 	ingress.init() // idempotent; guarantees p.streamPending exists before this test touches it directly
 
-	// A WebSocketHandler that returns many events; the cancel flag is set
-	// before Run's producer loop starts (a deterministic worst case for the
-	// cooperative per-event check: cancellation observed before the FIRST
-	// emission).
+	// A WebSocketHandler that returns many events. To make the "cancel stops
+	// production" property DETERMINISTIC rather than a producer-vs-cancel-delivery
+	// race, the handler blocks after signalling handlerStarted until the test has
+	// CONFIRMED the per-stream cancel flag is set on the egress side; only then
+	// does it return the events into the producer loop. handleInboundStreamRequest
+	// runs in its own goroutine (proxy.go dispatches handleInboundBridgeRequest via
+	// `go`), so blocking the handler does NOT block the egress Run loop from
+	// processing the inbound cancel frame -- the cancel is therefore guaranteed
+	// observed BEFORE the first emission, the boundary case of the §7.2 rule
+	// "a cancel observed mid-stream MUST stop the producer from emitting further
+	// frames" (here: zero further frames).
 	events := make([][]byte, 50)
 	for i := range events {
 		events[i] = []byte("event")
 	}
 	// handlerStarted signals that this goroutine has reached the handler --
-	// which stream.go's handleInboundStreamRequest only calls AFTER
-	// registering the per-stream cancel flag (program order, same
-	// goroutine). The test blocks on this signal before sending the cancel
-	// frame, which establishes (via the channel receive + the shared mutex
-	// both sides take) a proper happens-before relationship: the cancel
-	// frame's arrival cannot be processed by handleInboundStreamFrame until
-	// AFTER the cancel flag is guaranteed registered, eliminating the
-	// registration-vs-cancel race that a fixed sleep would only paper over.
+	// which stream.go's handleInboundStreamRequest only calls AFTER registering
+	// the per-stream cancel flag (program order, same goroutine) -- so once it
+	// fires the flag is registered and an inbound cancel can be routed to it.
+	// cancelObserved unblocks the handler once the test has confirmed the flag is
+	// set (the atomicBool + shared mu give the happens-before), eliminating the
+	// registration-vs-cancel AND the producer-vs-cancel-delivery races that a
+	// fixed sleep would only paper over.
 	handlerStarted := make(chan struct{})
+	cancelObserved := make(chan struct{})
 	egress.WebSocketHandler = func(ctx context.Context, msg []byte) ([][]byte, error) {
 		close(handlerStarted)
+		<-cancelObserved
 		return events, nil
 	}
 
@@ -135,10 +143,32 @@ func TestHandleInboundStreamRequest_Cancel_StopsProduction(t *testing.T) {
 		t.Fatalf("Send cancel: %v", err)
 	}
 
-	// Drain until BRIDGE_STREAM_END; assert far fewer than 50 events arrived
-	// (the exact count is a race between the cancel and the producer loop,
-	// which is inherent to cooperative mid-stream cancellation -- the
-	// invariant this test proves is "far fewer than the full 50", not "zero").
+	// Wait until the egress side has actually SET the per-stream cancel flag (the
+	// cancel frame above is processed by handleInboundStreamFrame on the free
+	// egress Run goroutine), THEN release the handler. This makes the interleaving
+	// deterministic: production starts with the flag already set, so the very
+	// first per-event check in stream.go stops it before any BRIDGE_STREAM_DATA.
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	for {
+		egress.mu.Lock()
+		cf, ok := egress.streamCancel[string(corrID)]
+		egress.mu.Unlock()
+		if ok && cf.get() {
+			break
+		}
+		select {
+		case <-deadline.C:
+			t.Fatal("egress never set the per-stream cancel flag after the cancel frame was sent")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	close(cancelObserved)
+
+	// Drain until BRIDGE_STREAM_END; assert ZERO data events arrived. The
+	// interleaving is now deterministic (the handler was released only after the
+	// cancel flag was confirmed set), so the cooperative per-event check stops the
+	// producer before its first emission.
 	got := 0
 	sawEnd := false
 	sawCancelAck := false
@@ -158,8 +188,12 @@ func TestHandleInboundStreamRequest_Cancel_StopsProduction(t *testing.T) {
 			t.Fatal("timed out waiting for BRIDGE_STREAM_END")
 		}
 	}
-	if got >= len(events) {
-		t.Fatalf("got %d events before END, want fewer than %d (the cancel must have stopped production)", got, len(events))
+	// Mutation anchor: the cancel was observed before the first emission, so the
+	// producer MUST emit zero BRIDGE_STREAM_DATA frames. If stream.go's producer
+	// loop stops honouring the per-event cancel check, all len(events) frames
+	// arrive and this fails.
+	if got != 0 {
+		t.Fatalf("got %d BRIDGE_STREAM_DATA events, want 0 (the cancel was confirmed set before the first emission and MUST stop production)", got)
 	}
 	if !sawCancelAck {
 		t.Fatal("the terminating BRIDGE_STREAM_END did not carry cancel_ack (§7.2)")
