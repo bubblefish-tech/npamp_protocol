@@ -84,7 +84,7 @@
 //!   against). It does not add a `Transport::Npamp` variant to agentgateway's
 //!   own `client::mod.rs` match, add an async `client/npamp_tunnel.rs`
 //!   module to that (separate, external) repository, or open the PR — see
-//!   `docs/agentgateway-npamp-backend-connector-PR-draft.md` for that
+//!   an internal design note for that
 //!   concrete, citation-grounded writeup, and mesh-underlay validation
 //!   (E2.18, actually running agentgateway pods in-mesh with a packet trace)
 //!   is held pending a live cluster, per this build's own task table.

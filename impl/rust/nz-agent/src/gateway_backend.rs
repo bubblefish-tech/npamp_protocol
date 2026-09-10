@@ -55,11 +55,7 @@
 //! [`connect_npamp_backend`]'s SYNC core via `tokio::task::spawn_blocking`
 //! (`npamp::session::Session`'s bounded-core API is deliberately
 //! synchronous — see that crate's own module docs — so an async host wraps
-//! it, it does not reimplement it). See
-//! `docs/agentgateway-npamp-backend-connector-PR-draft.md` for the concrete
-//! PR-shaped writeup citing this seam, since this build environment does
-//! not have write access to the upstream `agentgateway/agentgateway`
-//! repository (a separate project) to open that PR directly.
+//! it, it does not reimplement it).
 //!
 //! # What this module actually builds (the prototype connection type)
 //!
