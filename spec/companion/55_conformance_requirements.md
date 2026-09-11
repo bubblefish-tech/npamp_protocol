@@ -344,7 +344,7 @@ tag mismatch — plus the Sovereign KEM-refusal invariant.
 > §{{error-handling}}), not a header-parse rule — `header.decode` accepts any
 > 16-bit Frame Type value because frame-type validity is scoped to the
 > (role, state) the frame arrives in, not to the header alone. That rule is
-> exercised by the T18.1 deviant-trace suite (`impl/go/sdk/statetrace_test.go`,
+> exercised by the deviant-trace conformance suite (`impl/go/sdk/statetrace_test.go`,
 > driven from `harness/statemodel/npamp-state-table.json`) against the Go
 > reference implementation, but — unlike the corpus above — is not yet
 > exported as a machine-gradable, cross-language byte-level vector set; a
@@ -398,7 +398,7 @@ Tier A or Tier B run.
   SecP384r1MLKEM1024 KEM has a Go reference KEM-wire KAT
   (`impl/go/kem1024_kat_test.go`) anchoring the secp384r1 leg to RFC 5903 §8.2 and
   asserting the ECDHE-first (P-384-first) wire and IKM order; a cross-language JSON
-  corpus vector for it is Phase-4 (T18.3, tracked).
+  corpus vector for it is planned but not yet available (tracked).
 
 ### 8.4 Profile coverage limits
 

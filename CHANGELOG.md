@@ -59,7 +59,7 @@ Revision of the Internet-Draft. Wire-breaking vs draft-01.
   the reference implementation, which has always marshalled two regions. Payload
   Length is defined as the octet count of everything after the 36-octet header — the
   frame-type body (including any extension TLVs) and the trailing 16-octet AEAD tag.
-  No wire bytes change. ADR 0013 records the decision.
+  No wire bytes change.
 - **Stream framing stated.** Frames are self-delimiting via the Payload Length
   field: over TCP/TLS a reader reads the 36-octet header, takes Payload Length, and
   consumes exactly 36 + Payload Length octets. The reference implementation adds a

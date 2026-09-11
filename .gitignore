@@ -15,6 +15,9 @@ draft-bubblefish-npamp-*.pdf
 node_modules/
 .venv/
 __pycache__/
+# Local agent-session state (hook debug logs etc.) — can embed a developer's
+# absolute machine path; never a repo artifact.
+.local/
 # npm build/pack outputs (regenerate via `npm run build` / `npm pack`)
 impl/typescript/dist/
 *.tgz

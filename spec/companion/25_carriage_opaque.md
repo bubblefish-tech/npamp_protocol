@@ -429,7 +429,7 @@ operation of this document. Both are now assigned by the core specification
    handshake-only use of fixed 32-octet length, which does not fit a
    variable-length media-type string. `0x0012` was reserved for a companion
    specification but unconsumed (it was returned to that status when the
-   unspecified "AnomalyCharge" TLV was retired, DECISIONS.md D11/T15.2) and had
+   unspecified "AnomalyCharge" TLV was retired) and had
    the high bit `0x8000` clear (so endpoints that do not implement opaque
    carriage ignore it rather than rejecting the frame) and variable length — it
    is now assigned to OpaqueContentType.

@@ -78,9 +78,8 @@ This document does NOT:
 * **Bind TLV `0x12` to this channel.** The core specification's TLV `0x12` is
   currently assigned to **OpaqueContentType**, a general per-frame media-type
   discriminator for the NPAMP-CC-OPAQUE carriage companion (Immune interface
-  reference §4; ADR 0015). `0x12` previously named an unspecified "AnomalyCharge"
-  TLV, retired to `(reserved)` before this reassignment (DECISIONS.md D11, task
-  T15.2, approved 2026-08-27). Neither the current nor the retired assignment is an
+  reference §4). `0x12` previously named an unspecified "AnomalyCharge"
+  TLV, retired to `(reserved)` before this reassignment. Neither the current nor the retired assignment is an
   Immune operation, and no frame in this document uses it.
 * **Change the core wire format.** It alters no field of the core frame header, no
   reserved all-channel frame type, the extension-TLV encoding, or any code point

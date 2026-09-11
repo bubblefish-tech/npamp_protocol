@@ -24,8 +24,8 @@ obtains its ML-KEM and ECDH/ECDHE shared secrets from a *different* provider —
 Go's `crypto/mlkem`/`crypto/ecdh`, Rust's RustCrypto or `liboqs-rust`,
 `liboqs` bindings elsewhere, an OpenSSL 3.5/`oqs-provider` binding, and so on.
 Re-implementing the per-group ordering rule inside each provider binding would
-be exactly the kind of per-language reimplementation the ecosystem work exists
-to eliminate (Part-2 design.md, "buy-before-make"). This document specifies
+be exactly the kind of per-language reimplementation this adapter exists
+to eliminate. This document specifies
 the **one piece we author**: a small, provider-agnostic adapter that performs
 only the combiner-order concatenation, so every language binds one shared rule
 instead of re-deriving it.

@@ -26,7 +26,7 @@ code, KEM/signature-suite selection) is either maintained inside this specificat
 | Identification Sequence | `0x6E 0x2D 0x70 0x61 0x6D 0x70 0x2F 0x33` (UTF-8 "n-pamp/3") |
 | Policy | Expert Review (RFC 8126) |
 | Reference | This document, §IANA Considerations / ALPN Protocol Identifier |
-| Notes | "n-pamp/1" and "n-pamp/2" are prior crypto generations, deprecated (SHOULD NOT negotiate for new associations); not replaced, both remain registered for history. Each future crypto generation gets a new identifier — this is not an on-wire minor-version field (T0.2 decision, D-ADR-0014). |
+| Notes | "n-pamp/1" and "n-pamp/2" are prior crypto generations, deprecated (SHOULD NOT negotiate for new associations); not replaced, both remain registered for history. Each future crypto generation gets a new identifier — this is not an on-wire minor-version field. |
 
 ## 2. URI Scheme — existing registry, provisional/FCFS, reference update only
 

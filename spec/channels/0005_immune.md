@@ -190,10 +190,9 @@ Notes and honest boundaries:
 - **TLV `0x12` is not part of this channel's interface.** The core specification's
   TLV type registry currently assigns `0x12` to **OpaqueContentType**, a general
   **per-frame media-type discriminator** used by the NPAMP-CC-OPAQUE carriage
-  companion (core specification §9, TLV Type Registry; ADR 0015). `0x12` previously
+  companion (core specification §9, TLV Type Registry). `0x12` previously
   named an unspecified "AnomalyCharge" TLV, which was retired to `(reserved)`
-  before this reassignment (DECISIONS.md D11, task T15.2, approved 2026-08-27) —
-  neither the current nor the retired assignment was ever bound to the Immune
+  before this reassignment — neither the current nor the retired assignment was ever bound to the Immune
   channel or made an Immune operation; it is a general wire-level mechanism, not an
   Immune-channel report frame. This reference does not claim any relationship the
   core specification does not state.

@@ -611,5 +611,5 @@ grade them (a SETTLE_INTENT pair, a RECEIPT pair, a batch-commit pair and a
 malformed-body rejections), but no non-circular vector oracle grades those behavioural
 clauses yet; a claim of conformance to them is established by such a recorded live
 exchange, not by the pinned vector corpus. The live-exchange harness for the §5–§9
-behavioural clauses is tracked as an open gap in the project's spec-parity ledger; the
+behavioural clauses is tracked as an open conformance gap; the
 `settlement.body.decode` payload surface is graded today.
