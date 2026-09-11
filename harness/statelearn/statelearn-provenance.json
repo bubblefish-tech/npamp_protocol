@@ -1,5 +1,5 @@
 {
-  "_doc": "Provenance baseline for the T18.2 state-machine conformance gate. The committed learned-*.json under outputs were learned by NpampStateLearner.java driving the real impl/go SDK, whose source (+ the SUL driver, the Java harness, and the learn parameters) is pinned under inputs at the hashes below. statelearn_freshness.py fails if any input hash changed (models stale -> relearn) or any output hash changed without a relearn (model fabricated). This is a freshness + non-fabrication check, NOT an m-completeness proof (see the module docstring).",
+  "_doc": "Provenance baseline for the state-machine conformance gate. The committed learned-*.json under outputs were learned by NpampStateLearner.java driving the real impl/go SDK, whose source (+ the SUL driver, the Java harness, and the learn parameters) is pinned under inputs at the hashes below. statelearn_freshness.py fails if any input hash changed (models stale -> relearn) or any output hash changed without a relearn (model fabricated). This is a freshness + non-fabrication check, NOT an m-completeness proof (see the module docstring).",
   "hash_algo": "sha256-lf-normalized",
   "learn_config_ref": "harness/statelearn/learn-config.json",
   "full_learn_recipe": "harness/statelearn/run.sh  (Windows: README.md 'Run on Windows')",
