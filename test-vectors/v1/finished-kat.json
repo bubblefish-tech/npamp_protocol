@@ -6,7 +6,7 @@
       "verify_data vs ComputeFinished (impl leg) + VerifyFinished accept/reject — guards the impl"
     ],
     "not_covered_here": [
-      "finished_key DERIVATION (key-schedule KAT, ADR-0008)",
+      "finished_key DERIVATION (key-schedule KAT)",
       "High/Sovereign (SHA-384, HashLen 48): this vector is Standard/SHA-256"
     ]
   },

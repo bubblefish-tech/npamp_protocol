@@ -19,9 +19,14 @@ type Transcript struct {
 }
 
 // NewTranscript returns an empty transcript using the negotiated profile's KDF
-// hash (SHA-256 at Standard, SHA-384 at High/Sovereign).
-func NewTranscript(p Profile) *Transcript {
-	return &Transcript{newHash: hashForProfile(p)}
+// hash (SHA-256 at Standard). A profile other than Standard is refused with
+// ErrNoSuiteForProfile.
+func NewTranscript(p Profile) (*Transcript, error) {
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
+	return &Transcript{newHash: h}, nil
 }
 
 // AddFrameType absorbs a frame's 2-octet big-endian frame type. Nothing else

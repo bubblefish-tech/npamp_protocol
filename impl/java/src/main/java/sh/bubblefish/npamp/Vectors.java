@@ -20,13 +20,6 @@ public final class Vectors {
         return b;
     }
 
-    /** Returns a buffer of {@code count} octets all equal to {@code value}. */
-    private static byte[] fill(int value, int count) {
-        byte[] b = new byte[count];
-        java.util.Arrays.fill(b, (byte) value);
-        return b;
-    }
-
     public static String render() {
         // 1) header = Frame{PING, Control, seq=0, no payload}.marshal()
         Npamp.Frame f1 = new Npamp.Frame(Npamp.FRAME_PING, Npamp.CHAN_CONTROL);
@@ -44,21 +37,12 @@ public final class Vectors {
         byte[] pt3 = "hello world".getBytes(StandardCharsets.US_ASCII);
         String aead = Npamp.toHex(Npamp.sealAes256Gcm(key3, iv3, 7L, aad3, pt3));
 
-        // 4) traffic = deriveKeyIv(deriveTrafficSecret(master=48*0x2A, dir=0, epoch=0,
-        //          suite=AES-256-GCM, channel=Control, standard=false), standard=false)[key]
-        byte[] master = fill(0x2A, 48);
-        byte[] secret = Npamp.deriveTrafficSecret(master, 0, 0L,
-                Npamp.AEAD_AES256_GCM, Npamp.CHAN_CONTROL, false);
-        byte[] trafficKey = Npamp.deriveKeyIv(secret, false)[0];
-        String traffic = Npamp.toHex(trafficKey);
-
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         sb.append("  \"spec\": \"draft-bubblefish-npamp-00\",\n");
         sb.append("  \"header_ping_control_seq0\": \"").append(header).append("\",\n");
         sb.append("  \"nonce_iv1to12_seq0102\": \"").append(nonce).append("\",\n");
-        sb.append("  \"aes256gcm_seal_helloworld\": \"").append(aead).append("\",\n");
-        sb.append("  \"traffic_key_sha384\": \"").append(traffic).append("\"\n");
+        sb.append("  \"aes256gcm_seal_helloworld\": \"").append(aead).append("\"\n");
         sb.append("}\n");
         return sb.toString();
     }

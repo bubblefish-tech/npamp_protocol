@@ -1,6 +1,6 @@
 # Issue/PR label taxonomy for N-PAMP (RFC 8874 "WG GitHub Usage Guidance" + quicwg practice).
 # The decision-process rule (CONTRIBUTING.md): every `design`-consensus issue produces a
-# closing comment + a numbered ADR in decisions/ + a "Since draft-NN" change-log bullet.
+# closing comment + a recorded decision + a "Since draft-NN" change-log bullet.
 
 - name: design
   color: "d73a4a"

@@ -15,7 +15,6 @@ type vectors struct {
 	HeaderPing  string `json:"header_ping_control_seq0"`
 	Nonce       string `json:"nonce_iv1to12_seq0102"`
 	AEADSeal    string `json:"aes256gcm_seal_helloworld"`
-	TrafficKey  string `json:"traffic_key_sha384"`
 }
 
 func main() {
@@ -43,20 +42,11 @@ func main() {
 	(&npamp.Frame{Type: uint16(npamp.FramePing), Channel: uint16(npamp.ChanControl)}).HeaderPrefix(aad, 11)
 	sealed, _ := npamp.SealAES256GCM(key, iv2, 7, aad, []byte("hello world"))
 
-	// 4. Key schedule: master = 48 x 0x2A (SHA-384 length), High profile, traffic secret -> key.
-	master := make([]byte, 48)
-	for i := range master {
-		master[i] = 0x2A
-	}
-	ts, _ := npamp.DeriveTrafficSecret(master, npamp.DirClientToServer, 0, npamp.AEADAES256GCM, npamp.ChanControl, npamp.ProfileHigh)
-	tk, _, _ := npamp.DeriveKeyIV(ts, npamp.ProfileHigh)
-
 	out := vectors{
 		Spec:       "draft-bubblefish-npamp-00",
 		HeaderPing: hex.EncodeToString(hdr),
 		Nonce:      hex.EncodeToString(n[:]),
 		AEADSeal:   hex.EncodeToString(sealed),
-		TrafficKey: hex.EncodeToString(tk[:]),
 	}
 	b, _ := json.MarshalIndent(out, "", "  ")
 	fmt.Println(string(b))

@@ -22,7 +22,7 @@ const MaxFrameSize = 16 << 20 // 16 MiB
 // protocol -- a receiver MUST reject any frame whose Ver nibble != 0x2. The crypto
 // generation is carried out of band by the negotiated ALPN identifier (currently
 // "n-pamp/3"), or by explicit configuration where frames are exchanged without TLS;
-// a raw frame is not generation-self-describing (ADR 0014).
+// a raw frame is not generation-self-describing.
 const ProtocolVersion uint8 = 0x2
 
 // Magic is the 4-octet frame magic, ASCII "NPAM".

@@ -236,7 +236,7 @@ public final class HandshakeFlowKat {
                 x25519Ss, sat(root, "inputs", "x25519_shared_secret"));
 
         // ML-KEM leg: JDK 21 ships no ML-KEM (this impl is no-new-dep tier), so the ML-KEM
-        // shared secret is the pinned self-validating input. Combine ML-KEM-first (ADR-0005).
+        // shared secret is the pinned self-validating input. Combine ML-KEM-first.
         byte[] combined = new byte[wantMlkemSs.length + x25519Ss.length];
         System.arraycopy(wantMlkemSs, 0, combined, 0, wantMlkemSs.length);
         System.arraycopy(x25519Ss, 0, combined, wantMlkemSs.length, x25519Ss.length);

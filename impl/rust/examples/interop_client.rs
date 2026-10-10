@@ -7,24 +7,19 @@
 //! (Rust<->Rust) or the Go reference harness impl/go/cmd/npamp-interop -role server
 //! (Go<->Rust) — the two-interoperable-implementations unlock.
 //!
-//! At `--profile standard` (the default) this drives `Session::dial` — the
-//! original Ed25519-only entry point, byte-unchanged. At `--profile high` /
-//! `--profile sovereign` this drives the multi-profile entry point
-//! `Session::dial_with_profiles` (spec/05_profiles.md; draft-00 section 6)
-//! instead, offering exactly the requested profile and authenticating with a
-//! freshly generated ML-DSA-87 identity — the SAME entry point
-//! `session.rs`'s own `#[cfg(test)]` module drives over an in-memory pipe,
-//! run here for the first time over a real loopback `TcpStream`.
+//! At `--profile standard` (the default) this drives `Session::dial`. At
+//! `--profile high` / `--profile sovereign` this drives the multi-profile entry
+//! point `Session::dial_with_profiles` (spec/05_profiles.md; draft-00 section 6),
+//! which this crate answers with `NoSuiteForProfile`: only the Standard profile is
+//! implemented, so the example reports the refusal and exits 1 before any
+//! handshake byte is sent.
 //!
 //!   cargo run --example interop_client -- 127.0.0.1:47700 --profile standard
-//!   cargo run --example interop_client -- 127.0.0.1:47700 --profile high
-//!   cargo run --example interop_client -- 127.0.0.1:47700 --profile sovereign
 //!
 //! Exit code 0 iff the handshake completes AND the server echo byte-matches the
 //! sent payload. Transport: raw TCP (the handshake is transport-agnostic; the Go
 //! SDK's TLS transport binding is not exercised here — see `npamp::session` docs).
 
-use npamp::mldsa87;
 use npamp::session::{self, Session};
 use std::net::TcpStream;
 use std::process::exit;
@@ -32,10 +27,9 @@ use std::process::exit;
 const APP_FRAME_TYPE: u16 = 0x0120; // application-defined frame type
 const CHAN_MEMORY: u16 = npamp::CHAN_MEMORY;
 
-/// The three profiles `Session::dial_with_profiles`/`Session::accept_with_profiles`
-/// negotiate (spec/05_profiles.md). Standard still runs through the original
-/// `Session::dial`/`Session::accept` pair — this enum only selects which entry
-/// point + identity material this example builds, never a new wire behavior.
+/// The three profile code points (spec/05_profiles.md). Standard runs through
+/// `Session::dial`; High and Sovereign are offered through
+/// `Session::dial_with_profiles` and refused by this crate.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Profile {
     Standard,
@@ -104,28 +98,11 @@ fn main() {
     let identity = session::generate_identity();
     println!("interop_client: identity ed25519 = {}", hex8(&identity.verifying_key().to_bytes()));
 
-    // Standard runs the original Session::dial (byte-unchanged); High/Sovereign
-    // runs the multi-profile entry point with a freshly generated ML-DSA-87
-    // long-term identity — required (fail-closed inside dial_with_profiles) for
-    // either non-Standard profile.
-    let mldsa_identity = if profile != Profile::Standard {
-        let id = mldsa87::Identity::generate();
-        println!("interop_client: identity ml-dsa-87 = {}", hex8(id.public_key_bytes()));
-        Some(id)
-    } else {
-        None
-    };
-
     let sess = match profile {
         Profile::Standard => Session::dial(&mut stream, &identity, None),
-        Profile::High | Profile::Sovereign => Session::dial_with_profiles(
-            &mut stream,
-            &identity,
-            mldsa_identity.as_ref(),
-            &[profile.wire_byte()],
-            None,
-            None,
-        ),
+        Profile::High | Profile::Sovereign => {
+            Session::dial_with_profiles(&mut stream, &identity, &[profile.wire_byte()], None)
+        }
     };
     let sess = match sess {
         Ok(s) => s,
@@ -135,25 +112,10 @@ fn main() {
         }
     };
 
-    // dial_with_profiles offered exactly one profile, so a completed handshake
-    // proves the server negotiated that SAME profile (offered_profiles.contains
-    // check inside dial_with_profiles rejects any other selection) — and
-    // kem_group_for_profiles forces SecP384r1MLKEM1024 (0x11ed) whenever High or
-    // Sovereign is offered, so peer_identity_mldsa87() being populated is live
-    // proof both the KEM group and the ML-DSA-87 CertVerify negotiated as
-    // expected for the requested profile, not merely that SOME handshake completed.
-    match sess.peer_identity_mldsa87() {
-        Some(peer_mldsa) => println!(
-            "interop_client: handshake OK — profile={} negotiated KEM SecP384r1MLKEM1024 (0x11ed) + ML-DSA-87 CertVerify; authenticated server ml-dsa-87 = {} ({} octets)",
-            profile.name(),
-            hex8(peer_mldsa),
-            peer_mldsa.len()
-        ),
-        None => println!(
-            "interop_client: handshake OK — profile=standard; authenticated server ed25519 = {}",
-            hex8(&sess.peer_identity())
-        ),
-    }
+    println!(
+        "interop_client: handshake OK — profile=standard; authenticated server ed25519 = {}",
+        hex8(&sess.peer_identity())
+    );
 
     // Send one application frame on the Memory channel (seq 0).
     let payload = b"hello from the rust interop client";

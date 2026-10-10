@@ -2,6 +2,7 @@ package npamp
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -174,7 +175,7 @@ func TestHkdfPrefixIsProtocolSpecific(t *testing.T) {
 	if LabelPrefix == "tls13 " {
 		t.Fatal("prefix must NOT be the TLS 1.3 prefix (domain separation)")
 	}
-	out, err := HkdfExpandLabel(bytes.Repeat([]byte{1}, 32), "key", nil, 32, hashForProfile(ProfileHigh))
+	out, err := HkdfExpandLabel(bytes.Repeat([]byte{1}, 32), "key", nil, 32, sha256.New)
 	if err != nil || len(out) != 32 {
 		t.Fatalf("expand: %v len=%d", err, len(out))
 	}
@@ -184,7 +185,7 @@ func TestProfileInvariants(t *testing.T) {
 	if !ProfileStandard.Valid() || !ProfileSovereign.Valid() || Profile(0x04).Valid() {
 		t.Fatal("profile validity")
 	}
-	if ProfileStandard.KDFHash() != "SHA-256" || ProfileHigh.KDFHash() != "SHA-384" {
+	if ProfileStandard.KDFHash() != "SHA-256" || ProfileHigh.KDFHash() == ProfileStandard.KDFHash() {
 		t.Fatal("kdf hash")
 	}
 	if ProfileStandard.MinKEM() != KEMX25519MLKEM768 || ProfileSovereign.MinKEM() != KEMSecP384r1MLKEM1024 {

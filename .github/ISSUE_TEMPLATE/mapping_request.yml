@@ -5,7 +5,7 @@
 # protocol, exactly one carriage class (its Section 5: JSONRPC, HTTP, MSG, STREAM,
 # DOC, OPAQUE), and a mapping reference. A registry change is substantive, so this
 # form auto-applies `design` + `needs-discussion` per CONTRIBUTING.md and
-# .github/labels.yml; consensus produces a numbered ADR in decisions/.
+# .github/labels.yml; consensus produces a recorded decision.
 name: "New protocol mapping request"
 description: "Request a per-protocol mapping companion document (60-series) / a protocol_id assignment in the bridge protocol registry."
 title: "[mapping]: "

@@ -17,13 +17,6 @@ object Vectors {
         return b
     }
 
-    /** Returns a buffer of [count] octets all equal to [value]. */
-    private fun fill(value: Int, count: Int): ByteArray {
-        val b = ByteArray(count)
-        java.util.Arrays.fill(b, value.toByte())
-        return b
-    }
-
     fun render(): String {
         // 1) header = Frame{PING, Control, seq=0, no payload}.marshal()
         val f1 = Npamp.Frame(Npamp.FRAME_PING, Npamp.CHAN_CONTROL)
@@ -41,23 +34,12 @@ object Vectors {
         val pt3 = "hello world".toByteArray(StandardCharsets.US_ASCII)
         val aead = Npamp.toHex(Npamp.sealAes256Gcm(key3, iv3, 7L, aad3, pt3))
 
-        // 4) traffic = deriveKeyIv(deriveTrafficSecret(master=48*0x2A, dir=0, epoch=0,
-        //          suite=AES-256-GCM, channel=Control, standard=false), standard=false)[key]
-        val master = fill(0x2A, 48)
-        val secret = Npamp.deriveTrafficSecret(
-            master, 0, 0L,
-            Npamp.AEAD_AES256_GCM, Npamp.CHAN_CONTROL, false,
-        )
-        val trafficKey = Npamp.deriveKeyIv(secret, false)[0]
-        val traffic = Npamp.toHex(trafficKey)
-
         val sb = StringBuilder()
         sb.append("{\n")
         sb.append("  \"spec\": \"draft-bubblefish-npamp-00\",\n")
         sb.append("  \"header_ping_control_seq0\": \"").append(header).append("\",\n")
         sb.append("  \"nonce_iv1to12_seq0102\": \"").append(nonce).append("\",\n")
-        sb.append("  \"aes256gcm_seal_helloworld\": \"").append(aead).append("\",\n")
-        sb.append("  \"traffic_key_sha384\": \"").append(traffic).append("\"\n")
+        sb.append("  \"aes256gcm_seal_helloworld\": \"").append(aead).append("\"\n")
         sb.append("}\n")
         return sb.toString()
     }

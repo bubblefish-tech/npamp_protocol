@@ -17,7 +17,7 @@ import (
 // carriage. NPAMP-REG (spec/companion/30_protocol_registry.md §6) originally
 // assigned code points 0x01-0x04 only (MCP, A2A, HTTP/2, WebSocket); gRPC had
 // no assigned code point, and this build used an EXPERIMENTAL value (§7.1)
-// pending registration -- see decisions/adr/0015 for the derivation. gRPC
+// pending registration. gRPC
 // generic carriage is now assigned 0x05 -- the next available code point in
 // the standards-assigned range (registries/bridge_protocol_ids.csv,
 // spec/companion/30_protocol_registry.md §6/§8), mirroring the existing 0x04

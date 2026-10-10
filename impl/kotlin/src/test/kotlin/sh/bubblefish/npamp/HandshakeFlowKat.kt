@@ -18,7 +18,7 @@
 //     (client_private + the server-public tail of kem_ciphertext -> x25519_shared_secret),
 //     which also pins that 32-octet tail;
 //   * ML-KEM decapsulation is a tracked SKIP (no JDK ML-KEM — the same decaps deferral as
-//     Go/swift, ADR-0007): mlkem_shared_secret is consumed as the pinned self-validating
+//     Go/swift): mlkem_shared_secret is consumed as the pinned self-validating
 //     input, and the front 1088 octets of kem_ciphertext are pinned equal to the
 //     mlkem_ciphertext input.
 //
@@ -243,7 +243,7 @@ object HandshakeFlowKat {
             x25519Private(serverX) // throws if the pinned server X25519 private is invalid.
         }
 
-        // ML-KEM decapsulation: no JDK 21 ML-KEM primitive -> tracked SKIP (ADR-0007).
+        // ML-KEM decapsulation: no JDK 21 ML-KEM primitive -> tracked SKIP.
         skip("handshake_flow_kat_mlkem_decaps", "no JDK ML-KEM; mlkem_shared_secret pinned as self-validating input")
 
         // ============================================================================
@@ -302,7 +302,7 @@ object HandshakeFlowKat {
 
         val thKem = transcript.hash(STANDARD)
 
-        // Handshake-secret ladder (ML-KEM-first IKM per ADR-0005).
+        // Handshake-secret ladder (ML-KEM-first IKM).
         val hs = Npamp.deriveHandshakeSecret(mlkemSS, KatSupport.fromHex(wantX25519SS), STANDARD)
         val cHs = Npamp.deriveClientHandshakeSecret(hs, thKem, STANDARD)
         val sHs = Npamp.deriveServerHandshakeSecret(hs, thKem, STANDARD)

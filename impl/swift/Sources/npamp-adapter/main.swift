@@ -85,8 +85,10 @@ func handle(_ req: [String: Any]) -> [String: Any] {
         } catch { return ["error": "authentication failed"] }
 
     case "hkdf.expand":
-        let okm = Npamp.hkdfExpand(hash: s("hash"), prk: hx("prk"), info: hx("info"), length: i("length"))
-        return ["out": ["okm": Npamp.toHex(okm)]]
+        do {
+            let okm = try Npamp.hkdfExpand(hash: s("hash"), prk: hx("prk"), info: hx("info"), length: i("length"))
+            return ["out": ["okm": Npamp.toHex(okm)]]
+        } catch { return ["skipped": "refused: \(error)"] }
 
     default:
         return ["skipped": "op not implemented: \(op)"]

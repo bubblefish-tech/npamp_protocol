@@ -5,11 +5,12 @@ package keyformat
 // keyformat_test.go exercises the round-trip and typed-accessor behavior of
 // the versioned key-storage format against REAL key material produced by the
 // same stdlib crypto types the rest of this module uses (crypto/mlkem,
-// crypto/ecdh, crypto/ed25519) — not fixtures invented for this test. Each
-// round trip additionally reconstructs a live, USABLE key from the decoded
-// bytes (a fresh mlkem.DecapsulationKey / ecdh.PrivateKey / ed25519 sign-
-// verify) to prove the format carries genuinely reusable key material, not
-// merely bytes that happen to compare equal.
+// crypto/ecdh, crypto/ed25519) — not fixtures invented for this test —
+// except where a group has no provider here (the opaque-material tests). Each
+// provider-backed round trip additionally reconstructs a live, USABLE key from
+// the decoded bytes (a fresh mlkem.DecapsulationKey / ecdh.PrivateKey /
+// ed25519 sign-verify) to prove the format carries genuinely reusable key
+// material, not merely bytes that happen to compare equal.
 
 import (
 	"bytes"
@@ -17,6 +18,7 @@ import (
 	"crypto/ed25519"
 	"crypto/mlkem"
 	"crypto/rand"
+	"errors"
 	"testing"
 
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
@@ -160,70 +162,107 @@ func TestRoundTripX25519MLKEM768KEMPrivateAndPublic(t *testing.T) {
 	}
 }
 
-// TestRoundTripSecP384r1MLKEM1024KEMPrivateAndPublic is
-// TestRoundTripX25519MLKEM768KEMPrivateAndPublic for the Sovereign/High
-// group (ML-KEM-1024 + P-384), confirming the format's KEM handling is not
-// accidentally specific to the 768/X25519 group's component sizes.
-func TestRoundTripSecP384r1MLKEM1024KEMPrivateAndPublic(t *testing.T) {
-	dk, err := mlkem.GenerateKey1024()
-	if err != nil {
-		t.Fatalf("mlkem.GenerateKey1024: %v", err)
-	}
-	pk, err := ecdh.P384().GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ecdh P384 GenerateKey: %v", err)
-	}
+// TestKEMGroup0x11edKeyMaterialIsRefused: the SecP384r1MLKEM1024 group (0x11ed) is a known code
+// point whose key material this package refuses to store or load. Every typed and untyped
+// entry point returns ErrGroupNotSupported and no bytes or components, including for
+// component sizes that group's keys would have had (ML-KEM-1024 seed 64 / encapsulation key
+// 1568, P-384 private 48 / public 97) and for sizes that match no group at all, because the
+// refusal comes from the group and not from a size check. A record carrying 0x11ed that was
+// written elsewhere is refused on Decode too.
+func TestKEMGroup0x11edKeyMaterialIsRefused(t *testing.T) {
+	const group = npamp.KEMSecP384r1MLKEM1024
+	sized := func(n int) []byte { return bytes.Repeat([]byte{0x42}, n) }
 
-	privData, err := EncodeKEMPrivate(npamp.KEMSecP384r1MLKEM1024, dk.Bytes(), pk.Bytes())
-	if err != nil {
-		t.Fatalf("EncodeKEMPrivate: %v", err)
+	t.Run("EncodeKEMPrivate", func(t *testing.T) {
+		for _, c := range [][2]int{{64, 48}, {64, 32}, {1, 1}, {0, 0}} {
+			data, err := EncodeKEMPrivate(group, sized(c[0]), sized(c[1]))
+			if !errors.Is(err, ErrGroupNotSupported) || data != nil {
+				t.Fatalf("EncodeKEMPrivate sizes %v: data %d octets, err = %v; want nil and ErrGroupNotSupported", c, len(data), err)
+			}
+		}
+	})
+	t.Run("EncodeKEMPublic", func(t *testing.T) {
+		for _, c := range [][2]int{{1568, 97}, {1184, 32}, {1, 1}, {0, 0}} {
+			data, err := EncodeKEMPublic(group, sized(c[0]), sized(c[1]))
+			if !errors.Is(err, ErrGroupNotSupported) || data != nil {
+				t.Fatalf("EncodeKEMPublic sizes %v: data %d octets, err = %v; want nil and ErrGroupNotSupported", c, len(data), err)
+			}
+		}
+	})
+	t.Run("Encode", func(t *testing.T) {
+		for _, role := range []Role{RoleKEMPrivate, RoleKEMPublic} {
+			data, err := Encode(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: npamp.ALPN, Role: role, Algorithm: uint64(group), Components: [][]byte{sized(64), sized(48)}})
+			if !errors.Is(err, ErrGroupNotSupported) || data != nil {
+				t.Fatalf("Encode role %v: data %d octets, err = %v; want nil and ErrGroupNotSupported", role, len(data), err)
+			}
+		}
+	})
+	// A record produced by another writer: marshalRecord builds it without the Encode check.
+	privRec := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: npamp.ALPN, Role: RoleKEMPrivate, Algorithm: uint64(group), Components: [][]byte{sized(64), sized(48)}})
+	pubRec := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: npamp.ALPN, Role: RoleKEMPublic, Algorithm: uint64(group), Components: [][]byte{sized(1568), sized(97)}})
+	t.Run("Decode", func(t *testing.T) {
+		for name, data := range map[string][]byte{"private": privRec, "public": pubRec} {
+			rec, err := Decode(data, npamp.ALPN)
+			if !errors.Is(err, ErrGroupNotSupported) || !isZeroRecord(rec) {
+				t.Fatalf("Decode %s record: rec zero = %v, err = %v; want zero record and ErrGroupNotSupported", name, isZeroRecord(rec), err)
+			}
+		}
+	})
+	t.Run("DecodeKEMPrivate", func(t *testing.T) {
+		g, seed, classical, err := DecodeKEMPrivate(privRec, npamp.ALPN)
+		if !errors.Is(err, ErrGroupNotSupported) || g != 0 || seed != nil || classical != nil {
+			t.Fatalf("DecodeKEMPrivate: group %#04x seed %d classical %d err %v; want zero values and ErrGroupNotSupported", uint16(g), len(seed), len(classical), err)
+		}
+	})
+	t.Run("DecodeKEMPublic", func(t *testing.T) {
+		g, ek, classical, err := DecodeKEMPublic(pubRec, npamp.ALPN)
+		if !errors.Is(err, ErrGroupNotSupported) || g != 0 || ek != nil || classical != nil {
+			t.Fatalf("DecodeKEMPublic: group %#04x ek %d classical %d err %v; want zero values and ErrGroupNotSupported", uint16(g), len(ek), len(classical), err)
+		}
+	})
+	// The refusal is specific to the group: the other defined group still encodes.
+	if _, err := EncodeKEMPrivate(npamp.KEMX25519MLKEM768, sized(64), sized(32)); err != nil {
+		t.Fatalf("EncodeKEMPrivate(X25519MLKEM768) after the refusal change: %v", err)
 	}
-	pubData, err := EncodeKEMPublic(npamp.KEMSecP384r1MLKEM1024, dk.EncapsulationKey().Bytes(), pk.PublicKey().Bytes())
-	if err != nil {
-		t.Fatalf("EncodeKEMPublic: %v", err)
+	// A code point that is not defined at all stays ErrUnknownAlgorithm, not the refusal.
+	if _, err := EncodeKEMPrivate(npamp.KEMID(0x11ee), sized(64), sized(32)); !errors.Is(err, ErrUnknownAlgorithm) || errors.Is(err, ErrGroupNotSupported) {
+		t.Fatalf("EncodeKEMPrivate(0x11ee) err = %v, want ErrUnknownAlgorithm and not ErrGroupNotSupported", err)
 	}
+}
 
-	group, seed2, ppriv2, err := DecodeKEMPrivate(privData, npamp.ALPN)
-	if err != nil {
-		t.Fatalf("DecodeKEMPrivate: %v", err)
-	}
-	if group != npamp.KEMSecP384r1MLKEM1024 {
-		t.Fatalf("decoded group = 0x%04x, want 0x%04x", uint16(group), uint16(npamp.KEMSecP384r1MLKEM1024))
-	}
-	if !bytes.Equal(seed2, dk.Bytes()) {
-		t.Fatal("decoded ML-KEM-1024 seed is not byte-identical to the original")
-	}
-	if !bytes.Equal(ppriv2, pk.Bytes()) {
-		t.Fatal("decoded P-384 private key is not byte-identical to the original")
-	}
-
-	dk2, err := mlkem.NewDecapsulationKey1024(seed2)
-	if err != nil {
-		t.Fatalf("mlkem.NewDecapsulationKey1024(decoded seed): %v", err)
-	}
-	if !bytes.Equal(dk2.EncapsulationKey().Bytes(), dk.EncapsulationKey().Bytes()) {
-		t.Fatal("decapsulation key reconstructed from the decoded seed has a different encapsulation key")
-	}
-	pk2, err := ecdh.P384().NewPrivateKey(ppriv2)
-	if err != nil {
-		t.Fatalf("ecdh P384 NewPrivateKey(decoded bytes): %v", err)
-	}
-	if !bytes.Equal(pk2.PublicKey().Bytes(), pk.PublicKey().Bytes()) {
-		t.Fatal("P-384 private key reconstructed from the decoded bytes has a different public key")
-	}
-
-	group2, mlkemEK2, ppub2, err := DecodeKEMPublic(pubData, npamp.ALPN)
-	if err != nil {
-		t.Fatalf("DecodeKEMPublic: %v", err)
-	}
-	if group2 != npamp.KEMSecP384r1MLKEM1024 {
-		t.Fatalf("decoded public-record group = 0x%04x, want 0x%04x", uint16(group2), uint16(npamp.KEMSecP384r1MLKEM1024))
-	}
-	if !bytes.Equal(mlkemEK2, dk.EncapsulationKey().Bytes()) {
-		t.Fatal("decoded ML-KEM-1024 encapsulation key is not byte-identical to the original")
-	}
-	if !bytes.Equal(ppub2, pk.PublicKey().Bytes()) {
-		t.Fatal("decoded P-384 public key is not byte-identical to the original")
+// TestKEMGroup0x11edRefusedUnderEveryAcceptedGeneration: Decode validates a record against the
+// registry only for npamp.ALPN, so a record under any other generation the caller accepts is
+// not size-checked. The 0x11ed refusal comes from the group and must not depend on that
+// generation branch: a KEM-private and a KEM-public record carrying 0x11ed under a
+// non-ALPN generation the caller accepted must still return ErrGroupNotSupported and no key
+// material from Decode, DecodeKEMPrivate and DecodeKEMPublic. A generation the caller did not
+// accept keeps its own error.
+func TestKEMGroup0x11edRefusedUnderEveryAcceptedGeneration(t *testing.T) {
+	sized := func(n int) []byte { return bytes.Repeat([]byte{0x42}, n) }
+	const group = uint64(npamp.KEMSecP384r1MLKEM1024)
+	for _, gen := range []string{"n-pamp/2", "n-pamp/9"} {
+		priv := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: gen, Role: RoleKEMPrivate, Algorithm: group, Components: [][]byte{sized(64), sized(48)}})
+		pub := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: gen, Role: RoleKEMPublic, Algorithm: group, Components: [][]byte{sized(1568), sized(97)}})
+		for name, data := range map[string][]byte{"private": priv, "public": pub} {
+			if rec, err := Decode(data, gen); !errors.Is(err, ErrGroupNotSupported) || !isZeroRecord(rec) {
+				t.Fatalf("Decode %s record under accepted generation %q: rec zero = %v, err = %v; want zero record and ErrGroupNotSupported", name, gen, isZeroRecord(rec), err)
+			}
+		}
+		if g, seed, classical, err := DecodeKEMPrivate(priv, gen); !errors.Is(err, ErrGroupNotSupported) || g != 0 || seed != nil || classical != nil {
+			t.Fatalf("DecodeKEMPrivate under accepted generation %q: group %#04x seed %d classical %d err %v; want zero values and ErrGroupNotSupported", gen, uint16(g), len(seed), len(classical), err)
+		}
+		if g, ek, classical, err := DecodeKEMPublic(pub, gen); !errors.Is(err, ErrGroupNotSupported) || g != 0 || ek != nil || classical != nil {
+			t.Fatalf("DecodeKEMPublic under accepted generation %q: group %#04x ek %d classical %d err %v; want zero values and ErrGroupNotSupported", gen, uint16(g), len(ek), len(classical), err)
+		}
+		// A generation the caller did not accept is still ErrGenerationNotAccepted.
+		if _, err := Decode(priv, npamp.ALPN); !errors.Is(err, ErrGenerationNotAccepted) {
+			t.Fatalf("Decode of %q record accepting only %q: err = %v, want ErrGenerationNotAccepted", gen, npamp.ALPN, err)
+		}
+		// The refusal is the group's: the same record shape under the other group is returned.
+		other := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: gen, Role: RoleKEMPrivate, Algorithm: uint64(npamp.KEMX25519MLKEM768), Components: [][]byte{sized(64), sized(32)}})
+		if _, err := Decode(other, gen); err != nil {
+			t.Fatalf("Decode of X25519MLKEM768 record under accepted generation %q: %v", gen, err)
+		}
 	}
 }
 

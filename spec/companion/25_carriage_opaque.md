@@ -418,8 +418,7 @@ expectations before acting on it.
 ## 10. Code-point assignments
 
 The following two code-point assignments were required for full on-the-wire
-operation of this document. Both are now assigned by the core specification
-(decisions/adr/0015-opaque-carriage-and-grpc-code-point-assignments.md):
+operation of this document. Both are now assigned by the core specification:
 
 1. **OpaqueContentType TLV type code point (§4.3): assigned `0x0012`.** A
    reserved extension-TLV Type was required to carry the full media-type string.

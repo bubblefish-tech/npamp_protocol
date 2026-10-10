@@ -9,7 +9,7 @@ This repository is the **public reference home** of N-PAMP: the Internet-Draft, 
 | **Specification** | [`draft-bubblefish-npamp-02`](ietf/draft-bubblefish-npamp-latest.md) (Internet-Draft, Independent Submission stream, Informational) |
 | **License** | [Apache-2.0](LICENSE) |
 | **Reference implementations** | 10 languages (Go, Rust, Python, TypeScript, C#, Swift, Java, Kotlin, PHP, Ruby) |
-| **Conformance corpus** | 470-vector conformance corpus (byte-identical across all 10 languages) + 8 NIST/RFC-anchored KAT sets |
+| **Conformance corpus** | 410-vector conformance corpus (byte-identical across all 10 languages) + 6 NIST/RFC-anchored KAT sets |
 
 ---
 
@@ -34,7 +34,7 @@ This repository is the **public reference home** of N-PAMP: the Internet-Draft, 
 - **Carry any agent protocol under a PQC session.** A protocol-agnostic bridge framework (channel `0x000D`) encapsulates a foreign agent protocol octet-for-octet with correlation, structured errors, and a fail-safe safety label, over six carriage classes, with an assigned protocol-id registry (MCP / A2A / HTTP/2 / WebSocket / gRPC and more). *(Bridge framework graded; carriage classes JSON-RPC / HTTP / STREAM / OPAQUE implemented; per-protocol mappings specified.)*
 - **Zero-app-change ambient deployment.** A per-node data-plane agent terminates and originates N-PAMP PQC sessions for every workload with per-workload (never node-global) key isolation and SPIFFE/SPIRE identity, and an eBPF sockmap fast path steers workload traffic into the tunnel with no application change — plus a live-witnessed integration with the Linux-Foundation agentgateway. *(Built reference components; the eBPF datapath is live-benchmarked.)*
 - **Native semantic channel operations.** Deterministic-CBOR operations for ten of the twenty channels — memory, streaming, capability, immune, settlement, telemetry, commerce, interaction, workflow, and knowledge — governed at the wire, not bolted on above it. *(Body-decode graded in six ports; Sensory and Spatial robotics channels specified.)*
-- **Standards-anchored conformance + a machine-verified handshake.** A 470-vector byte-identical corpus + 8 NIST/RFC-anchored KAT sets grade every port, and the handshake is machine-verified by two independent formal tools. *(Corpus graded; formal status table public.)*
+- **Standards-anchored conformance + a machine-verified handshake.** A 410-vector byte-identical corpus + 6 NIST/RFC-anchored KAT sets grade every port, and the handshake is machine-verified by two independent formal tools. *(Corpus graded; formal status table public.)*
 
 ---
 
@@ -78,7 +78,7 @@ Rigor and adoption-readiness in the same repository: the protocol is specified l
   | Sovereign | `0x03` | SecP384r1MLKEM1024 | ML-DSA-87 | SHA-384 |
 
   High and Sovereign add per-frame AEAD diversification and downgrade refusal. (Profile enums and code points are public; high-assurance implementation material is maintained separately — see [Scope](#scope).)
-- **Hybrid post-quantum key establishment** combining an elliptic-curve ECDH with ML-KEM (FIPS 203), per RFC 10024 (formerly `draft-ietf-tls-ecdhe-mlkem`, published August 2026). The concatenation order is per-group: X25519MLKEM768 is ML-KEM-first (`ML-KEM_SS || X25519_SS`) and SecP384r1MLKEM1024 is ECDHE-first (`ECDHE_SS || ML-KEM_SS`), each placing the FIPS-approved component first per NIST SP 800-56C Rev. 2 (see ADR-0005 for the 768 group).
+- **Hybrid post-quantum key establishment** combining an elliptic-curve ECDH with ML-KEM (FIPS 203), per RFC 10024 (formerly `draft-ietf-tls-ecdhe-mlkem`, published August 2026). The concatenation order is per-group: X25519MLKEM768 is ML-KEM-first (`ML-KEM_SS || X25519_SS`) and SecP384r1MLKEM1024 is ECDHE-first (`ECDHE_SS || ML-KEM_SS`), each placing the FIPS-approved component first per NIST SP 800-56C Rev. 2.
 - **A 1.5-RTT, mutually-authenticated handshake** — a four-frame exchange with transcript binding, an HKDF key schedule, forward secrecy, and downgrade protection.
 - **QUIC** as the primary transport and **TCP with TLS 1.3** as a fallback, negotiated via the ALPN identifier `n-pamp/3` (whose trailing digit is the crypto generation, an axis independent of the wire-format version — the `Ver` nibble `0x2` in the frame header, which is invariant).
 
@@ -186,15 +186,13 @@ The [`test-vectors/`](test-vectors/) tree is the **canonical** conformance oracl
 
 | Vector set | What it pins | Standards anchor |
 |---|---|---|
-| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 470 conformance vectors spanning primitives, frame / codec / reject, channels, and profiles (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / channel / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 through draft-02 (the hybrid-KEM combiner byte-order is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
-| [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 — ADR-0005 / ADR-0007 |
-| [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 — ADR-0008 |
-| [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor — ADR-0009 |
-| [`finished-kat`](test-vectors/v1/finished-kat.json) | Finished-message HMAC | RFC 4231 — ADR-0010 |
-| [`certverify-kat`](test-vectors/v1/certverify-kat.json) | CertificateVerify signature | RFC 8032 (Ed25519) — ADR-0011 |
+| [`conformance-corpus`](test-vectors/v1/conformance-corpus.json) | 410 conformance vectors spanning primitives, frame / codec / reject, channels, and profiles (Wycheproof AES-256-GCM & HKDF-Expand + N-PAMP frame / TLV / CRC / channel / profile; cross-implementation golden) | AES-256-GCM (RFC 5116), HKDF (RFC 5869), CRC32C Castagnoli — the frame/codec/primitive layer common to draft-00 through draft-02 (the hybrid-KEM combiner byte-order is pinned by [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) below) |
+| [`kem-wire-kat`](test-vectors/v1/kem-wire-kat.json) | X25519MLKEM768 KEM-wire order + HKDF-Extract IKM | NIST ACVP / FIPS 203 + RFC 7748 |
+| [`key-schedule-kat`](test-vectors/v1/key-schedule-kat.json) | HKDF handshake ladder, traffic keys/IVs, finished_key | RFC 8448 (TLS 1.3) + RFC 5869 |
+| [`transcript-kat`](test-vectors/v1/transcript-kat.json) | Handshake transcript hash | FIPS 180 (SHA) + independent per-TLV byte constructor |
+| [`finished-kat`](test-vectors/v1/finished-kat.json) | Finished-message HMAC | RFC 4231 |
+| [`certverify-kat`](test-vectors/v1/certverify-kat.json) | CertificateVerify signature | RFC 8032 (Ed25519) |
 | [`handshake-flow-kat`](test-vectors/v1/handshake-flow-kat.json) | Full 1.5-RTT handshake flow | Composed from the KEM / key-schedule / transcript / Finished / CertVerify KATs (RFC 8446 flow) |
-| [`mldsa87-primitives-kat`](test-vectors/v1/mldsa87-primitives-kat.json) | ML-DSA-87 keygen + verify primitives | FIPS 204 (Go stdlib `crypto/mldsa` reference) |
-| [`mlkem1024-acvp-kat`](test-vectors/v1/mlkem1024-acvp-kat.json) | ML-KEM-1024 deterministic keygen | NIST ACVP / FIPS 203 |
 
 Because every expected answer traces to an external standard, no value is generated by an N-PAMP implementation, and a shared implementation bug cannot pass the suite. Validate the vectors against their schemas with [`scripts/validate-schemas.py`](scripts/validate-schemas.py); confirm the pinned bytes with [`scripts/verify-pins.ps1`](scripts/verify-pins.ps1).
 

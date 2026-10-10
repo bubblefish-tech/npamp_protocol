@@ -142,18 +142,18 @@ than defining a new vector set:
   therefore the ordering-critical half of the combined secret. No
   NIST-ACVP-anchored ML-KEM-1024 shared-secret vector exists in this corpus
   yet (tracked as a Part-2 ecosystem-spec gap); the ML-KEM-1024 component is
-  exercised by round-trip through a real ML-KEM-1024 provider, matching the
-  existing `impl/go/kem1024_kat_test.go` limitation, stated honestly rather
-  than silently.
+  exercised by round-trip through a real ML-KEM-1024 provider. The open Go
+  reference implements the `X25519MLKEM768` group only and refuses
+  `SecP384r1MLKEM1024`; this is stated honestly rather than silently.
 
 ### 5.2 Cross-validation against the Go core
 
 Beyond the standards-anchored vectors, a conforming adapter's output MUST be
 byte-identical to the Go reference implementation's inline combiner
-(`impl/go/kem.go` `SharedSecrets.Combined()`; `impl/go/kem1024.go`
-`SharedSecrets1024.Combined()`) for the same component-secret inputs, for
-both groups. `impl/go/hybridkem/hybridkem_kat_test.go` is the Go reference's
-own such cross-check.
+(`impl/go/kem.go` `SharedSecrets.Combined()`) for the same component-secret
+inputs, for the `X25519MLKEM768` group the open reference implements.
+`impl/go/hybridkem/hybridkem_kat_test.go` is the Go reference's own such
+cross-check.
 
 ### 5.3 What this conformance class does NOT cover
 

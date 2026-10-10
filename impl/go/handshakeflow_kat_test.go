@@ -160,7 +160,7 @@ func TestHandshakeFlowKAT(t *testing.T) {
 	}
 
 	// --- Transcript + key ladder through the real impl. ---
-	tr := NewTranscript(p)
+	tr := mustTranscript(t, p)
 	tr.AddFrame(FrameClientHello, ch.TLVs())
 	tr.AddFrame(FrameServerHello, sh.TLVs())
 	thKem := tr.Sum()
@@ -200,7 +200,7 @@ func TestHandshakeFlowKAT(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertHex(t, "finished_keys.server", sFinKey, kat.Expected.FinishedKeys.Server)
-	sFin := ComputeFinished(sFinKey, thSCV, p)
+	sFin := mustFinished(t, sFinKey, thSCV, p)
 	assertHex(t, "finished.server", sFin, kat.Expected.Finished.Server)
 	tr.AddTLV(TLV{Type: TLVFinished, Value: sFin})
 	serverAuth := &AuthMessage{IdentityKey: serverPub, CertVerify: sCV, Finished: sFin}
@@ -232,7 +232,7 @@ func TestHandshakeFlowKAT(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertHex(t, "finished_keys.client", cFinKey, kat.Expected.FinishedKeys.Client)
-	cFin := ComputeFinished(cFinKey, thCCV, p)
+	cFin := mustFinished(t, cFinKey, thCCV, p)
 	assertHex(t, "finished.client", cFin, kat.Expected.Finished.Client)
 	clientAuth := &AuthMessage{IdentityKey: clientPub, CertVerify: cCV, Finished: cFin}
 	clientAuthPlain := clientAuth.Encode()

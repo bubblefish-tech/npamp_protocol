@@ -192,7 +192,7 @@ func TestOpaquePayload_TruncatedOpaqueContentTypeTLV_Rejected(t *testing.T) {
 // above that decodes via the real npamp.DecodeTLVs/DecodeBridgeFrame path).
 func TestOpaqueContentTypeTLV_IsTheAssignedCodePoint(t *testing.T) {
 	if opaqueContentTypeTLV != 0x0012 {
-		t.Fatalf("opaqueContentTypeTLV = 0x%04x, want 0x0012 (decisions/adr/0015)", uint16(opaqueContentTypeTLV))
+		t.Fatalf("opaqueContentTypeTLV = 0x%04x, want 0x0012 (registries/tlv_tags.csv)", uint16(opaqueContentTypeTLV))
 	}
 }
 
@@ -201,7 +201,7 @@ func TestOpaqueContentTypeTLV_IsTheAssignedCodePoint(t *testing.T) {
 // assigned content_type values 0x01-0x03.
 func TestOpaqueContentTypeDiscriminator_IsTheAssignedValue(t *testing.T) {
 	if opaqueContentTypeDiscriminator != 0x04 {
-		t.Fatalf("opaqueContentTypeDiscriminator = 0x%02x, want 0x04 (decisions/adr/0015)", byte(opaqueContentTypeDiscriminator))
+		t.Fatalf("opaqueContentTypeDiscriminator = 0x%02x, want 0x04 (spec/companion/10_bridge_framework.md §4)", byte(opaqueContentTypeDiscriminator))
 	}
 	for _, assigned := range []npamp.BridgeContentType{npamp.BridgeContentJSON, npamp.BridgeContentCBOR, npamp.BridgeContentGRPCProto} {
 		if opaqueContentTypeDiscriminator == assigned {

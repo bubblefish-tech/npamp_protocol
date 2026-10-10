@@ -355,7 +355,7 @@ impl TranscriptSink for ImplSink {
         self.tr.add_tlv(typ, value);
     }
     fn snap(&mut self) -> Vec<u8> {
-        self.tr.hash(true)
+        self.tr.hash(true).unwrap()
     }
 }
 
@@ -428,7 +428,7 @@ fn transcript_impl() {
 // ---------------------------------------------------------------------------
 
 const FINISHED_KAT_SHA256: &str =
-    "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f";
+    "05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d";
 
 /// HMAC-SHA-256 independent of compute_finished (guards the vector / anchors the primitive).
 fn hmac_sha256_oracle(key: &[u8], data: &[u8]) -> Vec<u8> {
@@ -479,14 +479,14 @@ fn finished_impl() {
         let th = from_hex(root.at(&["npamp_inputs", th_key]).s());
         let want = from_hex(root.at(&["expected", vd_key]).s());
 
-        let got = handshake::compute_finished(&fk, &th, true);
+        let got = handshake::compute_finished(&fk, &th, true).unwrap();
         assert_eq!(to_hex(&got), to_hex(&want), "{name} compute_finished");
 
-        assert!(handshake::verify_finished(&fk, &th, &want, true), "{name} verify_finished accepts");
+        assert!(handshake::verify_finished(&fk, &th, &want, true).unwrap(), "{name} verify_finished accepts");
 
         let mut bad = want.clone();
         bad[0] ^= 0x01;
-        assert!(!handshake::verify_finished(&fk, &th, &bad, true), "{name} verify_finished rejects tamper");
+        assert!(!handshake::verify_finished(&fk, &th, &bad, true).unwrap(), "{name} verify_finished rejects tamper");
     }
 }
 
@@ -632,7 +632,7 @@ fn certverify_impl() {
 // ---------------------------------------------------------------------------
 
 const KEY_SCHEDULE_KAT_SHA256: &str =
-    "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c";
+    "dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe";
 
 /// Independent HMAC-SHA-256 (RFC 2104), distinct from the src key schedule.
 fn ks_hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
@@ -691,9 +691,9 @@ fn key_schedule_anchor_rfc5869() {
     let okm_want = root.at(&["rfc5869_tc1", "okm"]).s();
 
     // The src primitives that leg D drives must match the RFC.
-    let prk = npamp::hkdf_extract(&salt, &ikm, true);
+    let prk = npamp::hkdf_extract(&salt, &ikm, true).unwrap();
     assert_eq!(to_hex(&prk), prk_want, "src hkdf_extract vs RFC 5869 TC1 PRK");
-    assert_eq!(to_hex(&npamp::hkdf_expand(&prk, &info, l, true)), okm_want, "src hkdf_expand vs RFC 5869 TC1 OKM");
+    assert_eq!(to_hex(&npamp::hkdf_expand(&prk, &info, l, true).unwrap()), okm_want, "src hkdf_expand vs RFC 5869 TC1 OKM");
 
     // The in-test oracle that JUDGES leg D must match the RFC independently of the src.
     assert_eq!(to_hex(&oracle_extract(&salt, &ikm)), prk_want, "oracle extract vs RFC 5869 TC1 PRK");
@@ -744,25 +744,25 @@ fn key_schedule_impl() {
     let mut ikm = Vec::with_capacity(mlkem.len() + x25519.len());
     ikm.extend_from_slice(&mlkem);
     ikm.extend_from_slice(&x25519);
-    let hs = npamp::derive_handshake_secret(&mlkem, &x25519, true);
+    let hs = npamp::derive_handshake_secret(&mlkem, &x25519, true).unwrap();
     assert_eq!(to_hex(&hs), to_hex(&oracle_extract(&zeros32, &ikm)), "handshake_secret");
 
     // c_hs / s_hs / master.
-    let c_hs = npamp::derive_client_handshake_secret(&hs, &th_kem, true);
+    let c_hs = npamp::derive_client_handshake_secret(&hs, &th_kem, true).unwrap();
     assert_eq!(to_hex(&c_hs), to_hex(&oracle_expand_label(&hs, "n-pamp ", "c hs", &th_kem, 32)), "c_hs");
-    let s_hs = npamp::derive_server_handshake_secret(&hs, &th_kem, true);
+    let s_hs = npamp::derive_server_handshake_secret(&hs, &th_kem, true).unwrap();
     assert_eq!(to_hex(&s_hs), to_hex(&oracle_expand_label(&hs, "n-pamp ", "s hs", &th_kem, 32)), "s_hs");
-    let master = npamp::derive_master_secret(&hs, &th_ccv, true);
+    let master = npamp::derive_master_secret(&hs, &th_ccv, true).unwrap();
     assert_eq!(to_hex(&master), to_hex(&oracle_expand_label(&hs, "n-pamp ", "master", &th_ccv, 32)), "master");
 
     // finished_key per direction: client from c_hs, server from s_hs.
     assert_eq!(
-        to_hex(&npamp::finished_key(&c_hs, true)),
+        to_hex(&npamp::finished_key(&c_hs, true).unwrap()),
         to_hex(&oracle_expand_label(&c_hs, "n-pamp ", "finished", &[], 32)),
         "finished_key(c_hs)"
     );
     assert_eq!(
-        to_hex(&npamp::finished_key(&s_hs, true)),
+        to_hex(&npamp::finished_key(&s_hs, true).unwrap()),
         to_hex(&oracle_expand_label(&s_hs, "n-pamp ", "finished", &[], 32)),
         "finished_key(s_hs)"
     );
@@ -776,8 +776,8 @@ fn key_schedule_impl() {
     let epoch: u64 = 0;
     let suite: u16 = npamp::AEAD_AES256_GCM;
     let channel: u16 = 0x0000;
-    let ts_impl = npamp::derive_traffic_secret(&s_hs, dir_s2c, epoch, suite, channel, true);
-    let (key, iv) = npamp::derive_key_iv(&ts_impl, true);
+    let ts_impl = npamp::derive_traffic_secret(&s_hs, dir_s2c, epoch, suite, channel, true).unwrap();
+    let (key, iv) = npamp::derive_key_iv(&ts_impl, true).unwrap();
 
     let mut ctx = Vec::with_capacity(1 + 8 + 2 + 2);
     ctx.push(dir_s2c);

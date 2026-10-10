@@ -99,9 +99,27 @@ export function openAes256Gcm(key: Buffer, iv: Buffer, seq: bigint, aad: Buffer,
   return Buffer.concat([d.update(ct), d.final()]);
 }
 
-// HKDF-Expand (RFC 5869), expand-only (PRK supplied).
+// Thrown when a profile other than Standard is requested. This module implements the Standard
+// profile only; High and Sovereign are refused, before any I/O, with this error.
+export class NoSuiteForProfile extends Error {
+  constructor() {
+    super("no cipher suite for this profile: only the Standard profile is implemented");
+    this.name = "NoSuiteForProfile";
+  }
+}
+
+// The Standard profile hash length (SHA-256).
+export const HASH_LEN = 32;
+
+function requireStandard(standard: boolean): void {
+  if (!standard) throw new NoSuiteForProfile();
+}
+
+// HKDF-Expand (RFC 5869), expand-only (PRK supplied). Only "sha256" is implemented; any other
+// hash name throws NoSuiteForProfile.
 export function hkdfExpand(hash: string, prk: Buffer, info: Buffer, length: number): Buffer {
-  const hashLen = hash === "sha256" ? 32 : 48;
+  requireStandard(hash === "sha256");
+  const hashLen = HASH_LEN;
   const n = Math.ceil(length / hashLen);
   let t = Buffer.alloc(0);
   const out: Buffer[] = [];
@@ -119,7 +137,8 @@ export function hkdfExpandLabel(secret: Buffer, label: string, context: Buffer, 
     Buffer.from([full.length]), full,
     Buffer.from([context.length]), context,
   ]);
-  return hkdfExpand(standard ? "sha256" : "sha384", secret, info, length);
+  requireStandard(standard);
+  return hkdfExpand("sha256", secret, info, length);
 }
 
 export function deriveTrafficSecret(master: Buffer, dir: number, epoch: bigint, suite: number, channel: number, standard: boolean): Buffer {
@@ -128,7 +147,7 @@ export function deriveTrafficSecret(master: Buffer, dir: number, epoch: bigint, 
   ctx.writeBigUInt64BE(epoch, 1);
   ctx.writeUInt16BE(suite, 9);
   ctx.writeUInt16BE(channel, 11);
-  return hkdfExpandLabel(master, "traffic", ctx, standard ? 32 : 48, standard);
+  return hkdfExpandLabel(master, "traffic", ctx, HASH_LEN, standard);
 }
 
 export function deriveKeyIv(secret: Buffer, standard: boolean): [Buffer, Buffer] {
@@ -136,22 +155,24 @@ export function deriveKeyIv(secret: Buffer, standard: boolean): [Buffer, Buffer]
 }
 
 // ----------------------------------------------------------------------------
-// Handshake key schedule trunk (binding spec/10 §5; ML-KEM-first per ADR-0005). The leaves above
+// Handshake key schedule trunk (binding spec/10 §5; ML-KEM-first). The leaves above
 // (hkdfExpand / hkdfExpandLabel / deriveTrafficSecret / deriveKeyIv) are reused unchanged; the
 // functions below add HKDF-Extract and the handshake-secret ladder that feeds them.
 // ----------------------------------------------------------------------------
 
-// HKDF-Extract (RFC 5869 §2.2): extract(salt, ikm) = HMAC-Hash(salt, ikm). Hash is SHA-256 at
-// Standard, SHA-384 at High/Sovereign — wired through the same `standard` flag as the leaves.
+// HKDF-Extract (RFC 5869 §2.2): extract(salt, ikm) = HMAC-SHA-256(salt, ikm). Throws
+// NoSuiteForProfile unless `standard` is true.
 export function hkdfExtract(salt: Buffer, ikm: Buffer, standard: boolean): Buffer {
-  return createHmac(standard ? "sha256" : "sha384", salt).update(ikm).digest();
+  requireStandard(standard);
+  return createHmac("sha256", salt).update(ikm).digest();
 }
 
 // deriveHandshakeSecret runs the §5 extract step. The IKM is the two KEM shared secrets concatenated
-// with ML-KEM FIRST (ADR-0005): ikm = ML-KEM_SS || X25519_SS. The binding's default salt is HashLen
-// zero octets (32 at Standard / SHA-256). mlkemSs and x25519Ss are shared secrets (IKM), not keys.
+// with ML-KEM FIRST: ikm = ML-KEM_SS || X25519_SS. The binding's default salt is HashLen
+// zero octets (32, SHA-256). mlkemSs and x25519Ss are shared secrets (IKM), not keys.
 export function deriveHandshakeSecret(mlkemSs: Buffer, x25519Ss: Buffer, standard: boolean): Buffer {
-  const salt = Buffer.alloc(standard ? 32 : 48); // HashLen zero octets
+  requireStandard(standard);
+  const salt = Buffer.alloc(HASH_LEN); // HashLen zero octets
   const ikm = Buffer.concat([mlkemSs, x25519Ss]); // ML-KEM concatenated first
   return hkdfExtract(salt, ikm, standard);
 }
@@ -159,22 +180,22 @@ export function deriveHandshakeSecret(mlkemSs: Buffer, x25519Ss: Buffer, standar
 // The handshake-secret ladder (binding spec/10 §5): c_hs / s_hs bind TH_kem; master binds TH_ccv.
 // Labels are exactly "c hs" / "s hs" / "master" — the "n-pamp " prefix is added by hkdfExpandLabel.
 export function deriveClientHandshakeSecret(handshakeSecret: Buffer, thKem: Buffer, standard: boolean): Buffer {
-  return hkdfExpandLabel(handshakeSecret, "c hs", thKem, standard ? 32 : 48, standard);
+  return hkdfExpandLabel(handshakeSecret, "c hs", thKem, HASH_LEN, standard);
 }
 
 export function deriveServerHandshakeSecret(handshakeSecret: Buffer, thKem: Buffer, standard: boolean): Buffer {
-  return hkdfExpandLabel(handshakeSecret, "s hs", thKem, standard ? 32 : 48, standard);
+  return hkdfExpandLabel(handshakeSecret, "s hs", thKem, HASH_LEN, standard);
 }
 
 export function deriveMasterSecret(handshakeSecret: Buffer, thCcv: Buffer, standard: boolean): Buffer {
-  return hkdfExpandLabel(handshakeSecret, "master", thCcv, standard ? 32 : 48, standard);
+  return hkdfExpandLabel(handshakeSecret, "master", thCcv, HASH_LEN, standard);
 }
 
 // deriveFinishedKey (binding spec/10 §6.2 / §5.4): finished_key = HKDF-Expand-Label(secret,
 // "finished", "" /*empty context*/, HashLen). The client Finished key derives from c_hs; the server
 // Finished key derives from s_hs. This is the KEY; computeFinished consumes it to produce the MAC.
 export function deriveFinishedKey(secret: Buffer, standard: boolean): Buffer {
-  return hkdfExpandLabel(secret, "finished", Buffer.alloc(0), standard ? 32 : 48, standard);
+  return hkdfExpandLabel(secret, "finished", Buffer.alloc(0), HASH_LEN, standard);
 }
 
 // ----------------------------------------------------------------------------
@@ -273,7 +294,7 @@ export function x25519SharedSecret(privateKey: KeyObject, publicKey: KeyObject):
 // cut point. Absorption granularity is per-TLV: addFrameType appends the 2-octet frame type ONLY
 // (NOT the rest of the 36-octet frame header — the spec §3/§7.1 divergence from RFC 8446 §4.4.1);
 // addTLV appends Type(2 BE)||Length(2 BE)||Value. A transcript point = hash over all bytes absorbed
-// so far (SHA-256 at Standard, SHA-384 at High/Sovereign).
+// so far (SHA-256).
 export class Transcript {
   #buf: Buffer = Buffer.alloc(0);
   addFrameType(ft: number): void {
@@ -288,14 +309,16 @@ export class Transcript {
     this.#buf = Buffer.concat([this.#buf, h, value]);
   }
   hash(standard: boolean): Buffer {
-    return createHash(standard ? "sha256" : "sha384").update(this.#buf).digest();
+    requireStandard(standard);
+    return createHash("sha256").update(this.#buf).digest();
   }
 }
 
 // Finished (binding spec/10 §6.2; RFC 8446 §4.4.4): verify_data = HMAC(finished_key, transcript_hash)
-// under the profile hash (SHA-256 at Standard, SHA-384 at High/Sovereign).
+// under SHA-256. Throws NoSuiteForProfile unless `standard` is true.
 export function computeFinished(finishedKey: Buffer, transcriptHash: Buffer, standard: boolean): Buffer {
-  return createHmac(standard ? "sha256" : "sha384", finishedKey).update(transcriptHash).digest();
+  requireStandard(standard);
+  return createHmac("sha256", finishedKey).update(transcriptHash).digest();
 }
 
 // verifyFinished recomputes the Finished MAC and constant-time-compares it to the received

@@ -1,9 +1,20 @@
 //! N-PAMP native Python extension: a thin PyO3/abi3 binding over the audited Rust core
 //! (`npamp` crate). One implementation of the security-critical code, shipped as a
 //! pre-built wheel so users never need a Rust toolchain (the pyca/cryptography model).
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyException, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+
+pyo3::create_exception!(
+    npamp_native,
+    NoSuiteForProfile,
+    PyException,
+    "Raised when a profile other than Standard is requested: the native module implements the Standard profile only."
+);
+
+fn refused(e: npamp::NoSuiteForProfile) -> PyErr {
+    NoSuiteForProfile::new_err(e.to_string())
+}
 
 fn arr32(b: &[u8]) -> PyResult<[u8; 32]> {
     b.try_into().map_err(|_| PyValueError::new_err("key must be 32 bytes"))
@@ -36,19 +47,21 @@ fn open_aes256gcm<'py>(py: Python<'py>, key: &[u8], iv: &[u8], seq: u64, aad: &[
 }
 
 #[pyfunction]
-fn hkdf_expand_label<'py>(py: Python<'py>, secret: &[u8], label: &str, context: &[u8], length: usize, standard: bool) -> Bound<'py, PyBytes> {
-    PyBytes::new(py, &npamp::hkdf_expand_label(secret, label, context, length, standard))
+fn hkdf_expand_label<'py>(py: Python<'py>, secret: &[u8], label: &str, context: &[u8], length: usize, standard: bool) -> PyResult<Bound<'py, PyBytes>> {
+    let okm = npamp::hkdf_expand_label(secret, label, context, length, standard).map_err(refused)?;
+    Ok(PyBytes::new(py, &okm))
 }
 
 #[pyfunction]
-fn derive_traffic_secret<'py>(py: Python<'py>, master: &[u8], dir: u8, epoch: u64, suite: u16, channel: u16, standard: bool) -> Bound<'py, PyBytes> {
-    PyBytes::new(py, &npamp::derive_traffic_secret(master, dir, epoch, suite, channel, standard))
+fn derive_traffic_secret<'py>(py: Python<'py>, master: &[u8], dir: u8, epoch: u64, suite: u16, channel: u16, standard: bool) -> PyResult<Bound<'py, PyBytes>> {
+    let ts = npamp::derive_traffic_secret(master, dir, epoch, suite, channel, standard).map_err(refused)?;
+    Ok(PyBytes::new(py, &ts))
 }
 
 #[pyfunction]
-fn derive_key_iv<'py>(py: Python<'py>, secret: &[u8], standard: bool) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
-    let (k, v) = npamp::derive_key_iv(secret, standard);
-    (PyBytes::new(py, &k), PyBytes::new(py, &v))
+fn derive_key_iv<'py>(py: Python<'py>, secret: &[u8], standard: bool) -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>)> {
+    let (k, v) = npamp::derive_key_iv(secret, standard).map_err(refused)?;
+    Ok((PyBytes::new(py, &k), PyBytes::new(py, &v)))
 }
 
 #[pyfunction]
@@ -60,6 +73,7 @@ fn frame_marshal<'py>(py: Python<'py>, version: u8, flags: u8, ftype: u16, chann
 /// Native module. Mirrors the pure-Python reference API so callers can swap backends.
 #[pymodule]
 fn npamp_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add("NoSuiteForProfile", m.py().get_type::<NoSuiteForProfile>())?;
     m.add("AEAD_AES256_GCM", npamp::AEAD_AES256_GCM)?;
     m.add("CHAN_CONTROL", npamp::CHAN_CONTROL)?;
     m.add("FRAME_PING", npamp::FRAME_PING)?;

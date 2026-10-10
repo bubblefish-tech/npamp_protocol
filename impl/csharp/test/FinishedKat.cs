@@ -17,7 +17,7 @@ namespace Sh.Bubblefish.Npamp;
 
 public static class FinishedKat
 {
-    private const string FinishedKatSha256 = "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f";
+    private const string FinishedKatSha256 = "05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d";
 
     private static int _failures;
 

@@ -38,20 +38,12 @@ public static class Vectors
         byte[] pt3 = Encoding.ASCII.GetBytes("hello world");
         string aead = Npamp.ToHex(Npamp.SealAes256Gcm(key3, iv3, 7UL, aad3, pt3));
 
-        // 4) traffic = DeriveKeyIv(DeriveTrafficSecret(master=48*0x2A, dir=0, epoch=0,
-        //          suite=AES-256-GCM, channel=Control, standard=false), standard=false).Key
-        byte[] master = new byte[48];
-        Array.Fill(master, (byte)0x2A);
-        byte[] secret = Npamp.DeriveTrafficSecret(master, 0, 0UL, Npamp.AeadAes256Gcm, Npamp.ChanControl, false);
-        string traffic = Npamp.ToHex(Npamp.DeriveKeyIv(secret, false).Key);
-
         var sb = new StringBuilder();
         sb.Append("{\n");
         sb.Append("  \"spec\": \"draft-bubblefish-npamp-00\",\n");
         sb.Append("  \"header_ping_control_seq0\": \"").Append(header).Append("\",\n");
         sb.Append("  \"nonce_iv1to12_seq0102\": \"").Append(nonce).Append("\",\n");
-        sb.Append("  \"aes256gcm_seal_helloworld\": \"").Append(aead).Append("\",\n");
-        sb.Append("  \"traffic_key_sha384\": \"").Append(traffic).Append("\"\n");
+        sb.Append("  \"aes256gcm_seal_helloworld\": \"").Append(aead).Append("\"\n");
         sb.Append("}\n");
         return sb.ToString();
     }

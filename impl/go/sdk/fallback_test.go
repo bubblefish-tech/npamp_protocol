@@ -21,7 +21,7 @@ package sdk_test
 // The mutation anchor for the red-evidence ledger is
 // TestDialWithFallback_NoCryptoDowngrade: temporarily changing
 // fallback.go's TCP+TLS leg to dial with a stripped-down Config (dropping
-// Identity/MLDSAIdentity) — simulating a fallback path that silently
+// Identity) — simulating a fallback path that silently
 // authenticates less than the caller asked for — flips that test red
 // because the resulting Conn's PeerIdentity/Profile no longer match the
 // direct-Dial baseline.

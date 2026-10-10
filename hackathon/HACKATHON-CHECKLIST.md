@@ -91,9 +91,9 @@ provides.
       "Implementation experience" for both implementations and file a tracked
       issue against the draft/spec — this is exactly the "running code informs
       the standard" feedback loop the hackathon exists to produce (§1).
-- [ ] Note whether any High/Sovereign-profile (post-quantum ML-DSA-87 /
-      SecP384r1MLKEM1024) peer was available; if not, record that gap
-      explicitly in Part C rather than silently only testing Standard.
+- [ ] Note whether any High/Sovereign-profile peer was available; this open
+      reference refuses those profiles, so record that gap explicitly in
+      Part C rather than silently only testing Standard.
 
 ## 4. After the event
 

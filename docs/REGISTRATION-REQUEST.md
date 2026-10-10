@@ -103,7 +103,7 @@ Route:
 
 1. **Open a `design`-labeled issue** describing the need (`CONTRIBUTING.md`, RFC 8874 practice).
 2. **Write a NEP** (`process/NEP-NNNN-slug.md`) if the change is larger than a single ADR — a new channel, a new frame-type range, a new TLV tag, a new suite, or a new registration policy is a NEP-scale change (NEP-0000 §Abstract). A smaller additive registration MAY proceed with a PR + an ADR.
-3. **Record an ADR** (MADR 4.0, `decisions/`) capturing the Considered Options, Decision, and Consequences.
+3. **Record a decision** (MADR 4.0) capturing the Considered Options, Decision, and Consequences.
 4. **Add the CSV row + the spec table + the change-log bullet** in the PR.
 
 > **NEP `Final` gate (NEP-0000 §6):** a Standards-Track NEP MUST NOT reach `Final`
@@ -123,7 +123,7 @@ Route:
 | **Companion specification** (link, if the code point occupies a reserved companion range) | `<spec/companion/... or N/A>` |
 | **Reference implementation** (path; required for NEP `Final`) | `<impl/... or "planned, NEP Accepted">` |
 | **Conformance vectors** (path; non-circular — expected values from the underlying RFC/FIPS/NIST/Wycheproof standard, never from the impl under test) | `<test-vectors/... or "planned, NEP Accepted">` |
-| **ADR / NEP number** | `<decisions/NNNN-... and/or process/NEP-NNNN-...>` |
+| **Decision record / NEP number** | `<decision record NNNN and/or process/NEP-NNNN-...>` |
 | **Change controller / Contact** | `<...>` |
 
 ---

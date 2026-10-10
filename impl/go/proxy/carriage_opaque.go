@@ -22,9 +22,8 @@ import (
 // BridgeEnvelope `content_type` discriminator value (§4.4) -- neither of
 // which the core registries had assigned. Registering both (registries/
 // tlv_tags.csv, registries/bridge_protocol_ids.csv's sibling content_type
-// prose in spec/companion/10_bridge_framework.md, and decisions/adr/0015)
-// unblocks this file; see that ADR for the derivation and authority of each
-// value. Both assignments are additive reservations within ranges the core
+// prose in spec/companion/10_bridge_framework.md)
+// unblocks this file. Both assignments are additive reservations within ranges the core
 // specification already sets aside for companions (§10's own framing) and
 // touch no frozen n-pamp/3 wire byte.
 
@@ -45,7 +44,7 @@ const opaqueContentTypeTLV npamp.TLVType = 0x0012
 // (0x01 JSON, 0x02 CBOR, 0x03 grpc+proto, bridge.go) whose sole meaning is
 // "the media type is carried in the OpaqueContentType TLV." Assigned 0x04,
 // the next value in the `content_type` enumeration after the three currently
-// assigned ones (spec/companion/10_bridge_framework.md §4; decisions/adr/0015).
+// assigned ones (spec/companion/10_bridge_framework.md §4).
 const opaqueContentTypeDiscriminator npamp.BridgeContentType = 0x04
 
 // errOpaqueContentType classifies the four §4.2/§4.3 envelope faults this leg

@@ -46,7 +46,7 @@ public static class Handshake
     /// appends the 2-octet frame type ONLY (NOT the rest of the 36-octet frame header — the
     /// spec section 3 / 7.1 divergence from RFC 8446 section 4.4.1); <see cref="AddTLV"/>
     /// appends Type(2 BE) || Length(2 BE) || Value. A transcript point = the hash over all
-    /// bytes absorbed so far (SHA-256 at Standard, SHA-384 at High/Sovereign).
+    /// bytes absorbed so far (SHA-256).
     /// </summary>
     public sealed class Transcript
     {
@@ -69,11 +69,15 @@ public static class Handshake
             _buf.AddRange(value);
         }
 
-        /// <summary>Hashes every octet absorbed so far (SHA-256 when <paramref name="standard"/>, else SHA-384).</summary>
+        /// <summary>
+        /// Hashes every octet absorbed so far with SHA-256. Throws
+        /// <see cref="Npamp.NoSuiteForProfileException"/> unless <paramref name="standard"/> is true.
+        /// </summary>
         public byte[] Hash(bool standard)
         {
+            Npamp.RequireStandard(standard);
             byte[] data = _buf.ToArray();
-            return standard ? SHA256.HashData(data) : SHA384.HashData(data);
+            return SHA256.HashData(data);
         }
     }
 
@@ -81,13 +85,13 @@ public static class Handshake
 
     /// <summary>
     /// Finished verify_data = HMAC(finished_key, transcript_hash) under the profile hash
-    /// (HMAC-SHA-256 at Standard, HMAC-SHA-384 at High/Sovereign).
+    /// (HMAC-SHA-256). Throws <see cref="Npamp.NoSuiteForProfileException"/> unless
+    /// <paramref name="standard"/> is true.
     /// </summary>
     public static byte[] ComputeFinished(byte[] finishedKey, byte[] transcriptHash, bool standard)
     {
-        return standard
-            ? HMACSHA256.HashData(finishedKey, transcriptHash)
-            : HMACSHA384.HashData(finishedKey, transcriptHash);
+        Npamp.RequireStandard(standard);
+        return HMACSHA256.HashData(finishedKey, transcriptHash);
     }
 
     /// <summary>

@@ -185,22 +185,40 @@ module Npamp
     cipher.update(ct) + cipher.final
   end
 
+  # The Standard profile hash length (SHA-256).
+  HASH_LEN = 32
+
+  # Raised when a profile other than Standard is requested. This module implements the
+  # Standard profile only; High and Sovereign are refused, before any I/O, with this error.
+  class NoSuiteForProfile < StandardError
+    def initialize(msg = "no cipher suite for this profile: only the Standard profile is implemented")
+      super
+    end
+  end
+
+  # Raises NoSuiteForProfile unless standard is true.
+  def self.require_standard(standard)
+    raise NoSuiteForProfile unless standard
+  end
+
   # HKDF-Expand-Label (draft-00 key schedule). HKDF-Expand only (RFC 5869 sec 2.3);
   # the supplied secret IS the PRK, there is no extract step.
-  # SHA-256 when standard == true, SHA-384 when standard == false ("high" profile).
+  # SHA-256; raises NoSuiteForProfile unless standard == true.
   def self.hkdf_expand_label(secret, label, context, length, standard)
+    require_standard(standard)
     full = (LABEL_PREFIX + label).b
     info = uint_to_be(length, 2)
     info << full.bytesize.chr
     info << full
     info << context.bytesize.chr
     info << context.b
-    digest = standard ? OpenSSL::Digest.new("SHA256") : OpenSSL::Digest.new("SHA384")
-    hkdf_expand(secret.b, info, length, digest)
+    hkdf_expand(secret.b, info, length, OpenSSL::Digest.new("SHA256"))
   end
 
-  # RFC 5869 section 2.3 HKDF-Expand. PRK is the given secret; no extract step.
+  # RFC 5869 section 2.3 HKDF-Expand. PRK is the given secret; no extract step. Only the
+  # SHA-256 digest is implemented; any other digest raises NoSuiteForProfile.
   def self.hkdf_expand(prk, info, length, digest)
+    require_standard(digest.name == "SHA256")
     hash_len = digest.digest_length
     raise ArgumentError, "length too large for HKDF-Expand" if length > 255 * hash_len
 
@@ -216,14 +234,14 @@ module Npamp
   end
 
   # traffic secret: context = dir(1) | epoch(8 BE) | suite(2 BE) | channel(2 BE);
-  # label "traffic"; output 32 (SHA-256) or 48 (SHA-384).
+  # label "traffic"; output 32 (SHA-256).
   def self.derive_traffic_secret(master, direction, epoch, suite, channel, standard)
     ctx = direction.chr.b
     ctx << uint_to_be(epoch, 8)
     ctx << uint_to_be(suite, 2)
     ctx << uint_to_be(channel, 2)
-    hlen = standard ? 32 : 48
-    hkdf_expand_label(master, "traffic", ctx, hlen, standard)
+    require_standard(standard)
+    hkdf_expand_label(master, "traffic", ctx, HASH_LEN, standard)
   end
 
   # key/iv = HkdfExpandLabel(secret,"key",[],32) / (...,"iv",[],12).
@@ -233,49 +251,50 @@ module Npamp
     [key, iv]
   end
 
-  # RFC 5869 section 2.2 HKDF-Extract: PRK = HMAC-Hash(salt, IKM). SHA-256 when
-  # standard, SHA-384 when "high". Per RFC 5869, an absent salt defaults to HashLen
+  # RFC 5869 section 2.2 HKDF-Extract: PRK = HMAC-SHA-256(salt, IKM). Raises
+  # NoSuiteForProfile unless standard is true. Per RFC 5869, an absent salt defaults to HashLen
   # zero octets; the draft-00 binding (spec/10 section 5) uses that 32-zero-octet
   # default salt for the handshake-secret extract at the Standard profile.
   def self.hkdf_extract(salt, ikm, standard)
-    digest = standard ? OpenSSL::Digest.new("SHA256") : OpenSSL::Digest.new("SHA384")
+    require_standard(standard)
+    digest = OpenSSL::Digest.new("SHA256")
     salt = ("\x00".b * digest.digest_length) if salt.nil? || salt.empty?
     OpenSSL::HMAC.digest(digest, salt.b, ikm.b)
   end
 
-  # handshake_secret (binding spec/10 section 5; ML-KEM-first per ADR-0005). The two
+  # handshake_secret (binding spec/10 section 5; ML-KEM-first). The two
   # inputs are the post-quantum and classical KEM shared secrets (IKM); they are
   # concatenated with the ML-KEM shared secret FIRST, then HKDF-Extract'd under the
   # default salt of HashLen zero octets (32 at the Standard profile).
   def self.derive_handshake_secret(mlkem_ss, x25519_ss, standard)
     ikm = mlkem_ss.b + x25519_ss.b
-    hlen = standard ? 32 : 48
-    hkdf_extract("\x00".b * hlen, ikm, standard)
+    require_standard(standard)
+    hkdf_extract("\x00".b * HASH_LEN, ikm, standard)
   end
 
   # c_hs (binding spec/10 section 5): HKDF-Expand-Label(handshake_secret, "c hs",
   # th_kem, HashLen). The "n-pamp " prefix is added by hkdf_expand_label.
   def self.derive_client_handshake_secret(handshake_secret, th_kem, standard)
-    hkdf_expand_label(handshake_secret, "c hs", th_kem.b, standard ? 32 : 48, standard)
+    hkdf_expand_label(handshake_secret, "c hs", th_kem.b, HASH_LEN, standard)
   end
 
   # s_hs (binding spec/10 section 5): HKDF-Expand-Label(handshake_secret, "s hs",
   # th_kem, HashLen).
   def self.derive_server_handshake_secret(handshake_secret, th_kem, standard)
-    hkdf_expand_label(handshake_secret, "s hs", th_kem.b, standard ? 32 : 48, standard)
+    hkdf_expand_label(handshake_secret, "s hs", th_kem.b, HASH_LEN, standard)
   end
 
   # master (binding spec/10 section 5): HKDF-Expand-Label(handshake_secret, "master",
   # th_ccv, HashLen). Bound to th_ccv (the client-CertVerify cut), NOT th_kem.
   def self.derive_master_secret(handshake_secret, th_ccv, standard)
-    hkdf_expand_label(handshake_secret, "master", th_ccv.b, standard ? 32 : 48, standard)
+    hkdf_expand_label(handshake_secret, "master", th_ccv.b, HASH_LEN, standard)
   end
 
   # finished_key (binding spec/10 section 6.2 / section 5.4): HKDF-Expand-Label(secret,
   # "finished", "" /* empty context */, HashLen). The client Finished key derives from
   # c_hs; the server Finished key derives from s_hs.
   def self.derive_finished_key(secret, standard)
-    hkdf_expand_label(secret, "finished", "".b, standard ? 32 : 48, standard)
+    hkdf_expand_label(secret, "finished", "".b, HASH_LEN, standard)
   end
 
   # Lowercase hex encoding helper (mirrors the reference .hex() output).
@@ -302,8 +321,7 @@ module Npamp
   # and hashes it at a cut point. Per-TLV granularity: add_frame_type appends the
   # 2-octet frame type ONLY (not the rest of the 36-octet header - the spec 3/7.1
   # divergence from RFC 8446 4.4.1); add_tlv appends Type(2 BE) | Length(2 BE) |
-  # Value. A point = hash over all bytes absorbed so far (SHA-256 at Standard,
-  # SHA-384 at High/Sovereign).
+  # Value. A point = SHA-256 over all bytes absorbed so far.
   class Transcript
     def initialize
       @buf = "".b
@@ -322,18 +340,19 @@ module Npamp
       @buf << value
     end
 
-    # Hash over all bytes absorbed so far. SHA-256 when standard, else SHA-384.
+    # SHA-256 over all bytes absorbed so far. Raises NoSuiteForProfile unless standard is true.
     def hash(standard)
-      digest = standard ? OpenSSL::Digest.new("SHA256") : OpenSSL::Digest.new("SHA384")
-      digest.digest(@buf)
+      Npamp.require_standard(standard)
+      OpenSSL::Digest.new("SHA256").digest(@buf)
     end
   end
 
   # Finished (binding spec/10 6.2; RFC 8446 4.4.4): verify_data =
-  # HMAC(finished_key, transcript_hash) under the profile hash (SHA-256 at
-  # Standard, SHA-384 at High/Sovereign).
+  # HMAC(finished_key, transcript_hash) under SHA-256. Raises NoSuiteForProfile
+  # unless standard is true.
   def self.compute_finished(finished_key, transcript_hash, standard)
-    OpenSSL::HMAC.digest(standard ? "SHA256" : "SHA384", finished_key.b, transcript_hash.b)
+    require_standard(standard)
+    OpenSSL::HMAC.digest("SHA256", finished_key.b, transcript_hash.b)
   end
 
   # Recompute the Finished MAC and constant-time-compare it to the received

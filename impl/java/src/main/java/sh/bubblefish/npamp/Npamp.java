@@ -250,15 +250,38 @@ public final class Npamp {
 
     // -- Key schedule (HKDF-Extract / HKDF-Expand / HKDF-Expand-Label) ------
 
+    /** The Standard profile hash length (SHA-256). */
+    public static final int HASH_LEN = 32;
+
     /**
-     * HKDF-Extract (RFC 5869, section 2.2): PRK = HMAC-Hash(salt, IKM). {@code standard}
-     * selects SHA-256 (true, HmacSHA256) or SHA-384 (false, HmacSHA384). Per RFC 5869 a
+     * Thrown when a profile other than Standard is requested. This module implements the
+     * Standard profile only; High and Sovereign are refused, before any I/O, with this error.
+     */
+    public static final class NoSuiteForProfile extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public NoSuiteForProfile() {
+            super("no cipher suite for this profile: only the Standard profile is implemented");
+        }
+    }
+
+    /** Throws {@link NoSuiteForProfile} unless {@code standard} is true. */
+    static void requireStandard(boolean standard) {
+        if (!standard) {
+            throw new NoSuiteForProfile();
+        }
+    }
+
+    /**
+     * HKDF-Extract (RFC 5869, section 2.2): PRK = HMAC-SHA-256(salt, IKM). Throws
+     * {@link NoSuiteForProfile} unless {@code standard} is true. Per RFC 5869 a
      * null/empty salt is replaced with HashLen zero octets. Exposed for the handshake-secret
      * ladder and for independent KAT against RFC 5869 HKDF-Extract vectors.
      */
     public static byte[] hkdfExtract(byte[] salt, byte[] ikm, boolean standard) {
+        requireStandard(standard);
         try {
-            String macAlg = standard ? "HmacSHA256" : "HmacSHA384";
+            String macAlg = "HmacSHA256";
             Mac mac = Mac.getInstance(macAlg);
             byte[] key = (salt == null || salt.length == 0) ? new byte[mac.getMacLength()] : salt;
             mac.init(new SecretKeySpec(key, macAlg));
@@ -270,8 +293,8 @@ public final class Npamp {
 
     /**
      * HKDF-Expand (RFC 5869, section 2.3), expand step only: the supplied secret
-     * IS the PRK, so HKDF-Extract is not run. The hash is selected by the caller
-     * (HmacSHA256 or HmacSHA384).
+     * IS the PRK, so HKDF-Extract is not run. The caller supplies the MAC algorithm
+     * (only HmacSHA256 is reachable from the public entry points).
      */
     private static byte[] hkdfExpand(String macAlg, byte[] prk, byte[] info, int length) {
         try {
@@ -298,18 +321,19 @@ public final class Npamp {
 
     /**
      * HKDF-Expand (RFC 5869, section 2.3), expand step only: the supplied secret
-     * IS the PRK, so HKDF-Extract is not run. {@code standard} selects SHA-256
-     * (true, HmacSHA256) or SHA-384 (false, HmacSHA384). Exposed for independent
-     * KAT against RFC 5869 / Wycheproof HKDF-Expand vectors.
+     * IS the PRK, so HKDF-Extract is not run. HMAC-SHA-256; throws {@link NoSuiteForProfile}
+     * unless {@code standard} is true. Exposed for independent KAT against RFC 5869 /
+     * Wycheproof HKDF-Expand vectors.
      */
     public static byte[] hkdfExpand(byte[] prk, byte[] info, int length, boolean standard) {
-        return hkdfExpand(standard ? "HmacSHA256" : "HmacSHA384", prk, info, length);
+        requireStandard(standard);
+        return hkdfExpand("HmacSHA256", prk, info, length);
     }
 
     /**
      * HKDF-Expand-Label (draft-00 7.4). full = LABEL_PREFIX + label.
      * info = u16(length) || u8(len(full)) || full || u8(len(context)) || context.
-     * {@code standard} selects SHA-256 (true) or SHA-384 (false).
+     * Throws {@link NoSuiteForProfile} unless {@code standard} is true.
      */
     public static byte[] hkdfExpandLabel(byte[] secret, String label, byte[] context, int length, boolean standard) {
         byte[] full = (LABEL_PREFIX + label).getBytes(java.nio.charset.StandardCharsets.US_ASCII);
@@ -328,7 +352,8 @@ public final class Npamp {
     /**
      * Derives a directional traffic secret.
      * context = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE);
-     * output length 32 (SHA-256) or 48 (SHA-384); label "traffic".
+     * output length 32 (SHA-256); label "traffic". Throws {@link NoSuiteForProfile} unless
+     * {@code standard} is true.
      */
     public static byte[] deriveTrafficSecret(byte[] master, int dir, long epoch, int suite, int channel, boolean standard) {
         byte[] ctx = new byte[1 + 8 + 2 + 2];
@@ -336,8 +361,8 @@ public final class Npamp {
         putU64BE(ctx, 1, epoch);
         putU16BE(ctx, 9, suite);
         putU16BE(ctx, 11, channel);
-        int hlen = standard ? 32 : 48;
-        return hkdfExpandLabel(master, "traffic", ctx, hlen, standard);
+        requireStandard(standard);
+        return hkdfExpandLabel(master, "traffic", ctx, HASH_LEN, standard);
     }
 
     /** Derives the {key(32), iv(12)} pair from a traffic secret. */

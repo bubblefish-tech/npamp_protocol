@@ -579,12 +579,11 @@ fn handle(req: &Request, break_mode: bool) -> String {
             }
         }
 
-        // --- hkdf.expand: npamp::hkdf_expand (RFC 5869 §2.3). standard=true selects
-        //     SHA-256, false selects SHA-384, matching the reference key schedule. ---
+        // --- hkdf.expand: npamp::hkdf_expand (RFC 5869 §2.3) under SHA-256. Any
+        //     other hash is not implemented by the open reference build and is reported as skipped. ---
         "hkdf.expand" => {
             let standard = match req.get_str("hash") {
                 Some("sha256") => true,
-                Some("sha384") => false,
                 other => {
                     return serialize_skipped(&format!("hash not implemented: {}", other.unwrap_or("")))
                 }
@@ -601,8 +600,10 @@ fn handle(req: &Request, break_mode: bool) -> String {
             if length < 0 {
                 return serialize_error("negative length");
             }
-            let okm = npamp::hkdf_expand(&prk, &info, length as usize, standard);
-            serialize_out(&[("okm", OutVal::Str(hex_encode(&okm)))])
+            match npamp::hkdf_expand(&prk, &info, length as usize, standard) {
+                Ok(okm) => serialize_out(&[("okm", OutVal::Str(hex_encode(&okm)))]),
+                Err(e) => serialize_skipped(&format!("{e}")),
+            }
         }
 
         // --- profile.check: the OPEN reference impl (impl/rust) exposes no profile

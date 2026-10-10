@@ -7,37 +7,28 @@
 //! Interoperates with either this crate's interop_client example (Rust<->Rust) or
 //! the Go reference harness impl/go/cmd/npamp-interop -role client (Go<->Rust).
 //!
-//! At `--profile standard` (the default) this drives `Session::accept` — the
-//! original Ed25519-only entry point, byte-unchanged. At `--profile high` /
-//! `--profile sovereign` this drives the multi-profile entry point
-//! `Session::accept_with_profiles` (spec/05_profiles.md; draft-00 section 6)
-//! instead, allowing exactly the requested profile and authenticating with a
-//! freshly generated ML-DSA-87 identity — the SAME entry point
-//! `session.rs`'s own `#[cfg(test)]` module drives over an in-memory pipe,
-//! run here for the first time over a real loopback `TcpStream`. Pass the
-//! SAME `--profile` value the client uses (`interop_client`'s offered
-//! profile and this server's allowed profile must agree, or the handshake is
-//! correctly rejected as a downgrade — see `dial_with_profiles`'s docs).
+//! At `--profile standard` (the default) this drives `Session::accept`. At
+//! `--profile high` / `--profile sovereign` this drives the multi-profile entry
+//! point `Session::accept_with_profiles` (spec/05_profiles.md; draft-00 section 6),
+//! which this crate answers with `NoSuiteForProfile`: only the Standard profile is
+//! implemented, so the example reports the refusal and exits 1 before any
+//! handshake byte is read.
 //!
 //!   cargo run --example interop_server -- 127.0.0.1:47700 --profile standard
-//!   cargo run --example interop_server -- 127.0.0.1:47700 --profile high
-//!   cargo run --example interop_server -- 127.0.0.1:47700 --profile sovereign
 //!
 //! Transport: the N-PAMP handshake is transport-agnostic; this example runs it
 //! directly over TCP. The Go SDK's TLS 1.3 (ALPN "n-pamp/3") transport binding is
 //! layered by sdk.Dial/Listen and is not exercised here (see `npamp::session` docs).
 
-use npamp::mldsa87;
 use npamp::session::{self, Session};
 use std::net::TcpListener;
 use std::process::exit;
 
 const APP_FRAME_TYPE: u16 = 0x0120; // application-defined frame type
 
-/// Mirrors `interop_client`'s `Profile`: the three profiles
-/// `Session::accept_with_profiles` allows (spec/05_profiles.md). Standard still
-/// runs through the original `Session::accept` — this enum only selects which
-/// entry point + identity material this example builds, never a new wire behavior.
+/// Mirrors `interop_client`'s `Profile`: the three profile code points
+/// (spec/05_profiles.md). Standard runs through `Session::accept`; High and
+/// Sovereign are passed to `Session::accept_with_profiles` and refused by this crate.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Profile {
     Standard,
@@ -108,18 +99,6 @@ fn main() {
     let id_bytes = identity.verifying_key().to_bytes();
     println!("interop_server: identity ed25519 = {}", hex8(&id_bytes));
 
-    // Standard runs the original Session::accept (byte-unchanged); High/Sovereign
-    // runs the multi-profile entry point with a freshly generated ML-DSA-87
-    // long-term identity — required (fail-closed inside accept_with_profiles) for
-    // either non-Standard profile.
-    let mldsa_identity = if profile != Profile::Standard {
-        let id = mldsa87::Identity::generate();
-        println!("interop_server: identity ml-dsa-87 = {}", hex8(id.public_key_bytes()));
-        Some(id)
-    } else {
-        None
-    };
-
     let (mut stream, peer) = match listener.accept() {
         Ok(x) => x,
         Err(e) => {
@@ -131,14 +110,9 @@ fn main() {
 
     let sess = match profile {
         Profile::Standard => Session::accept(&mut stream, &identity, None),
-        Profile::High | Profile::Sovereign => Session::accept_with_profiles(
-            &mut stream,
-            &identity,
-            mldsa_identity.as_ref(),
-            &[profile.wire_byte()],
-            None,
-            None,
-        ),
+        Profile::High | Profile::Sovereign => {
+            Session::accept_with_profiles(&mut stream, &identity, &[profile.wire_byte()], None)
+        }
     };
     let sess = match sess {
         Ok(s) => s,
@@ -148,24 +122,10 @@ fn main() {
         }
     };
 
-    // accept_with_profiles allowed exactly one profile, so a completed handshake
-    // proves the client negotiated that SAME profile — and kem_group_for_profiles
-    // forces SecP384r1MLKEM1024 (0x11ed) whenever High or Sovereign is offered, so
-    // peer_identity_mldsa87() being populated is live proof both the KEM group and
-    // the ML-DSA-87 CertVerify negotiated as expected for the requested profile,
-    // not merely that SOME handshake completed.
-    match sess.peer_identity_mldsa87() {
-        Some(peer_mldsa) => println!(
-            "interop_server: handshake OK — profile={} negotiated KEM SecP384r1MLKEM1024 (0x11ed) + ML-DSA-87 CertVerify; authenticated client ml-dsa-87 = {} ({} octets)",
-            profile.name(),
-            hex8(peer_mldsa),
-            peer_mldsa.len()
-        ),
-        None => println!(
-            "interop_server: handshake OK — profile=standard; authenticated client ed25519 = {}",
-            hex8(&sess.peer_identity())
-        ),
-    }
+    println!(
+        "interop_server: handshake OK — profile=standard; authenticated client ed25519 = {}",
+        hex8(&sess.peer_identity())
+    );
 
     // Receive one application frame from the client (Memory channel, seq 0).
     let (channel, ftype, pt) = match sess.recv(&mut stream, 0) {

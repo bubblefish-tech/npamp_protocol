@@ -10,7 +10,7 @@ import (
 
 // X25519MLKEM768 (KEM 0x11ec) wire sizes, per the handshake binding
 // (spec/10 section 4). Component sizes are per FIPS 203 (ML-KEM-768) and
-// RFC 7748 (X25519). The wire layout is ML-KEM-first (ADR-0005): the suite
+// RFC 7748 (X25519). The wire layout is ML-KEM-first: the suite
 // NAME lists X25519 first, the BYTES are ML-KEM-first.
 const (
 	// KEMShareSize768 is the TLV 0x07 value size:
@@ -34,14 +34,14 @@ var (
 // SharedSecrets holds the two component shared secrets of the X25519MLKEM768
 // hybrid KEM. There is no hybrid-layer KDF: the key schedule's HKDF-Extract is
 // the combiner, and its IKM is the ML-KEM-first concatenation (spec/10 section
-// 4, ADR-0005).
+// 4).
 type SharedSecrets struct {
 	MLKEM  []byte // 32 octets, FIPS 203 ML-KEM-768 shared secret
 	X25519 []byte // 32 octets, RFC 7748 X25519 shared secret
 }
 
 // Combined returns ML-KEM_SS || X25519_SS (64 octets), the raw IKM fed to
-// HKDF-Extract by HandshakeSecret. ML-KEM-first, per ADR-0005 / SP 800-56C
+// HKDF-Extract by HandshakeSecret. ML-KEM-first, per SP 800-56C
 // Rev. 2 (the FIPS-approved secret leads the KDF input).
 func (s SharedSecrets) Combined() []byte {
 	out := make([]byte, 0, len(s.MLKEM)+len(s.X25519))

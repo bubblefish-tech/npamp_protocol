@@ -9,10 +9,9 @@ import (
 	"testing"
 )
 
-// kemWireKAT mirrors test-vectors/v1/kem-wire-kat.json (ADR-0007):
+// kemWireKAT mirrors test-vectors/v1/kem-wire-kat.json:
 // standards-derived vectors (NIST ACVP FIPS 203; RFC 7748 section 6.1) that
-// pin the X25519MLKEM768 ML-KEM-first wire order (spec/10 section 4,
-// ADR-0005).
+// pin the X25519MLKEM768 ML-KEM-first wire order (spec/10 section 4).
 type kemWireKAT struct {
 	KEMCodepoint string `json:"kem_codepoint"`
 	Keygen       struct {
@@ -94,7 +93,7 @@ func TestKEMWireKAT(t *testing.T) {
 	}
 
 	// Leg 3 (wire order, KEMShare): the impl's KEMShare MUST be
-	// ek (1184) || alice_public (32) — ML-KEM-first (ADR-0005).
+	// ek (1184) || alice_public (32) — ML-KEM-first.
 	client, err := NewKEMClient(seed, alicePriv)
 	if err != nil {
 		t.Fatal(err)
@@ -164,6 +163,6 @@ func TestKEMWireKAT(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bytes.Equal(hs, x25519First) {
-		t.Fatal("HandshakeSecret matches the X25519-first IKM order (ADR-0005 violation)")
+		t.Fatal("HandshakeSecret matches the X25519-first IKM order (ML-KEM-first violated)")
 	}
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "npamp_00 X25519MLKEM768 KEM-wire KAT",
-  "description": "Schema for the N-PAMP draft-00 (spec/10 §4; ADR-0005, ML-KEM-first) X25519MLKEM768 KEM-wire Known Answer Test vector. This is a standards-anchored, NON-CIRCULAR KAT: it carries RFC 7748 §6.1 X25519 anchors and NIST ACVP / FIPS 203 ML-KEM-768 anchors plus fixed wire-layout invariants, NOT bytes emitted by an N-PAMP implementation. It pins the hybrid-KEM wire byte order (combiner order) and component encodings.",
+  "description": "Schema for the N-PAMP draft-00 (spec/10 §4; ML-KEM-first) X25519MLKEM768 KEM-wire Known Answer Test vector. This is a standards-anchored, NON-CIRCULAR KAT: it carries RFC 7748 §6.1 X25519 anchors and NIST ACVP / FIPS 203 ML-KEM-768 anchors plus fixed wire-layout invariants, NOT bytes emitted by an N-PAMP implementation. It pins the hybrid-KEM wire byte order (combiner order) and component encodings.",
   "type": "object",
   "required": [
     "name",
@@ -35,7 +35,7 @@
     },
     "purpose": {
       "type": "string",
-      "description": "What invariant the vector pins (the wire byte order / combiner-order surface, ADR-0005)."
+      "description": "What invariant the vector pins (the wire byte order / combiner-order surface)."
     },
     "mlkem768_keygen": {
       "type": "object",
@@ -147,7 +147,7 @@
     },
     "wire_layout": {
       "type": "object",
-      "description": "How a conforming implementation MUST assemble the on-wire fields (ML-KEM-first, ADR-0005) and the fixed component lengths.",
+      "description": "How a conforming implementation MUST assemble the on-wire fields (ML-KEM-first) and the fixed component lengths.",
       "required": ["description", "kem_share", "kem_ciphertext", "combined_secret", "kem_share_len", "kem_ciphertext_len", "combined_secret_len"],
       "properties": {
         "description": { "type": "string" },

@@ -357,7 +357,6 @@ private fun handle(req: Map<String, Any?>): Map<String, Any?> {
         "hkdf.expand" -> {
             val macAlg = when (str(ins, "hash")) {
                 "sha256" -> "HmacSHA256"
-                "sha384" -> "HmacSHA384"
                 else -> return mapOf("skipped" to "hash not implemented: " + str(ins, "hash"))
             }
             try {

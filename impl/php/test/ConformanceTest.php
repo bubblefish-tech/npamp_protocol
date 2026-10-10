@@ -3,7 +3,7 @@
 /**
  * Conformance test for the N-PAMP PHP reference (draft-bubblefish-npamp-00).
  *
- * Reproduces the four cross-language golden vectors plus five property tests,
+ * Reproduces the three cross-language golden vectors plus five property tests,
  * mirroring the Go/Rust/Java/Python/C# suites. Prints one line per check and
  * exits 0 on success, 1 if any check fails.
  *
@@ -55,12 +55,6 @@ $aad = (new Frame(Npamp::FRAME_PING, Npamp::CHAN_CONTROL))->headerPrefix(11);
 $sealed = Npamp::sealAes256Gcm($key, $iv, 7, $aad, 'hello world');
 check('vec_aead', Npamp::toHex($sealed)
     === '3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf');
-
-$master = str_repeat(chr(0x2A), 48);
-$ts = Npamp::deriveTrafficSecret($master, 0, 0, Npamp::AEAD_AES256_GCM, Npamp::CHAN_CONTROL, false);
-[$tk] = Npamp::deriveKeyIv($ts, false);
-check('vec_traffic_key', Npamp::toHex($tk)
-    === '79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc');
 
 // --- property tests (mirror the Go/Rust/Java suites) ---
 

@@ -164,7 +164,10 @@ func clientHandshake(conn net.Conn, priv ed25519.PrivateKey, pub ed25519.PublicK
 		AEADOffer:    []npamp.AEADID{npamp.AEADAES256GCM},
 		KEMShare:     kem.KEMShare(),
 	}
-	t := npamp.NewTranscript(profile)
+	t, err := npamp.NewTranscript(profile)
+	if err != nil {
+		return nil, nil, err
+	}
 	if err := sendCleartext(conn, npamp.FrameClientHello, ch.Encode()); err != nil {
 		return nil, nil, err
 	}
@@ -231,7 +234,10 @@ func clientHandshake(conn net.Conn, priv ed25519.PrivateKey, pub ed25519.PublicK
 	if err != nil {
 		return nil, nil, err
 	}
-	cFin := npamp.ComputeFinished(cFinKey, thCCV, profile)
+	cFin, err := npamp.ComputeFinished(cFinKey, thCCV, profile)
+	if err != nil {
+		return nil, nil, err
+	}
 	auth := &npamp.AuthMessage{IdentityKey: pub, CertVerify: cCV, Finished: cFin}
 	caWire, err := sealFrame(cHS, npamp.DirClientToServer, uint16(npamp.ChanControl), 0, npamp.FrameClientAuth, auth.Encode())
 	if err != nil {
@@ -249,7 +255,10 @@ func clientHandshake(conn net.Conn, priv ed25519.PrivateKey, pub ed25519.PublicK
 }
 
 func serverHandshake(conn net.Conn, priv ed25519.PrivateKey, pub ed25519.PublicKey) (master []byte, peer ed25519.PublicKey, err error) {
-	t := npamp.NewTranscript(profile)
+	t, err := npamp.NewTranscript(profile)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	chPayload, err := recvCleartext(conn, npamp.FrameClientHello)
 	if err != nil {
@@ -298,7 +307,10 @@ func serverHandshake(conn net.Conn, priv ed25519.PrivateKey, pub ed25519.PublicK
 	if err != nil {
 		return nil, nil, err
 	}
-	sFin := npamp.ComputeFinished(sFinKey, t.Sum(), profile)
+	sFin, err := npamp.ComputeFinished(sFinKey, t.Sum(), profile)
+	if err != nil {
+		return nil, nil, err
+	}
 	t.AddTLV(npamp.TLV{Type: npamp.TLVFinished, Value: sFin})
 	auth := &npamp.AuthMessage{IdentityKey: pub, CertVerify: sCV, Finished: sFin}
 	saWire, err := sealFrame(sHS, npamp.DirServerToClient, uint16(npamp.ChanControl), 0, npamp.FrameServerAuth, auth.Encode())

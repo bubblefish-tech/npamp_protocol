@@ -3,7 +3,6 @@ package npamp
 import (
 	"crypto/hkdf"
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/binary"
 	"errors"
 	"hash"
@@ -22,11 +21,20 @@ const (
 	DirServerToClient Direction = 1
 )
 
-func hashForProfile(p Profile) func() hash.Hash {
+// ErrNoSuiteForProfile is returned when a key-schedule, transcript or Finished
+// function is asked to work for a profile this package has no cipher suite for.
+// This package implements the Standard profile (SHA-256 key schedule). The High
+// and Sovereign profiles keep their code points and names, and every call for
+// them is refused with this error before any key material is derived.
+var ErrNoSuiteForProfile = errors.New("npamp: no cipher suite is implemented for this profile (this package implements the Standard profile only)")
+
+// hashForProfile returns the KDF hash of profile p, or ErrNoSuiteForProfile for
+// every profile other than Standard.
+func hashForProfile(p Profile) (func() hash.Hash, error) {
 	if p == ProfileStandard {
-		return sha256.New
+		return sha256.New, nil
 	}
-	return sha512.New384
+	return nil, ErrNoSuiteForProfile
 }
 
 // HkdfExpandLabel implements the TLS-1.3-style HKDF-Expand-Label with the N-PAMP
@@ -55,7 +63,10 @@ func DeriveTrafficSecret(master []byte, dir Direction, epoch uint64, suite AEADI
 	ctx = binary.BigEndian.AppendUint64(ctx, epoch)
 	ctx = binary.BigEndian.AppendUint16(ctx, uint16(suite))
 	ctx = binary.BigEndian.AppendUint16(ctx, uint16(channel))
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
 	return HkdfExpandLabel(master, "traffic", ctx, h().Size(), h)
 }
 
@@ -65,43 +76,18 @@ func DeriveTrafficSecret(master []byte, dir Direction, epoch uint64, suite AEADI
 //	handshake_secret = HKDF-Extract(salt = HashLen x 0x00, IKM = ss.Combined())
 //
 // The salt is HashLen zero octets (the RFC 5869 section 2.2 default); the IKM is the
-// per-group combined KEM shared secret (ss.Combined()) — the Extract is itself the
+// combined KEM shared secret (ss.Combined()) — the Extract is itself the
 // hybrid combiner (a dual-PRF), with no hybrid-layer KDF before it. The concatenation
-// order is per-group per RFC 10024 (formerly draft-ietf-tls-ecdhe-mlkem; decision D2, superseding the
-// ADR-0005 universal ML-KEM-first): this SharedSecrets value is the X25519MLKEM768
-// group, whose Combined() is ML-KEM_SS || X25519_SS; SecP384r1MLKEM1024 uses
-// SharedSecrets1024.Combined() (ECDHE_SS || ML-KEM_SS). The public KEM material is
-// bound via the transcript (TH_kem), not folded into this Extract input.
+// order follows RFC 10024 (formerly draft-ietf-tls-ecdhe-mlkem): this SharedSecrets
+// value is the X25519MLKEM768 group, whose Combined() is ML-KEM_SS || X25519_SS.
+// The public KEM material is bound via the transcript (TH_kem), not folded into
+// this Extract input. A profile other than Standard is refused with
+// ErrNoSuiteForProfile.
 func HandshakeSecret(ss SharedSecrets, p Profile) ([]byte, error) {
-	h := hashForProfile(p)
-	return hkdf.Extract(h, ss.Combined(), make([]byte, h().Size()))
-}
-
-// ErrHandshakeSecret1024StandardProfile is returned by HandshakeSecret1024
-// when called with ProfileStandard. SecP384r1MLKEM1024 (kem1024.go) is the
-// High/Sovereign minimum KEM (spec/05_profiles.md "Minimum KEM"); Standard
-// uses X25519MLKEM768 and HandshakeSecret, never this function — a Standard
-// session that reached this call would be a protocol-layer bug upstream
-// (the SDK's KEM-group selection is profile-derived), so this is fail-closed
-// rather than a silent fallback to the wrong combiner/hash.
-var ErrHandshakeSecret1024StandardProfile = errors.New("npamp: HandshakeSecret1024 called with ProfileStandard (SecP384r1MLKEM1024 is High/Sovereign only, spec/05_profiles.md)")
-
-// HandshakeSecret1024 is HandshakeSecret for the SecP384r1MLKEM1024 KEM
-// (High, Sovereign), identical construction over the wider 1024 shared-secret
-// type (spec/10 section 5, spec/10 section 4a):
-//
-//	handshake_secret = HKDF-Extract(salt = HashLen x 0x00, IKM = ss.Combined())
-//
-// ss.Combined() is ECDHE_SS || ML-KEM_SS (kem1024.go: SecP384r1MLKEM1024 is
-// ECDHE-first, the reverse of X25519MLKEM768's ML-KEM-first order). p selects
-// H/HashLen exactly as HandshakeSecret does (SHA-384/48 at High and Sovereign,
-// the only profiles p may be here). Fail-closed for ProfileStandard: see
-// ErrHandshakeSecret1024StandardProfile.
-func HandshakeSecret1024(ss SharedSecrets1024, p Profile) ([]byte, error) {
-	if p == ProfileStandard {
-		return nil, ErrHandshakeSecret1024StandardProfile
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
 	}
-	h := hashForProfile(p)
 	return hkdf.Extract(h, ss.Combined(), make([]byte, h().Size()))
 }
 
@@ -114,7 +100,10 @@ func HandshakeSecret1024(ss SharedSecrets1024, p Profile) ([]byte, error) {
 // Handshake-phase traffic keys descend from these via DeriveTrafficSecret
 // (epoch 0, Control channel).
 func DeriveHandshakeTrafficSecrets(handshakeSecret, thKEM []byte, p Profile) (cHS, sHS []byte, err error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, nil, err
+	}
 	cHS, err = HkdfExpandLabel(handshakeSecret, "c hs", thKEM, h().Size(), h)
 	if err != nil {
 		return nil, nil, err
@@ -134,7 +123,10 @@ func DeriveHandshakeTrafficSecrets(handshakeSecret, thKEM []byte, p Profile) (cH
 // TH_cCV is the transcript through the client CertVerify (excluding the client
 // Finished). Application-phase traffic keys descend from master.
 func DeriveMasterSecret(handshakeSecret, thCCV []byte, p Profile) ([]byte, error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
 	return HkdfExpandLabel(handshakeSecret, "master", thCCV, h().Size(), h)
 }
 
@@ -145,7 +137,10 @@ func DeriveMasterSecret(handshakeSecret, thCCV []byte, p Profile) ([]byte, error
 //
 // BaseKey is c_hs_secret or s_hs_secret, per the sender's direction.
 func DeriveFinishedKey(handshakeTrafficSecret []byte, p Profile) ([]byte, error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
 	return HkdfExpandLabel(handshakeTrafficSecret, "finished", nil, h().Size(), h)
 }
 
@@ -161,7 +156,10 @@ func DeriveFinishedKey(handshakeTrafficSecret []byte, p Profile) ([]byte, error)
 // compute every future Tier-1 root). The caller zeroizes master_G in place after
 // the step so the pre-step root does not linger.
 func RatchetMasterTier1(master []byte, targetGen uint64, p Profile) ([]byte, error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
 	var ctx [8]byte
 	binary.BigEndian.PutUint64(ctx[:], targetGen)
 	return HkdfExpandLabel(master, "master ratchet", ctx[:], h().Size(), h)
@@ -184,7 +182,10 @@ func RatchetMasterTier1(master []byte, targetGen uint64, p Profile) ([]byte, err
 // intermediate rekem_secret is wiped in place before return; the caller wipes
 // master_G, new_ss, and the ephemeral KEM private keys.
 func RatchetMasterTier2(master, newSS, thRekem []byte, p Profile) ([]byte, error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
 	// HKDF-Extract(secret = IKM = new_ss, salt = master_G): the dual-PRF combiner
 	// with the OLD root as a non-zero salt (unlike the handshake's zero salt).
 	rekemSecret, err := hkdf.Extract(h, newSS, master)
@@ -201,7 +202,10 @@ func RatchetMasterTier2(master, newSS, thRekem []byte, p Profile) ([]byte, error
 // DeriveKeyIV derives the 32-octet AEAD key and 12-octet AEAD IV from a traffic
 // secret (draft-00 section 7.5).
 func DeriveKeyIV(secret []byte, p Profile) (key [32]byte, iv [12]byte, err error) {
-	h := hashForProfile(p)
+	h, err := hashForProfile(p)
+	if err != nil {
+		return key, iv, err
+	}
 	k, err := HkdfExpandLabel(secret, "key", nil, 32, h)
 	if err != nil {
 		return key, iv, err

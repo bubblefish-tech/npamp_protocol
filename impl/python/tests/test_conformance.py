@@ -4,7 +4,6 @@ import npamp as n
 HDR = "4e50414d20000100000000000000000000000000000d880c250000000000000000000000"
 NONCE = "010203040404040c0c0c0c04"
 AEAD = "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf"
-TK = "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc"
 
 
 def test_vec_header():
@@ -19,13 +18,6 @@ def test_vec_aead():
     key = bytes(range(32)); iv = bytes(0x10 + i for i in range(12))
     aad = n.Frame(ftype=n.FRAME_PING, channel=n.CHAN_CONTROL).header_prefix(11)
     assert n.seal_aes256gcm(key, iv, 7, aad, b"hello world").hex() == AEAD
-
-
-def test_vec_traffic_key():
-    master = bytes([0x2A]) * 48
-    ts = n.derive_traffic_secret(master, 0, 0, n.AEAD_AES256_GCM, n.CHAN_CONTROL, False)
-    tk, _ = n.derive_key_iv(ts, False)
-    assert tk.hex() == TK
 
 
 def test_roundtrip():

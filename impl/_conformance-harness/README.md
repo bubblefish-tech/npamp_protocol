@@ -15,11 +15,11 @@ authorities that never saw this code, so a shared bug cannot pass. Each gate is 
   language, binding the AES-256-GCM AEAD code point `0x0001` (per `registries/aead.csv`). Covers the
   nine handshake impls (`typescript, python, rust, java, kotlin, ruby, php, csharp, swift`);
   `swift` (native toolchain, or WSL Ubuntu on a Windows host via `swift/run.sh`) additionally
-  executes the KEM-wire KAT (`test-vectors/v1/kem-wire-kat.json`, §4/ADR-0005/0007): the RFC 7748
+  executes the KEM-wire KAT (`test-vectors/v1/kem-wire-kat.json`, §4): the RFC 7748
   X25519 anchor, the ML-KEM-first KEMShare/KEMCiphertext wire order, and the HKDF-Extract IKM order —
   its two ML-KEM-768 legs (NIST `d‖z → ek` keygen; expanded-dk decaps) are explicit, printed SKIPs
   because swift-crypto's `Crypto` product exposes no ML-KEM API (the decaps deferral matches the Go
-  reference, ADR-0007). `go` SKIPs here — the Go handshake layer + KATs run under the module's own
+  reference). `go` SKIPs here — the Go handshake layer + KATs run under the module's own
   `go test` (`impl/go`), not this cross-language shell harness.
   A language is PASS only on exit 0 **and** its positive pass token; a missing toolchain is
   a tracked SKIP (the summary reports `ran N; skipped …` so an ALL-PASS banner cannot mask zero

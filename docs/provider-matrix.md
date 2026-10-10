@@ -53,20 +53,18 @@ the wire bytes are fixed by the spec regardless of which library computes them.
 
 ## The Go reference provider path (already wired)
 
-The Go reference implementation already sources both component secrets from the standard
-library, with no external cryptographic dependency:
+The Go reference implementation already sources both component secrets of X25519MLKEM768 from
+the standard library, with no external cryptographic dependency (the open reference does not
+implement SecP384r1MLKEM1024):
 
 - `impl/go/kem.go` — X25519MLKEM768: `crypto/mlkem` (`GenerateKey768` / `Encapsulate` /
   `Decapsulate`) + `crypto/ecdh` (`X25519`).
-- `impl/go/kem1024.go` — SecP384r1MLKEM1024: `crypto/mlkem` (`GenerateKey1024` …) +
-  `crypto/ecdh` (`P384`).
 
 `impl/go/hybridkem/provider_path_test.go` demonstrates the end-to-end path in isolation: it
-runs a live X25519MLKEM768 and a live SecP384r1MLKEM1024 exchange using those stdlib providers,
+runs a live X25519MLKEM768 exchange using those stdlib providers,
 then feeds the resulting raw component secrets into the standalone combiner adapter
 (`hybridkem.Combine`) and asserts the adapter reproduces the reference key-schedule input
-byte-for-byte, in the correct per-group order (ML-KEM-first for 0x11ec, P-384-first for
-0x11ed). This is the concrete link between the provider (E0.2) and the combiner spec (E0.1).
+byte-for-byte, in the ML-KEM-first order of 0x11ec. This is the concrete link between the provider (E0.2) and the combiner spec (E0.1).
 
 ## Notes, gaps, and pre-E1 checks
 

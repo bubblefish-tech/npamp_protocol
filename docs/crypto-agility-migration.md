@@ -6,9 +6,9 @@ a crypto-agility/migration runbook, and a hybrid-by-default posture."*
 
 This runbook is the deployment-facing companion to
 [`impl/go/keyformat`](../impl/go/keyformat) (the versioned key-storage format) and to
-[decisions/adr/0014](../../decisions/adr/0014-certverify-context-and-alpn-track-crypto-generation-decoupled-from-wire-version.md)
-(the decision that separated N-PAMP's crypto generation from its wire-format version).
-It answers the operational question those two documents leave open: **given that
+the project rule that separates N-PAMP's crypto generation from its wire-format version
+(stated in section 1).
+It answers the operational question the key format and that rule leave open: **given that
 N-PAMP crypto generations change and code points get re-anchored across them, how does
 a real deployment detect that, and what does it do about it?**
 
@@ -20,12 +20,12 @@ as one:
 | Axis | Carrier | Current value | Changes on |
 |---|---|---|---|
 | Wire-format version | Frame header `Ver` nibble | `0x2` (invariant) | A frame-LAYOUT-breaking change (has not happened since draft-00) |
-| Crypto generation | ALPN identifier (live) / `KeyRecord.Generation` (at rest) | `n-pamp/3` | A cryptographically incompatible change (combiner order, code-point re-anchor) — decisions/adr/0014 |
+| Crypto generation | ALPN identifier (live) / `KeyRecord.Generation` (at rest) | `n-pamp/3` | A cryptographically incompatible change (combiner order, code-point re-anchor) |
 | Profile | `ProfileOffer`/`ProfileSelect` TLV, `registries/profiles.csv` | Standard / High / Sovereign | An operator's own security-posture choice, independent of generation |
 
 The production gap this runbook closes is specifically the crypto-generation axis: an
 algorithm code point (an `npamp.KEMID` or `npamp.SigID` value) has **no fixed meaning**
-without knowing which generation's registry to read it under. Per decisions/adr/0014,
+without knowing which generation's registry to read it under. Under that rule,
 this is not hypothetical — N-PAMP has already re-anchored code points across a
 generation boundary once (the `SigID` values naming ML-DSA-65 vs ML-DSA-87 moved
 between `n-pamp/2` and `n-pamp/3`). A migration tool, a key-management system, or an
@@ -34,9 +34,9 @@ reading its generation field can silently misinterpret it.
 
 ## 2. Detection: how a deployment recognizes a generation mismatch
 
-**Live connections** are self-protecting by construction: decisions/adr/0014 fixes the
-crypto generation to the negotiated ALPN identifier, and "an endpoint MUST NOT process
-frames under a generation it did not negotiate or configure." A `n-pamp/3`-only
+**Live connections** are self-protecting by construction: the
+crypto generation is fixed to the negotiated ALPN identifier, and an endpoint MUST NOT process
+frames under a generation it did not negotiate or configure. A `n-pamp/3`-only
 endpoint simply fails ALPN negotiation against a peer offering only `n-pamp/2` — there
 is no code path where a live session runs under an ambiguous or unstated generation.
 
@@ -105,7 +105,7 @@ working while newly-deployed or newly-rekeyed peers move to `n-pamp/3`.
 - The transition window is a **deployment-fleet** property, not a protocol
   requirement: N-PAMP has no wire-level "generation negotiation handshake" beyond
   ordinary ALPN — the ladder is operational discipline layered on top of the existing
-  mechanism decisions/adr/0014 already defines.
+  mechanism the generation rule already defines.
 
 ### Step 3 — Re-key under the current generation
 
@@ -127,7 +127,7 @@ deployment's compliance requirements.
 
 Once fleet telemetry confirms every peer negotiates `n-pamp/3` (no live `n-pamp/2`
 sessions observed over a monitoring period the operator sets), remove `n-pamp/2` from
-the offered ALPN set. Per decisions/adr/0014, the `n-pamp/2` **IANA registration
+the offered ALPN set. Under the generation rule, the `n-pamp/2` **IANA registration
 record itself is not retracted** — it stands as the historical record of a superseded
 generation — so cutover is an endpoint-configuration change, not a registry change.
 
@@ -182,12 +182,12 @@ every language's own key-storage binding; each language's own I/O and key-manage
 integration is out of scope for this document); ML-DSA operational signing/rotation
 procedures (no Go standard-library ML-DSA implementation exists yet to operate one —
 see `impl/go/keyformat`'s package documentation); and wire-format-version migrations
-(the `Ver` nibble is an invariant per decisions/adr/0014 and has never moved — a future
+(the `Ver` nibble is an invariant under the generation rule and has never moved — a future
 frame-layout break would need its own runbook, not this one).
 
 ## 7. References
 
-- decisions/adr/0014 — crypto generation and wire-format version, decoupled axes.
+- The generation rule of section 1 — crypto generation and wire-format version, decoupled axes.
 - `registries/kem.csv`, `registries/signatures.csv`, `registries/profiles.csv` — the
   authoritative code-point and profile registries this runbook and `keyformat` both
   read from.

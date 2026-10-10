@@ -155,7 +155,7 @@ function handle(array $req): array
 
         case 'hkdf.expand':
             $hash = $in['hash'] ?? null;
-            if ($hash !== 'sha256' && $hash !== 'sha384') {
+            if ($hash !== 'sha256') {
                 return ['skipped' => 'hash not implemented: ' . (is_string($hash) ? $hash : 'null')];
             }
             $okm = refHkdfExpand(

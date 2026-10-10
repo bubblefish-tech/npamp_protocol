@@ -1,16 +1,15 @@
 # frozen_string_literal: true
 
 # Conformance test for the N-PAMP Ruby reference (draft-bubblefish-npamp-00).
-# Reproduces the four cross-language golden vectors plus five property tests.
+# Reproduces the three cross-language golden vectors plus five property tests.
 # Prints one line per check and exits 1 if any check fails. Mirrors the
-# Java/Python/Go/Rust suites (9 checks).
+# Java/Python/Go/Rust suites (8 checks).
 
 require_relative "../lib/npamp"
 
 HDR   = "4e50414d20000100000000000000000000000000000d880c250000000000000000000000"
 NONCE = "010203040404040c0c0c0c04"
 AEAD  = "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf"
-TK    = "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc"
 
 $failures = 0
 
@@ -45,13 +44,6 @@ def vec_aead
   aad = Npamp::Frame.new(ftype: Npamp::FRAME_PING, channel: Npamp::CHAN_CONTROL).header_prefix(11)
   sealed = Npamp.seal_aes256gcm(key, iv, 7, aad, "hello world".b)
   check("vec_aead", Npamp.to_hex(sealed) == AEAD)
-end
-
-def vec_traffic_key
-  master = "\x2A".b * 48
-  ts = Npamp.derive_traffic_secret(master, 0, 0, Npamp::AEAD_AES256_GCM, Npamp::CHAN_CONTROL, false)
-  tk, = Npamp.derive_key_iv(ts, false)
-  check("vec_traffic_key", Npamp.to_hex(tk) == TK)
 end
 
 # --- property tests (mirror the Go/Rust/Java suites) ---
@@ -114,12 +106,11 @@ end
 vec_header
 vec_nonce
 vec_aead
-vec_traffic_key
 roundtrip
 crc_validated_first
 reserved_must_be_zero
 aead_tamper_fails
 hkdf_prefix_protocol_specific
 
-puts($failures.zero? ? "ALL PASS (9/9)" : "FAILURES: #{$failures}")
+puts($failures.zero? ? "ALL PASS (8/8)" : "FAILURES: #{$failures}")
 exit($failures.zero? ? 0 : 1)

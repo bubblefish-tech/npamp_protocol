@@ -5,7 +5,6 @@ package sdk
 import (
 	"context"
 	"crypto/ed25519"
-	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/subtle"
 	"crypto/tls"
@@ -20,13 +19,8 @@ import (
 
 // ErrKEMDowngrade is returned when a peer's negotiated KEM group is not the
 // one required by the negotiated profile's minimum KEM (spec/05_profiles.md
-// "Minimum KEM"; spec/10 section 4a: "Sovereign MUST NOT accept
-// X25519MLKEM768"). High and Sovereign refuse a downgrade to
-// X25519MLKEM768; conversely a client that generated key material only for
-// X25519MLKEM768 (because it did not offer High/Sovereign) refuses a
-// SecP384r1MLKEM1024 selection it cannot decapsulate. This is the wire-level
-// enforcement of the profile-level downgrade refusal in
-// spec/05_profiles.md's negotiation rules.
+// "Minimum KEM"). This package generates key material only for
+// X25519MLKEM768, so a SERVER_HELLO selecting any other group is refused.
 var ErrKEMDowngrade = errors.New("npamp/sdk: negotiated KEM group does not match the selected profile's minimum KEM (downgrade refused)")
 
 // sdkProfile is the default security profile a zero-value Config.Profiles
@@ -38,13 +32,10 @@ var sdkProfile = npamp.ProfileStandard
 // more security profiles, built by resolveIdentity from a Config (or by
 // stdIdentity for the pre-multi-profile Ed25519-only test callers). It is
 // deliberately NOT exported: callers configure identity via Config.Identity /
-// Config.MLDSAIdentity / Config.Profiles, never this type directly.
+// Config.Profiles, never this type directly.
 type localIdentity struct {
 	edPriv ed25519.PrivateKey
 	edPub  ed25519.PublicKey
-
-	mldsaPriv *mldsa.PrivateKey
-	mldsaPub  *mldsa.PublicKey
 
 	// profiles is the ProfileOffer this endpoint sends (client) or the
 	// preference-ordered set it accepts (server). Always non-empty:
@@ -62,68 +53,43 @@ func profilesOrDefault(profiles []npamp.Profile) []npamp.Profile {
 	return profiles
 }
 
-// needsMLDSA reports whether profiles contains High or Sovereign, both of
-// which this SDK signs CertVerify with ML-DSA-87 (spec/05_profiles.md:
-// High allows Ed25519 OR ML-DSA-87; this SDK always uses ML-DSA-87 for High,
-// matching Sovereign's hard requirement, per the task's per-profile dispatch).
-func needsMLDSA(profiles []npamp.Profile) bool {
-	return slices.Contains(profiles, npamp.ProfileHigh) || slices.Contains(profiles, npamp.ProfileSovereign)
-}
-
 // needsEd25519 reports whether profiles contains Standard.
 func needsEd25519(profiles []npamp.Profile) bool {
 	return slices.Contains(profiles, npamp.ProfileStandard)
 }
 
-// kemGroupForProfiles returns the single KEM group this SDK generates
-// ephemeral key material for and offers as CLIENT_HELLO's KEMOffer/KEMShare
-// (spec/05_profiles.md "Minimum KEM"; spec/10 section 4/4a): SecP384r1MLKEM1024
-// whenever High or Sovereign is in profiles (their minimum KEM — the same set
-// needsMLDSA tests), else X25519MLKEM768 (Standard's minimum KEM, and this
-// SDK's pre-multi-profile default). A CLIENT_HELLO carries exactly ONE
-// physical KEMShare TLV (spec/10 section 1.1: a single `0x07` per frame), so a
-// client offering both a Standard-only profile and a High/Sovereign profile in
-// the same ProfileOffer sends only the stronger group's share and lists only
-// that group in KEMOffer; the server can then select only a profile whose
-// MinKEM() is present in KEMOffer (requireOffers), and this client's own
-// requireSelections refuses any SERVER_HELLO whose selection it did not
-// generate key material for.
-func kemGroupForProfiles(profiles []npamp.Profile) npamp.KEMID {
-	if needsMLDSA(profiles) {
-		return npamp.KEMSecP384r1MLKEM1024
+// validateProfiles refuses an offered/accepted profile this package cannot
+// serve. Only the Standard profile is implemented here: Dial, Listen and every
+// other entry point call it before any wire I/O, and a High or Sovereign entry
+// is refused with npamp.ErrNoSuiteForProfile. An invalid profile code is a
+// Config error.
+func validateProfiles(profiles []npamp.Profile) error {
+	for _, p := range profiles {
+		if !p.Valid() {
+			return fmt.Errorf("npamp/sdk: Config.Profiles contains invalid profile 0x%02x", uint8(p))
+		}
+		if p != npamp.ProfileStandard {
+			return fmt.Errorf("npamp/sdk: Config.Profiles offers/accepts profile %s: %w", p, npamp.ErrNoSuiteForProfile)
+		}
 	}
-	return npamp.KEMX25519MLKEM768
+	return nil
 }
 
 // resolveIdentity builds a localIdentity from cfg: it defaults cfg.Profiles to
-// Standard-only when unset, resolves the Ed25519 half via identity()
-// (generating an ephemeral key when cfg.Identity is nil, exactly today's
-// behavior) whenever Standard is offered/accepted, and requires
-// cfg.MLDSAIdentity whenever High or Sovereign is offered/accepted — a
-// fail-closed Config error rather than a silent downgrade or a nil-key panic
-// later in the handshake.
+// Standard-only when unset, refuses any other profile (validateProfiles), and
+// resolves the Ed25519 identity via identity() (generating an ephemeral key
+// when cfg.Identity is nil).
 func resolveIdentity(cfg Config) (*localIdentity, error) {
 	profiles := profilesOrDefault(cfg.Profiles)
-	for _, p := range profiles {
-		if !p.Valid() {
-			return nil, fmt.Errorf("npamp/sdk: Config.Profiles contains invalid profile 0x%02x", uint8(p))
-		}
+	if err := validateProfiles(profiles); err != nil {
+		return nil, err
 	}
 	id := &localIdentity{profiles: profiles}
-	if needsEd25519(profiles) {
-		priv, pub, err := identity(cfg.Identity)
-		if err != nil {
-			return nil, err
-		}
-		id.edPriv, id.edPub = priv, pub
+	priv, pub, err := identity(cfg.Identity)
+	if err != nil {
+		return nil, err
 	}
-	if needsMLDSA(profiles) {
-		if cfg.MLDSAIdentity == nil {
-			return nil, fmt.Errorf("npamp/sdk: Config.Profiles offers/accepts High or Sovereign but Config.MLDSAIdentity is nil")
-		}
-		id.mldsaPriv = cfg.MLDSAIdentity
-		id.mldsaPub = cfg.MLDSAIdentity.PublicKey()
-	}
+	id.edPriv, id.edPub = priv, pub
 	return id, nil
 }
 
@@ -132,33 +98,6 @@ func resolveIdentity(cfg Config) (*localIdentity, error) {
 // statetrace_test.go already construct their keys in.
 func stdIdentity(priv ed25519.PrivateKey, pub ed25519.PublicKey) *localIdentity {
 	return &localIdentity{edPriv: priv, edPub: pub, profiles: []npamp.Profile{npamp.ProfileStandard}}
-}
-
-// sigForProfile returns the SigID this SDK signs/expects CertVerify with for
-// profile p: Ed25519 at Standard, ML-DSA-87 at High or Sovereign
-// (spec/05_profiles.md "Allowed signatures"; task-directed per-profile
-// dispatch — see needsMLDSA's doc for why High always uses ML-DSA-87 here).
-func sigForProfile(p npamp.Profile) npamp.SigID {
-	if p == npamp.ProfileStandard {
-		return npamp.SigEd25519
-	}
-	return npamp.SigMLDSA87
-}
-
-// offeredSigs returns the SigOffer for profiles: SigEd25519 if Standard is
-// present, SigMLDSA87 if High or Sovereign is present, in that order — the
-// union of sigForProfile over the offered set, deduplicated. A Standard-only
-// offer (the default) produces exactly [SigEd25519], byte-identical to the
-// pre-multi-profile ClientHello.
-func offeredSigs(profiles []npamp.Profile) []npamp.SigID {
-	var out []npamp.SigID
-	if needsEd25519(profiles) {
-		out = append(out, npamp.SigEd25519)
-	}
-	if needsMLDSA(profiles) {
-		out = append(out, npamp.SigMLDSA87)
-	}
-	return out
 }
 
 // selectProfile picks the profile the server selects: the first entry of
@@ -177,59 +116,29 @@ func selectProfile(offered, allowed []npamp.Profile) (npamp.Profile, error) {
 }
 
 // localIdentityKeyBytes returns the raw public-key encoding this endpoint
-// proves for profile p: id.edPub at Standard, id.mldsaPub.Bytes() at High or
-// Sovereign. It is the TLV 0x09 IdentityKey value both AUTH frames carry.
-func localIdentityKeyBytes(id *localIdentity, p npamp.Profile) ([]byte, error) {
-	if p == npamp.ProfileStandard {
-		if len(id.edPub) == 0 {
-			return nil, fmt.Errorf("npamp/sdk: profile Standard selected but no Ed25519 identity is configured")
-		}
-		return append([]byte(nil), id.edPub...), nil
+// proves: the Ed25519 public key. It is the TLV 0x09 IdentityKey value both
+// AUTH frames carry.
+func localIdentityKeyBytes(id *localIdentity) ([]byte, error) {
+	if len(id.edPub) == 0 {
+		return nil, fmt.Errorf("npamp/sdk: no Ed25519 identity is configured")
 	}
-	if id.mldsaPub == nil {
-		return nil, fmt.Errorf("npamp/sdk: profile %s selected but no ML-DSA-87 identity is configured", p)
-	}
-	return append([]byte(nil), id.mldsaPub.Bytes()...), nil
+	return append([]byte(nil), id.edPub...), nil
 }
 
 // signCertVerify produces the TLV 0x0A CertVerify value for role at
-// transcript point th, dispatching on the negotiated profile p: Standard
-// signs with npamp.SignCertVerify (Ed25519); High and Sovereign sign with
-// npamp.SignCertVerifyMLDSA87. Fail-closed: an endpoint that negotiated a
-// profile it has no matching identity key for (should be unreachable —
-// resolveIdentity requires the key before the profile can even be offered)
-// returns a named error rather than silently falling back to a weaker
-// scheme.
-func signCertVerify(id *localIdentity, p npamp.Profile, role npamp.Role, th []byte) ([]byte, error) {
-	if p == npamp.ProfileStandard {
-		if id.edPriv == nil {
-			return nil, fmt.Errorf("npamp/sdk: profile Standard selected but no Ed25519 identity is configured")
-		}
-		return npamp.SignCertVerify(id.edPriv, role, th)
+// transcript point th with the Ed25519 identity.
+func signCertVerify(id *localIdentity, role npamp.Role, th []byte) ([]byte, error) {
+	if id.edPriv == nil {
+		return nil, fmt.Errorf("npamp/sdk: no Ed25519 identity is configured")
 	}
-	if id.mldsaPriv == nil {
-		return nil, fmt.Errorf("npamp/sdk: profile %s selected but no ML-DSA-87 identity is configured", p)
-	}
-	return npamp.SignCertVerifyMLDSA87(id.mldsaPriv, role, th)
+	return npamp.SignCertVerify(id.edPriv, role, th)
 }
 
 // verifyCertVerify checks a TLV 0x0A CertVerify value against the peer's
-// claimed identity-key bytes, dispatching on the negotiated profile p:
-// Standard verifies with npamp.VerifyCertVerify (Ed25519); High and Sovereign
-// decode peerPub as an ML-DSA-87 public key and verify with
-// npamp.VerifyCertVerifyMLDSA87. Fail-closed on every path: a malformed
-// peerPub encoding, a wrong signature scheme, or a bad signature all return a
-// non-nil error and the caller aborts the handshake — never a fallback to a
-// weaker check.
-func verifyCertVerify(peerPub []byte, p npamp.Profile, role npamp.Role, th, certVerifyValue []byte) error {
-	if p == npamp.ProfileStandard {
-		return npamp.VerifyCertVerify(peerPub, role, th, certVerifyValue)
-	}
-	pub, err := mldsa.NewPublicKey(mldsa.MLDSA87(), peerPub)
-	if err != nil {
-		return fmt.Errorf("npamp/sdk: peer ML-DSA-87 identity key: %w", err)
-	}
-	return npamp.VerifyCertVerifyMLDSA87(pub, role, th, certVerifyValue)
+// claimed Ed25519 identity-key bytes. Every failure is a non-nil error and the
+// caller aborts the handshake.
+func verifyCertVerify(peerPub []byte, role npamp.Role, th, certVerifyValue []byte) error {
+	return npamp.VerifyCertVerify(peerPub, role, th, certVerifyValue)
 }
 
 // Dial establishes an N-PAMP session to addr ("host:port") over TCP + TLS 1.3,
@@ -273,6 +182,9 @@ type Listener struct {
 func Listen(addr string, cfg Config) (*Listener, error) {
 	if cfg.TLSConfig == nil {
 		return nil, fmt.Errorf("npamp/sdk: Config.TLSConfig is required")
+	}
+	if err := validateProfiles(profilesOrDefault(cfg.Profiles)); err != nil {
+		return nil, err
 	}
 	ln, err := tls.Listen("tcp", addr, withNpampTLS(cfg.TLSConfig))
 	if err != nil {
@@ -383,42 +295,30 @@ func requireALPN(raw net.Conn) error {
 // (spec/10) over raw, returning the master secret, the peer's authenticated
 // identity-key bytes, and the negotiated profile. The transcript/key-schedule
 // steps mirror the reference flow in impl/go's TestHandshakeFlowStandard,
-// which is pinned to the published KATs. id.profiles is the ProfileOffer;
-// CertVerify sign/verify dispatches on the profile the SERVER selects
-// (sigForProfile/signCertVerify/verifyCertVerify). The KEM group is decided
-// upfront by kemGroupForProfiles (X25519MLKEM768 unless High/Sovereign is
-// offered, in which case SecP384r1MLKEM1024 — spec/05_profiles.md "Minimum
-// KEM") since CLIENT_HELLO carries only one physical KEMShare; requireSelections
-// then refuses any SERVER_HELLO that selected a different group (ErrKEMDowngrade).
+// which is pinned to the published KATs. id.profiles is the ProfileOffer and
+// must be Standard-only (validateProfiles). The KEM group is X25519MLKEM768
+// (spec/05_profiles.md "Minimum KEM" for Standard); requireSelections refuses
+// any SERVER_HELLO that selected a different group (ErrKEMDowngrade).
 func runClientHandshake(ctx context.Context, raw net.Conn, id *localIdentity, expectedPeer []byte) (master []byte, peerID []byte, profile npamp.Profile, err error) {
 	if dl, ok := ctx.Deadline(); ok {
 		_ = raw.SetDeadline(dl)
 		defer func() { _ = raw.SetDeadline(time.Time{}) }()
 	}
 	profiles := profilesOrDefault(id.profiles)
-	wantKEM := kemGroupForProfiles(profiles)
-
-	var kem768 *npamp.KEMClient
-	var kem1024 *npamp.KEMClient1024
-	var kemShare []byte
-	switch wantKEM {
-	case npamp.KEMSecP384r1MLKEM1024:
-		kem1024, err = npamp.GenerateKEMClient1024()
-		if err != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM-1024 keygen: %w", err)
-		}
-		kemShare = kem1024.KEMShare()
-	default:
-		kem768, err = npamp.GenerateKEMClient()
-		if err != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM keygen: %w", err)
-		}
-		kemShare = kem768.KEMShare()
+	if err := validateProfiles(profiles); err != nil {
+		return nil, nil, 0, err
 	}
+	wantKEM := npamp.KEMX25519MLKEM768
+
+	kem768, err := npamp.GenerateKEMClient()
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM keygen: %w", err)
+	}
+	kemShare := kem768.KEMShare()
 	ch := &npamp.ClientHello{
 		ProfileOffer: profiles,
 		KEMOffer:     []npamp.KEMID{wantKEM},
-		SigOffer:     offeredSigs(profiles),
+		SigOffer:     []npamp.SigID{npamp.SigEd25519},
 		AEADOffer:    []npamp.AEADID{npamp.AEADAES256GCM},
 		KEMShare:     kemShare,
 	}
@@ -443,30 +343,20 @@ func runClientHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	// bytes absorbed are identical either way; only the hash function used by Sum()
 	// depends on construction time, per NewTranscript(p)'s doc).
 	p := sh.ProfileSelect
-	t := npamp.NewTranscript(p)
+	t, err := npamp.NewTranscript(p)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	t.AddFrame(npamp.FrameClientHello, ch.TLVs())
 	t.AddFrame(npamp.FrameServerHello, sh.TLVs())
 
-	var hs []byte
-	switch wantKEM {
-	case npamp.KEMSecP384r1MLKEM1024:
-		ss1024, derr := kem1024.SharedSecrets(sh.KEMCiphertext)
-		if derr != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM-1024 decapsulate: %w", derr)
-		}
-		hs, err = npamp.HandshakeSecret1024(ss1024, p)
-		if err != nil {
-			return nil, nil, 0, err
-		}
-	default:
-		ss, derr := kem768.SharedSecrets(sh.KEMCiphertext)
-		if derr != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM decapsulate: %w", derr)
-		}
-		hs, err = npamp.HandshakeSecret(ss, p)
-		if err != nil {
-			return nil, nil, 0, err
-		}
+	ss, derr := kem768.SharedSecrets(sh.KEMCiphertext)
+	if derr != nil {
+		return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM decapsulate: %w", derr)
+	}
+	hs, err := npamp.HandshakeSecret(ss, p)
+	if err != nil {
+		return nil, nil, 0, err
 	}
 	cHS, sHS, err := npamp.DeriveHandshakeTrafficSecrets(hs, t.Sum(), p) // TH_kem
 	if err != nil {
@@ -489,7 +379,7 @@ func runClientHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	}
 	t.AddFrameType(npamp.FrameServerAuth)
 	t.AddTLV(npamp.TLV{Type: npamp.TLVIdentityKey, Value: sAuth.IdentityKey})
-	if err := verifyCertVerify(sAuth.IdentityKey, p, npamp.RoleServer, t.Sum(), sAuth.CertVerify); err != nil {
+	if err := verifyCertVerify(sAuth.IdentityKey, npamp.RoleServer, t.Sum(), sAuth.CertVerify); err != nil {
 		return nil, nil, 0, emitHandshakeError(raw, cHS, npamp.DirClientToServer, 0, npamp.ErrCodeDecryptFailed, p,
 			fmt.Errorf("npamp/sdk: server CertVerify: %w", err))
 	}
@@ -511,13 +401,13 @@ func runClientHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	}
 
 	// --- CLIENT_AUTH (AEAD-sealed under the client handshake key) ---
-	localPub, err := localIdentityKeyBytes(id, p)
+	localPub, err := localIdentityKeyBytes(id)
 	if err != nil {
 		return nil, nil, 0, err
 	}
 	t.AddFrameType(npamp.FrameClientAuth)
 	t.AddTLV(npamp.TLV{Type: npamp.TLVIdentityKey, Value: localPub})
-	cCV, err := signCertVerify(id, p, npamp.RoleClient, t.Sum()) // TH_cId
+	cCV, err := signCertVerify(id, npamp.RoleClient, t.Sum()) // TH_cId
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -527,7 +417,10 @@ func runClientHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	cFin := npamp.ComputeFinished(cFinKey, thCCV, p)
+	cFin, err := npamp.ComputeFinished(cFinKey, thCCV, p)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	auth := &npamp.AuthMessage{IdentityKey: localPub, CertVerify: cCV, Finished: cFin}
 	caWire, err := sealFrame(cHS, npamp.DirClientToServer, npamp.ChanControl, 0, npamp.FrameClientAuth, auth.Encode(), p)
 	if err != nil {
@@ -555,6 +448,9 @@ func runServerHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 		defer func() { _ = raw.SetDeadline(time.Time{}) }()
 	}
 	allowed := profilesOrDefault(id.profiles)
+	if err := validateProfiles(allowed); err != nil {
+		return nil, nil, 0, err
+	}
 
 	chPayload, err := recvCleartext(raw, npamp.FrameClientHello)
 	if err != nil {
@@ -570,41 +466,28 @@ func runServerHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	}
 	// See runClientHandshake's matching comment: the transcript hash depends on the
 	// negotiated profile, known here as soon as the server selects it from the offer.
-	t := npamp.NewTranscript(p)
+	t, err := npamp.NewTranscript(p)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	t.AddFrame(npamp.FrameClientHello, ch.TLVs())
 
-	// The KEM group is p.MinKEM() (spec/05_profiles.md): X25519MLKEM768 at Standard,
-	// SecP384r1MLKEM1024 at High/Sovereign. requireOffers already confirmed
-	// ch.KEMOffer contains this group, so ch.KEMShare is expected to be the matching
-	// group's share; Encapsulate/Encapsulate1024 fail closed on a size mismatch.
-	var kemCT []byte
-	var hs []byte
-	switch p.MinKEM() {
-	case npamp.KEMSecP384r1MLKEM1024:
-		ct, ss, eerr := npamp.Encapsulate1024(ch.KEMShare)
-		if eerr != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM-1024 encapsulate: %w", eerr)
-		}
-		kemCT = ct
-		hs, err = npamp.HandshakeSecret1024(ss, p)
-		if err != nil {
-			return nil, nil, 0, err
-		}
-	default:
-		ct, ss, eerr := npamp.Encapsulate(ch.KEMShare)
-		if eerr != nil {
-			return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM encapsulate: %w", eerr)
-		}
-		kemCT = ct
-		hs, err = npamp.HandshakeSecret(ss, p)
-		if err != nil {
-			return nil, nil, 0, err
-		}
+	// The KEM group is p.MinKEM() (spec/05_profiles.md), X25519MLKEM768 at Standard.
+	// requireOffers already confirmed ch.KEMOffer contains this group, so
+	// ch.KEMShare is expected to be that group's share; Encapsulate fails closed on
+	// a size mismatch.
+	kemCT, kemSS, eerr := npamp.Encapsulate(ch.KEMShare)
+	if eerr != nil {
+		return nil, nil, 0, fmt.Errorf("npamp/sdk: KEM encapsulate: %w", eerr)
+	}
+	hs, err := npamp.HandshakeSecret(kemSS, p)
+	if err != nil {
+		return nil, nil, 0, err
 	}
 	sh := &npamp.ServerHello{
 		ProfileSelect: p,
 		KEMSelect:     p.MinKEM(),
-		SigSelect:     sigForProfile(p),
+		SigSelect:     npamp.SigEd25519,
 		AEADSelect:    npamp.AEADAES256GCM,
 		KEMCiphertext: kemCT,
 	}
@@ -619,13 +502,13 @@ func runServerHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	}
 
 	// --- SERVER_AUTH ---
-	localPub, err := localIdentityKeyBytes(id, p)
+	localPub, err := localIdentityKeyBytes(id)
 	if err != nil {
 		return nil, nil, 0, err
 	}
 	t.AddFrameType(npamp.FrameServerAuth)
 	t.AddTLV(npamp.TLV{Type: npamp.TLVIdentityKey, Value: localPub})
-	sCV, err := signCertVerify(id, p, npamp.RoleServer, t.Sum()) // TH_sId
+	sCV, err := signCertVerify(id, npamp.RoleServer, t.Sum()) // TH_sId
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -634,7 +517,10 @@ func runServerHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	sFin := npamp.ComputeFinished(sFinKey, t.Sum(), p) // TH_sCV
+	sFin, err := npamp.ComputeFinished(sFinKey, t.Sum(), p) // TH_sCV
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	t.AddTLV(npamp.TLV{Type: npamp.TLVFinished, Value: sFin})
 	// srvSendSeq tracks the server's Control send sequence under the server handshake key
 	// (sHS/DirServerToClient) so a post-key handshake ERROR never reuses a nonce already
@@ -666,7 +552,7 @@ func runServerHandshake(ctx context.Context, raw net.Conn, id *localIdentity, ex
 	}
 	t.AddFrameType(npamp.FrameClientAuth)
 	t.AddTLV(npamp.TLV{Type: npamp.TLVIdentityKey, Value: cAuth.IdentityKey})
-	if err := verifyCertVerify(cAuth.IdentityKey, p, npamp.RoleClient, t.Sum(), cAuth.CertVerify); err != nil {
+	if err := verifyCertVerify(cAuth.IdentityKey, npamp.RoleClient, t.Sum(), cAuth.CertVerify); err != nil {
 		return nil, nil, 0, emitHandshakeError(raw, sHS, npamp.DirServerToClient, srvSendSeq, npamp.ErrCodeDecryptFailed, p,
 			fmt.Errorf("npamp/sdk: client CertVerify: %w", err))
 	}
@@ -774,17 +660,13 @@ func emitHandshakeError(raw net.Conn, baseSecret []byte, dir npamp.Direction, se
 // client offered: the selected profile must be one this client actually
 // offered (offeredProfiles — the server MUST select from the client's
 // offered set, spec/05_profiles.md "Negotiation rules"), the selected KEM
-// must be BOTH the group this client generated key material for (wantKEM,
-// from kemGroupForProfiles — otherwise decapsulation is impossible) AND the
-// negotiated profile's minimum KEM (sh.ProfileSelect.MinKEM() —
-// spec/05_profiles.md "Minimum KEM"; spec/10 section 4a "Sovereign MUST NOT
-// accept X25519MLKEM768"), the selected signature scheme must be the one this
-// SDK expects for that profile (sigForProfile), and AEADSelect must match what
-// was offered. A mismatched KEM at either check is ErrKEMDowngrade — this is
-// the wire-level enforcement of the profile-level downgrade refusal: a client
-// that offered High/Sovereign (wantKEM = SecP384r1MLKEM1024) refuses a
-// SERVER_HELLO selecting X25519MLKEM768, and any profile/KEM inconsistency a
-// deviant peer might construct is refused before any KEM material is touched.
+// must be BOTH the group this client generated key material for (wantKEM —
+// otherwise decapsulation is impossible) AND the negotiated profile's minimum
+// KEM (sh.ProfileSelect.MinKEM(), spec/05_profiles.md "Minimum KEM"), the
+// selected signature scheme must be Ed25519, and AEADSelect must match what
+// was offered. A mismatched KEM at either check is ErrKEMDowngrade, and any
+// profile/KEM inconsistency a deviant peer might construct is refused before
+// any KEM material is touched.
 func requireSelections(sh *npamp.ServerHello, offeredProfiles []npamp.Profile, wantKEM npamp.KEMID) error {
 	switch {
 	case !slices.Contains(offeredProfiles, sh.ProfileSelect):
@@ -793,8 +675,8 @@ func requireSelections(sh *npamp.ServerHello, offeredProfiles []npamp.Profile, w
 		return fmt.Errorf("%w: server selected KEM 0x%04x, this client generated key material only for 0x%04x", ErrKEMDowngrade, uint16(sh.KEMSelect), uint16(wantKEM))
 	case sh.ProfileSelect.MinKEM() != wantKEM:
 		return fmt.Errorf("%w: server selected profile %s (minimum KEM 0x%04x) with KEM 0x%04x", ErrKEMDowngrade, sh.ProfileSelect, uint16(sh.ProfileSelect.MinKEM()), uint16(wantKEM))
-	case sh.SigSelect != sigForProfile(sh.ProfileSelect):
-		return fmt.Errorf("npamp/sdk: server selected signature 0x%04x, want 0x%04x for profile %s", uint16(sh.SigSelect), uint16(sigForProfile(sh.ProfileSelect)), sh.ProfileSelect)
+	case sh.SigSelect != npamp.SigEd25519:
+		return fmt.Errorf("npamp/sdk: server selected signature 0x%04x, want 0x%04x for profile %s", uint16(sh.SigSelect), uint16(npamp.SigEd25519), sh.ProfileSelect)
 	case sh.AEADSelect != npamp.AEADAES256GCM:
 		return fmt.Errorf("npamp/sdk: server selected unsupported AEAD 0x%04x", uint16(sh.AEADSelect))
 	}
@@ -809,9 +691,8 @@ func requireSelections(sh *npamp.ServerHello, offeredProfiles []npamp.Profile, w
 // matching signature scheme, and AEAD. Gating KEMOffer on p.MinKEM() rather
 // than a fixed group means the server never selects a profile the client's
 // single physical KEMShare cannot serve (ErrKEMDowngrade's server-side
-// counterpart: a client that only sent a SecP384r1MLKEM1024 share cannot be
-// downgraded to Standard here, because Standard's KEMOffer requirement,
-// X25519MLKEM768, would then be absent). It returns the selected profile so
+// counterpart: a client whose KEMOffer lacks X25519MLKEM768 is refused here
+// rather than served a group it cannot use). It returns the selected profile so
 // the caller need not re-derive it.
 func requireOffers(ch *npamp.ClientHello, allowedProfiles []npamp.Profile) (npamp.Profile, error) {
 	p, err := selectProfile(ch.ProfileOffer, allowedProfiles)
@@ -822,8 +703,8 @@ func requireOffers(ch *npamp.ClientHello, allowedProfiles []npamp.Profile) (npam
 	switch {
 	case !slices.Contains(ch.KEMOffer, wantKEM):
 		return 0, fmt.Errorf("npamp/sdk: client did not offer KEM 0x%04x required for profile %s", uint16(wantKEM), p)
-	case !slices.Contains(ch.SigOffer, sigForProfile(p)):
-		return 0, fmt.Errorf("npamp/sdk: client did not offer signature 0x%04x required for profile %s", uint16(sigForProfile(p)), p)
+	case !slices.Contains(ch.SigOffer, npamp.SigEd25519):
+		return 0, fmt.Errorf("npamp/sdk: client did not offer signature 0x%04x required for profile %s", uint16(npamp.SigEd25519), p)
 	case !slices.Contains(ch.AEADOffer, npamp.AEADAES256GCM):
 		return 0, fmt.Errorf("npamp/sdk: client did not offer AES-256-GCM")
 	}

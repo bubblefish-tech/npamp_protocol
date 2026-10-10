@@ -212,7 +212,7 @@ func (s *initiatorScenario) reset() error {
 // deterministically reproducible from s.ch/s.shValid, so it is recomputed on demand instead
 // of caching a mutable *npamp.Transcript across calls.
 func (s *initiatorScenario) transcriptThroughSH() *npamp.Transcript {
-	tr := npamp.NewTranscript(profile)
+	tr := newTranscript()
 	tr.AddFrame(npamp.FrameClientHello, s.ch.TLVs())
 	tr.AddFrame(npamp.FrameServerHello, s.shValid.TLVs())
 	return tr
@@ -236,7 +236,11 @@ func (s *initiatorScenario) transcriptThroughServerAuth() (tr *npamp.Transcript,
 		logf("initiator: derive server Finished key: %v", err)
 		return tr, sCV, nil
 	}
-	sFin = npamp.ComputeFinished(sFinKey, tr.Sum(), profile)
+	sFin, err = npamp.ComputeFinished(sFinKey, tr.Sum(), profile)
+	if err != nil {
+		logf("initiator: compute server Finished: %v", err)
+		return tr, sCV, nil
+	}
 	tr.AddTLV(npamp.TLV{Type: npamp.TLVFinished, Value: sFin})
 	return tr, sCV, sFin
 }

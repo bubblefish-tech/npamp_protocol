@@ -60,10 +60,9 @@ history of who has implemented N-PAMP over time is preserved.
   built on RustCrypto primitives and the `ml-kem` crate; the second
   independent stack required by R2.1/goal 1.
 - **Maturity:** prototype / pre-1.0 reference.
-- **Coverage:** the same handshake + record layer as the Go reference, plus
-  the multi-profile entry points (Standard / High / Sovereign,
-  `spec/05_profiles.md`) including `SecP384r1MLKEM1024` + ML-DSA-87 CertVerify
-  for High/Sovereign.
+- **Coverage:** the same handshake + record layer as the Go reference, at the
+  Standard profile. The High and Sovereign profiles (`spec/05_profiles.md`) are
+  refused by this open reference.
 - **Version compatibility:** `draft-bubblefish-npamp-01`; wire-format version
   2, crypto generation 3.
 - **Licensing:** Apache-2.0.

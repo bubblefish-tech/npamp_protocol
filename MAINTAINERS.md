@@ -14,9 +14,9 @@ It is a companion to two documents and does not restate them:
   whole (who decides, by what rule, and how a normative change moves from
   proposal to accepted).
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — the mechanics a contributor follows:
-  the `design`/`editorial` label split, the three-layer decision record (ADR +
-  in-draft change log + issue/PR labels), the MADR 4.0 ADR format in
-  `decisions/`, the idnits/`0 errors` bar for the draft, and the
+  the `design`/`editorial` label split, the three-layer decision record (decision
+  record + in-draft change log + issue/PR labels), the MADR 4.0 format,
+  the idnits/`0 errors` bar for the draft, and the
   contribution licensing terms (Apache-2.0 for code, BCP 78 for the draft text).
 
 Where this file and `GOVERNANCE.md` describe the same process, `GOVERNANCE.md`
@@ -91,7 +91,7 @@ CRC, the channel/frame-type/TLV number spaces, the profiles, the handshake
 binding, the key schedule, the cryptographic suites, or a code-point registry
 value. For any normative change, a maintainer requires **all** of:
 
-1. **A numbered ADR** in `decisions/` in MADR 4.0 format
+1. **A numbered decision record** in MADR 4.0 format
    (`NNNN-verb-phrase-title.md`), per CONTRIBUTING.md — the durable "why."
 2. **At least one maintainer approval** on the pull request. When more than one
    maintainer exists, a normative change needs a second maintainer's approval

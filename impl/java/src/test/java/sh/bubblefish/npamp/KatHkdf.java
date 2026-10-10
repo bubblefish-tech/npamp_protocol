@@ -1,15 +1,16 @@
 // Independent crypto KAT: drive N-PAMP's HKDF-Expand through Google/C2SP
-// Wycheproof HKDF-SHA-256/384 vectors, via the dependency-free flat corpus
+// Wycheproof HKDF-SHA-256 vectors, via the dependency-free flat corpus
 // _shared/wycheproof/hkdf_kat.tsv. This validates the HKDF-Expand primitive
 // (used by the HKDF-Expand-Label key schedule) against an authority that never
 // saw our code -- so a shared bug between our impls cannot pass it.
 //
 // Each data line: tcId, hash ("sha256"|"sha384"), prk (hex), info (hex),
-// size (int), okm (hex). PASS iff toHex(hkdfExpand(prk, info, size,
-// standard=hash=="sha256")) == okm.
+// size (int), okm (hex). A sha256 row PASSES iff toHex(hkdfExpand(prk, info, size,
+// true)) == okm. This module implements the Standard profile only, so a row for any other
+// hash is not computed and PASSES iff the call is refused with Npamp.NoSuiteForProfile.
 //
-// Exit 0 iff every vector reproduces its OKM and total>0. Java port of the
-// Python reference runner kat_hkdf_wycheproof.py (passes 163/163).
+// Exit 0 iff every sha256 vector reproduces its OKM, every other row is refused, and total>0.
+// Java port of the Python reference runner kat_hkdf_wycheproof.py.
 //
 // Build (from impl/java):
 //   javac -d <out> src/main/java/sh/bubblefish/npamp/Npamp.java \
@@ -55,6 +56,7 @@ public final class KatHkdf {
 
         int total = 0;
         int passed = 0;
+        int refused = 0;
         List<String> fails = new ArrayList<>();
 
         List<String> lines = Files.readAllLines(tsv, StandardCharsets.UTF_8);
@@ -77,23 +79,31 @@ public final class KatHkdf {
             boolean standard = hash.equals("sha256");
             String got;
             String reason = "";
+            boolean wasRefused = false;
             try {
                 got = Npamp.toHex(Npamp.hkdfExpand(prk, info, size, standard));
+            } catch (Npamp.NoSuiteForProfile e) {
+                got = null;
+                wasRefused = true;
+                reason = "refused";
             } catch (RuntimeException e) {
                 got = null;
                 reason = "exception: " + e.getMessage();
             }
 
             total++;
-            if (got != null && got.equals(okm)) {
+            if (standard && got != null && got.equals(okm)) {
                 passed++;
+            } else if (!standard && wasRefused) {
+                refused++;
             } else {
                 fails.add("  FAIL tcId=" + tc + " " + hash
                         + (reason.isEmpty() ? "" : " " + reason));
             }
         }
 
-        System.out.println("HKDF-Expand Wycheproof KAT (java): " + passed + "/" + total + " passed");
+        System.out.println("HKDF-Expand Wycheproof KAT (java): " + passed + " sha256 passed, " + refused
+                + " non-sha256 refused, " + total + " total");
         for (int i = 0; i < fails.size() && i < 15; i++) {
             System.out.println(fails.get(i));
         }

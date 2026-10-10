@@ -54,8 +54,8 @@ specifies behavior but ships no implementation and no vectors is at most
 every normative claim is backed by executable evidence rather than prose.
 
 The NEP process sits *above*, and feeds, the three-layer decision history that
-[`CONTRIBUTING.md`](../CONTRIBUTING.md) already defines (ADRs in
-`decisions/`, the in-draft change log, and issue/PR labels). It
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) already defines (decision
+records, the in-draft change log, and issue/PR labels). It
 does not replace any of them.
 
 ## Motivation
@@ -262,8 +262,8 @@ automatic merge").
 
 On acceptance, the NEP's normative text is merged into its target document, and
 the change is recorded in the existing three layers of `CONTRIBUTING.md`:
-- **(1)** one or more MADR 4.0 ADRs in `decisions/` (the NEP
-  cites the ADR number(s); the ADR cites the NEP);
+- **(1)** one or more MADR 4.0 decision records (the NEP
+  cites the record number(s); the record cites the NEP);
 - **(2)** a change-log bullet in the draft's `## Changes Since …` appendix; and
 - **(3)** the closing/consensus labels on the issue/PR.
 
@@ -366,8 +366,7 @@ it therefore **MUST NOT** contain any controlled or sealed material:
 
 1. **No controlled or sealed material** — no controlled cryptographic extensions,
    and no High/Sovereign high-assurance implementation material, all of which are
-   maintained separately and out of scope for this open reference
-   (ADR-0004).
+   maintained separately and out of scope for this open reference.
    Publishing a **code point** (an identifier — e.g. a KEM/signature
    suite value, a channel number) is permitted, because it discloses an
    identifier, not an implementation; publishing the High/Sovereign
@@ -452,7 +451,7 @@ NEPs.
 9. **Considered Alternatives** — the options weighed and why they were not
    chosen (feeds the MADR ADR's "Considered Options"; Rust "Rationale and
    alternatives"; PEP 1 "Rejected Ideas").
-10. **Decision Record Links** — the ADR number(s) in `decisions/` this NEP
+10. **Decision Record Links** — the decision record number(s) this NEP
     produced or updated, the change-log bullet, and the issue/PR (the three
     layers of `CONTRIBUTING.md`). Populated on `Accepted`.
 
@@ -542,9 +541,9 @@ Technologies, Inc. **Firewall check: clean.**
 
 ## Decision Record Links
 
-On adoption, this NEP is recorded in the three layers of `CONTRIBUTING.md`: an
-ADR in `decisions/` recording the decision to adopt a NEP
-process (Considered Options: ADR-only / full IETF WG process / PEP-KEP-adapted
+On adoption, this NEP is recorded in the three layers of `CONTRIBUTING.md`: a
+decision record recording the decision to adopt a NEP
+process (Considered Options: decision-record-only / full IETF WG process / PEP-KEP-adapted
 NEP), a change-log bullet in the draft appendix noting the addition of the
 `process/` directory, and the `nep`-labelled issue/PR in which it was adopted.
 
@@ -610,7 +609,7 @@ dependency. Reviewer sign-off. State "clean" or "not clean — do not proceed".>
 <Options weighed and why not chosen. Feeds the ADR's Considered Options.>
 
 ## Decision Record Links
-<ADR number(s) in decisions/, the change-log bullet, and the issue/PR.
+<decision record number(s), the change-log bullet, and the issue/PR.
 Populated on Accepted.>
 ```
 

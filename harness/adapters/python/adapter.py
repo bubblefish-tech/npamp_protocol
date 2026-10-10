@@ -43,8 +43,8 @@ def crc32c_hex(data: bytes) -> str:
     return crc32c(data).to_bytes(4, "big").hex()
 
 
-def hkdf_expand(hashname, prk, info, length):
-    h = hashlib.sha256 if hashname == "sha256" else hashlib.sha384
+def hkdf_expand(prk, info, length):
+    h = hashlib.sha256
     out, t, i = b"", b"", 1
     while len(out) < length:
         t = hmac.new(prk, t + info + bytes([i]), h).digest()
@@ -124,9 +124,9 @@ def handle(req):
         return {"out": {"pt": pt.hex()}}
     if op == "hkdf.expand":
         hn = i.get("hash")
-        if hn not in ("sha256", "sha384"):
+        if hn != "sha256":
             return {"skipped": "hash not implemented: %s" % hn}
-        return {"out": {"okm": hkdf_expand(hn, hx(i, "prk"), hx(i, "info"), int(i["length"])).hex()}}
+        return {"out": {"okm": hkdf_expand(hx(i, "prk"), hx(i, "info"), int(i["length"])).hex()}}
     if op == "profile.check":
         profile, kem = i.get("profile"), i.get("kem")
         if profile == "Sovereign" and kem == "X25519MLKEM768":

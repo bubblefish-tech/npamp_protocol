@@ -190,8 +190,6 @@ public final class Adapter {
                 boolean standard;
                 if ("sha256".equals(hash)) {
                     standard = true;
-                } else if ("sha384".equals(hash)) {
-                    standard = false;
                 } else {
                     return skipped("hash not implemented: " + hash);
                 }

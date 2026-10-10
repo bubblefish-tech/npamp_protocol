@@ -54,11 +54,10 @@ decision history is maintained in three layers (modeled on RFC 8874 WG practice
 plus the ADR convention); all three are required for any change that affects the
 protocol.
 
-- **Layer 1 — Architecture Decision Records (the durable "why").** Every
+- **Layer 1 — Decision records (the durable "why").** Every
   substantive decision (wire format, handshake binding, cryptographic suites,
-  profiles, registries, conformance corpus) gets a numbered ADR in
-  `decisions/`, in **MADR 4.0** format (see `decisions/template.md`):
-  `NNNN-verb-phrase-title.md`, status `proposed → accepted` then `deprecated` or
+  profiles, registries, conformance corpus) gets a numbered decision record in
+  **MADR 4.0** format, status `proposed → accepted` then `deprecated` or
   `superseded by NNNN`, recording the Considered Options, Pros/Cons, Decision,
   Consequences, and a Confirmation step.
 - **Layer 2 — In-draft change log (the "what changed when").** Each draft
@@ -71,7 +70,7 @@ protocol.
   `needs-discussion`, `proposal-ready` as applicable (see `.github/labels.yml`).
 
 > Every `design`-labeled issue that reaches consensus produces **(1)** a closing
-> comment, **(2)** a numbered ADR in `decisions/`, and **(3)** a change-log bullet.
+> comment, **(2)** a numbered decision record, and **(3)** a change-log bullet.
 
 ## Research discipline
 

@@ -20,7 +20,7 @@
 //     binding to a child MCP server process (stdio.go).
 //   - gRPC — carriage class STREAM (spec/companion/23_carriage_streaming.md;
 //     carriage_grpc.go/grpc.go), under protocol_id 0x05 (NPAMP-REG's standards-assigned
-//     range, decisions/adr/0015 — this build previously used an EXPERIMENTAL 0x10
+//     range, registries/bridge_protocol_ids.csv — this build previously used an EXPERIMENTAL 0x10
 //     pending that registration, see carriage_grpc.go).
 //   - WebSocket generic carriage — ALSO carriage class STREAM, per NPAMP-REG's own
 //     assignment (spec/companion/30_protocol_registry.md §6: "0x04 | WebSocket generic
@@ -32,7 +32,7 @@
 //     its own). Was genuinely spec-blocked (the companion spec's own §10 named two
 //     open items "for the core-specification maintainer": the OpaqueContentType TLV
 //     type code point and the BridgeEnvelope content_type discriminator value);
-//     registering both (decisions/adr/0015) unblocked this leg. Carries any payload,
+//     registering both unblocked this leg. Carries any payload,
 //     including the three BridgeEnvelope-enumerated media types (§4.2 case 1, no
 //     extension TLV) and any other declared media type via the OpaqueContentType TLV
 //     (§4.2 case 2, for example the raw-TCP default application/octet-stream).

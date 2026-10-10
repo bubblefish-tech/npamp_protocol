@@ -150,7 +150,7 @@ func TestEncodeRejectsUnknownAlgorithm(t *testing.T) {
 // refused with ErrGenerationNotAccepted and no key returned — even when the
 // record is otherwise perfectly well-formed for a generation this package
 // DOES have a registry for (the record here claims "n-pamp/2", the deprecated
-// generation ADR-0014 describes; the caller only accepts npamp.ALPN,
+// generation; the caller only accepts npamp.ALPN,
 // "n-pamp/3").
 func TestDecodeRejectsUnacceptedGeneration(t *testing.T) {
 	rec := KeyRecord{
@@ -328,29 +328,43 @@ func TestDecodeRejectsHostileComponentArrayLength(t *testing.T) {
 	}
 }
 
-// TestComponentsOrderIsPQCFirstRegardlessOfWireCombinerOrder confirms the
-// storage-format Components order (component[0]=ML-KEM, component[1]=
-// classical) is applied uniformly to BOTH hybrid-KEM groups, even though
-// their WIRE combiner orders differ (X25519MLKEM768 is ML-KEM-first;
-// SecP384r1MLKEM1024 is classical-first, per hybridkem.Combine) — the two
-// orderings are independent axes and this format does not mirror the wire
-// combiner's per-group flip.
-func TestComponentsOrderIsPQCFirstRegardlessOfWireCombinerOrder(t *testing.T) {
+// TestComponentsOrderIsPQCFirst confirms the storage-format Components order
+// (component[0]=ML-KEM, component[1]=classical) for the one hybrid-KEM group this package
+// stores, X25519MLKEM768, whose WIRE combiner order is also ML-KEM-first; the storage order is
+// an independent axis from the wire combiner order (hybridkem.Combine).
+func TestComponentsOrderIsPQCFirst(t *testing.T) {
 	mlkemSeed := bytes.Repeat([]byte{0xAA}, 64)
-	classicalPriv384 := bytes.Repeat([]byte{0xBB}, 48)
+	classicalPriv := bytes.Repeat([]byte{0xBB}, 32)
 
-	data, err := EncodeKEMPrivate(npamp.KEMSecP384r1MLKEM1024, mlkemSeed, classicalPriv384)
+	data, err := EncodeKEMPrivate(npamp.KEMX25519MLKEM768, mlkemSeed, classicalPriv)
 	if err != nil {
-		t.Fatalf("EncodeKEMPrivate(SecP384r1MLKEM1024): %v", err)
+		t.Fatalf("EncodeKEMPrivate(X25519MLKEM768): %v", err)
 	}
 	rec, err := Decode(data, npamp.ALPN)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
 	if !bytes.Equal(rec.Components[0], mlkemSeed) {
-		t.Fatal("Components[0] is not the ML-KEM component for SecP384r1MLKEM1024 (storage order must be PQC-first for both groups)")
+		t.Fatal("Components[0] is not the ML-KEM component for X25519MLKEM768 (storage order must be PQC-first)")
 	}
-	if !bytes.Equal(rec.Components[1], classicalPriv384) {
-		t.Fatal("Components[1] is not the classical (P-384) component for SecP384r1MLKEM1024")
+	if !bytes.Equal(rec.Components[1], classicalPriv) {
+		t.Fatal("Components[1] is not the classical (X25519) component for X25519MLKEM768")
+	}
+}
+
+// TestSecP384r1MLKEM1024RefusedNotStoredInAnyOrder: the inputs the PQC-first ordering test used
+// for the 0x11ed group (a 64-octet ML-KEM seed and a 48-octet P-384 private key) are refused
+// with ErrGroupNotSupported on both Encode and a record written elsewhere, so no ordering of
+// that group's components is ever stored or returned.
+func TestSecP384r1MLKEM1024RefusedNotStoredInAnyOrder(t *testing.T) {
+	mlkemSeed := bytes.Repeat([]byte{0xAA}, 64)
+	classicalPriv384 := bytes.Repeat([]byte{0xBB}, 48)
+
+	if data, err := EncodeKEMPrivate(npamp.KEMSecP384r1MLKEM1024, mlkemSeed, classicalPriv384); !errors.Is(err, ErrGroupNotSupported) || data != nil {
+		t.Fatalf("EncodeKEMPrivate(SecP384r1MLKEM1024) = %d octets, err %v; want nil and ErrGroupNotSupported", len(data), err)
+	}
+	foreign := marshalRecord(KeyRecord{FormatVersion: CurrentFormatVersion, Generation: npamp.ALPN, Role: RoleKEMPrivate, Algorithm: uint64(npamp.KEMSecP384r1MLKEM1024), Components: [][]byte{classicalPriv384, mlkemSeed}})
+	if rec, err := Decode(foreign, npamp.ALPN); !errors.Is(err, ErrGroupNotSupported) || !isZeroRecord(rec) {
+		t.Fatalf("Decode(classical-first foreign record): zero = %v, err = %v; want zero record and ErrGroupNotSupported", isZeroRecord(rec), err)
 	}
 }

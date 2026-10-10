@@ -15,10 +15,6 @@ check("vec_nonce", Npamp.toHex(Npamp.deriveNonce(ramp(0x01, 12), 0x0102_0304_050
 let aad = Npamp.Frame(ftype: Npamp.framePing, channel: Npamp.chanControl).headerPrefix(11)
 check("vec_aead", Npamp.toHex(try! Npamp.sealAes256Gcm(ramp(0x00, 32), ramp(0x10, 12), 7, aad, Array("hello world".utf8)))
     == "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf")
-let secret = Npamp.deriveTrafficSecret([UInt8](repeating: 0x2A, count: 48), 0, 0,
-                                       Npamp.aeadAes256Gcm, Npamp.chanControl, false)
-check("vec_traffic_key", Npamp.toHex(Npamp.deriveKeyIv(secret, false).key)
-    == "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc")
 
 // roundtrip
 let f = Npamp.Frame(ftype: 0x0100, channel: Npamp.chanMemory, seq: 42, flags: Npamp.flagEnc, payload: Array("payload".utf8))

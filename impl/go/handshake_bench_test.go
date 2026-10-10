@@ -200,7 +200,7 @@ func BenchmarkComputeFinished(b *testing.B) {
 func BenchmarkVerifyFinished(b *testing.B) {
 	key := bytes.Repeat([]byte{0x22}, 32)
 	th := bytes.Repeat([]byte{0x33}, 32)
-	vd := ComputeFinished(key, th, ProfileStandard)
+	vd := mustFinished(b, key, th, ProfileStandard)
 	b.ReportAllocs()
 	for b.Loop() {
 		if err := VerifyFinished(key, th, vd, ProfileStandard); err != nil {

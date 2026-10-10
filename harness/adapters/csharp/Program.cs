@@ -207,10 +207,6 @@ internal static class Adapter
                 {
                     standard = true;
                 }
-                else if (hash == "sha384")
-                {
-                    standard = false;
-                }
                 else
                 {
                     return Skipped("hash not implemented: " + hash);

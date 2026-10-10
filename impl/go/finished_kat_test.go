@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// finishedKAT mirrors test-vectors/v1/finished-kat.json (ADR-0010):
+// finishedKAT mirrors test-vectors/v1/finished-kat.json:
 // verify_data = HMAC-SHA256(finished_key, transcript_hash) with the HMAC
 // primitive anchored to RFC 4231 TC1/TC2, fixed finished_key fixtures, and the
 // Transcript KAT's TH_sCV / TH_cCV as the covered points (spec/10 section
@@ -78,7 +78,7 @@ func TestFinishedKAT(t *testing.T) {
 			t.Fatalf("%s: oracle HMAC does not reproduce the vector", c.role)
 		}
 		// Impl leg: ComputeFinished reproduces it through the real code path.
-		if got := ComputeFinished(c.finishedKey, c.th, ProfileStandard); !bytes.Equal(got, c.want) {
+		if got := mustFinished(t, c.finishedKey, c.th, ProfileStandard); !bytes.Equal(got, c.want) {
 			t.Fatalf("%s: ComputeFinished = %x, want %x", c.role, got, c.want)
 		}
 		// VerifyFinished accepts the correct MAC ...

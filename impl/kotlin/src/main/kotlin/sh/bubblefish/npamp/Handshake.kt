@@ -4,7 +4,7 @@
 // methods, parameters, or weights.
 //
 // Pure-Kotlin sibling of Npamp.kt. Uses the same JDK crypto providers: MessageDigest
-// "SHA-256"/"SHA-384", Mac "HmacSHA256"/"HmacSHA384", Signature "Ed25519", and
+// "SHA-256", Mac "HmacSHA256", Signature "Ed25519", and
 // KeyFactory "Ed25519" with EdECPrivateKeySpec / EdECPublicKeySpec.
 package sh.bubblefish.npamp
 
@@ -48,8 +48,7 @@ object Handshake {
      * it at a cut point. Per-TLV granularity: [addFrameType] appends the 2-octet
      * frame type ONLY (not the rest of the 36-octet header — the §3/§7.1 divergence
      * from RFC 8446 §4.4.1); [addTlv] appends Type(2 BE) || Length(2 BE) || Value.
-     * A point = the profile hash (SHA-256 at Standard, SHA-384 at High/Sovereign)
-     * over all bytes absorbed so far.
+     * A point = SHA-256 over all bytes absorbed so far.
      */
     class Transcript {
         private val buf = ByteArrayOutputStream()
@@ -69,9 +68,10 @@ object Handshake {
             buf.write(value, 0, value.size)
         }
 
-        /** Hashes all absorbed bytes: SHA-256 at Standard, SHA-384 otherwise. */
+        /** Hashes all absorbed bytes with SHA-256; throws [Npamp.NoSuiteForProfile] unless [standard] is true. */
         fun hash(standard: Boolean): ByteArray {
-            val md = MessageDigest.getInstance(if (standard) "SHA-256" else "SHA-384")
+            Npamp.requireStandard(standard)
+            val md = MessageDigest.getInstance("SHA-256")
             return md.digest(buf.toByteArray())
         }
     }
@@ -80,10 +80,11 @@ object Handshake {
 
     /**
      * Finished verify_data = HMAC(finished_key, transcript_hash) under the profile
-     * hash (HmacSHA256 at Standard, HmacSHA384 at High/Sovereign).
+     * hash (HmacSHA256). Throws [Npamp.NoSuiteForProfile] unless [standard] is true.
      */
     fun computeFinished(finishedKey: ByteArray, transcriptHash: ByteArray, standard: Boolean): ByteArray {
-        val alg = if (standard) "HmacSHA256" else "HmacSHA384"
+        Npamp.requireStandard(standard)
+        val alg = "HmacSHA256"
         val mac = Mac.getInstance(alg)
         mac.init(SecretKeySpec(finishedKey, alg))
         return mac.doFinal(transcriptHash)

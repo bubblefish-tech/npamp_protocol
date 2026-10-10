@@ -181,8 +181,7 @@ absorbs (§6).
 
 ### 4.2 KEMShare: 1216 octets, ML-KEM-first
 
-KEM `0x11ec` (X25519MLKEM768). The wire layout is **ML-KEM-first** (ADR-0005;
-binding §4), even though the suite *name* lists X25519 first:
+KEM `0x11ec` (X25519MLKEM768). The wire layout is **ML-KEM-first** (binding §4), even though the suite *name* lists X25519 first:
 
 ```
 KEMShare (TLV 0x07) = ML-KEM-768 encapsulation key ek (1184) ‖ X25519 public key (32) = 1216 octets
@@ -299,7 +298,7 @@ the NIST one, that feeds §8's key schedule below. Both were independently
 re-parsed/re-derived in producing this document. **[KAT:handshake-flow]**
 
 At this point both peers hold the 64-octet hybrid secret, ML-KEM-first
-(ADR-0005; binding §4):
+(binding §4):
 
 ```
 KEM output (IKM) = ML-KEM SS (32) ‖ X25519 SS (32)
@@ -920,7 +919,7 @@ use this information as they see fit."
 - **Coverage:** all five handshake-layer KATs (KEM-wire, key-schedule,
   transcript, Finished, CertVerify) and the golden-interop handshake-flow KAT
   (binding §8); High/Sovereign PQ-primitive branches are code points only,
-  pending reference implementations (ADR-0004).
+  maintained separately.
 - **Version compatibility:** `draft-bubblefish-npamp-01`, crypto generation 3
   (`n-pamp/3`).
 - **Licensing:** Apache-2.0 (`../../LICENSE`).

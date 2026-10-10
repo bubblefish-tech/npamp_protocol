@@ -12,7 +12,7 @@
 > governs · **[D→RFC]** N-PAMP
 > applies an RFC pattern with N-PAMP parameters · **[D→N-PAMP]** N-PAMP-original, this document
 > is the authority. Reference implementations live under `impl/`. Profiles are
-> parameterized, not duplicated (ADR-0003): one wire format, one construction, a parameter row.
+> parameterized, not duplicated: one wire format, one construction, a parameter row.
 
 ## 1. Message flow (1.5-RTT, mutual authentication)
 
@@ -55,7 +55,7 @@ why it is distinct from any fixed-32 reserved tag. **[D→N-PAMP]**
 
 ## 2. Cryptographic agility and profiles
 
-One construction serves all three profiles (ADR-0003); a profile selects a parameter row:
+One construction serves all three profiles; a profile selects a parameter row:
 
 | Parameter | Standard | High | Sovereign |
 |-----------|----------|------|-----------|
@@ -66,9 +66,9 @@ One construction serves all three profiles (ADR-0003); a profile selects a param
 | Per-frame AEAD diversification | Off | On | On |
 
 `H` and `HashLen` are read from the negotiated profile throughout this document. **[STD/P]**
-(`05_profiles.md`). The reference build implements the Standard row and the High/Sovereign
-SHA-384 key-schedule branch; the High/Sovereign PQ-primitive implementations (ML-KEM-1024,
-ML-DSA-87) are public code points, published as reference implementations become available (ADR-0004).
+(`05_profiles.md`). The open reference build implements the Standard row only: a request for the High or Sovereign
+row is refused with a distinct error before any I/O. The High/Sovereign key-schedule and PQ-primitive
+implementations (SHA-384, ML-KEM-1024, ML-DSA-87) are maintained separately; their code points are public.
 
 ## 3. Transcript construction
 
@@ -100,7 +100,7 @@ Both peers absorb the identical decoded on-wire TLV bytes, so transcripts are by
 
 KEM `0x11ec` (Standard/High). **ML-KEM-first** in both the shared secret and the wire layout,
 per {{RFC10024}} + NIST SP 800-56C Rev. 2 (the FIPS-approved secret leads the
-HKDF input). **The suite name lists X25519 first; the bytes are ML-KEM-first** (ADR-0005). **[STD]**
+HKDF input). **The suite name lists X25519 first; the bytes are ML-KEM-first**. **[STD]**
 
 - **KEMShare (TLV `0x07`):** `ML-KEM-768 encapsulation key (1184) ‖ X25519 public key (32)` =
   **1216** octets. **[STD]** sizes per FIPS 203 / RFC 7748.
@@ -147,7 +147,7 @@ HKDF-Expand-Label(Secret, Label, Context, Length) =
 HkdfLabel = uint16(Length) ‖ opaque label<7..255> = ("n-pamp " ‖ Label) ‖ opaque context<0..255> = Context
 ```
 
-Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM = the per-group combined KEM shared secret of §4/§4a — ML-KEM-first for X25519MLKEM768, ECDHE-first for SecP384r1MLKEM1024 — per D2 / {{RFC10024}}, superseding the ADR-0005 universal order)
+Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM = the per-group combined KEM shared secret of §4/§4a — ML-KEM-first for X25519MLKEM768, ECDHE-first for SecP384r1MLKEM1024 — per D2 / {{RFC10024}}, superseding the earlier universal ML-KEM-first order)
 
 ```
 handshake_secret = HKDF-Extract(salt = HashLen·0x00, IKM = per-group KEM shared secret §4/§4a)
@@ -238,7 +238,7 @@ re-targeting (`formal/`):
 2. **Single-Extract key schedule** (§5) rather than TLS's three-stage derive-secret chain.
    Sound because there is no PSK/0-RTT stage to separate; the master/handshake separation is by
    label and by the transcript context bound into each Expand-Label.
-3. **Hybrid KEM ordering** is per-group (§4/§4a): X25519MLKEM768 is ML-KEM-first (ADR-0005),
+3. **Hybrid KEM ordering** is per-group (§4/§4a): X25519MLKEM768 is ML-KEM-first,
    SecP384r1MLKEM1024 is ECDHE-first (P-384 first); each places the FIPS-approved component first,
    satisfying SP 800-56C Rev. 2 and matching {{RFC10024}}.
 
@@ -272,18 +272,18 @@ profile) and carries **no handshake-layer vectors**. To make this binding indepe
 conformance-testable (not merely self-interop-testable), the following standards-derived,
 non-circular vectors are required and are tracked as corpus growth:
 
-- **KEM-wire KAT** — **DELIVERED** (`test-vectors/v1/kem-wire-kat.json`, ADR-0007). ML-KEM-768
+- **KEM-wire KAT** — **DELIVERED** (`test-vectors/v1/kem-wire-kat.json`). ML-KEM-768
   keygen from a NIST seed `d‖z` (NIST ACVP, FIPS 203) and X25519 from RFC 7748 §6.1, asserting
   the ML-KEM-first wire order of KEMShare (`ek ‖ x25519_pub`), the client KEMCiphertext parse
   (X25519 half anchored to RFC 7748's shared secret), and the HKDF-Extract IKM order
   (`ML-KEM_SS ‖ X25519_SS`). This closes the wire-byte-order gap that symmetric self-interop +
-  code review could not catch (the original X25519-first defect; ADR-0005). **Documented
+  code review could not catch (the original X25519-first defect). **Documented
   limitation:** the ML-KEM *decapsulation* leg's shared-secret VALUE is not anchored to NIST via
   Go's public `crypto/mlkem`, because that API imports only the 64-byte seed and NIST ACVP
   encapDecap supplies the key as an expanded decapsulation key; the NIST decaps vector (`c`, `K`)
   is carried in the KAT file for implementations that can import an expanded dk, and is the
   remaining growth item for a fully-NIST-anchored ML-KEM shared secret.
-- **Key-schedule KAT** — **DELIVERED** (`test-vectors/v1/key-schedule-kat.json`, ADR-0008). Fixed
+- **Key-schedule KAT** — **DELIVERED** (`test-vectors/v1/key-schedule-kat.json`). Fixed
   KEM secrets + fixed transcript points → the `handshake_secret` ladder (`c hs`/`s hs`/`master`),
   the handshake/application traffic (key, iv), and `finished_key`. Non-circular by EXTERNAL ANCHOR:
   N-PAMP's HKDF-Expand-Label is RFC 9846 §7.1 with the `"n-pamp "` prefix, so the KAT proves an
@@ -296,8 +296,8 @@ non-circular vectors are required and are tracked as corpus growth:
   → `finished_key` + the handshake-phase traffic key/iv); the §7.5 traffic context binds the AEAD code
   point the reference vector fixes as its test input — AES-256-GCM `0x0001` (`registries/aead.csv`; `0x0002`
   is ChaCha20-Poly1305) — the KAT fixture, NOT the AUTH-sealing rule (AUTH uses the negotiated AEAD, §6.4). Mutation-proven per
-  language (an X25519-first IKM order — violating ML-KEM-first / ADR-0005 — fails the impl leg only).
-- **Transcript KAT** — **DELIVERED** (`test-vectors/v1/transcript-kat.json`, ADR-0009). Fixed
+  language (an X25519-first IKM order — violating ML-KEM-first — fails the impl leg only).
+- **Transcript KAT** — **DELIVERED** (`test-vectors/v1/transcript-kat.json`). Fixed
   frame/TLV inputs → each `TH_*` point (`TH_kem`/`TH_sId`/`TH_sCV`/`TH_cId`/`TH_cCV`). Non-circular by
   construction: the expected points are produced by an INDEPENDENT per-TLV byte-constructor
   (frame-type as 2-octet BE; each TLV as `Type(2)‖Length(2)‖Value`) + SHA-256, with the SHA-256
@@ -308,7 +308,7 @@ non-circular vectors are required and are tracked as corpus growth:
   Delivered + mutation-proven, and now mirrored non-circularly across all reference impls — Go as the
   reference implementation; TypeScript / Python / Java / Kotlin / Ruby / PHP / Rust / C# under `impl/` — gated by
   `impl/_conformance-harness/kat-handshake-all-langs.sh`.
-- **Finished KAT** — **DELIVERED** (`test-vectors/v1/finished-kat.json`, ADR-0010). `verify_data` =
+- **Finished KAT** — **DELIVERED** (`test-vectors/v1/finished-kat.json`). `verify_data` =
   HMAC-SHA256(`finished_key`, `transcript_hash`) (§6.2 / RFC 9846 §4.5.3). Non-circular: the expected
   `verify_data` are produced with an independent `crypto/hmac`, with the HMAC-SHA-256 primitive
   anchored to **RFC 4231** TC1/TC2; the `finished_key` is a fixture (its derivation is anchored by the
@@ -316,7 +316,7 @@ non-circular vectors are required and are tracked as corpus growth:
   points §6.2 covers). The consuming test runs anchor/oracle/impl legs + a `VerifyFinished`
   accept/reject check; mutation-proven (a key-independent hash fails the impl leg only). Mirrored
   non-circularly across all reference impls (gated by `kat-handshake-all-langs.sh`).
-- **CertVerify KAT** — **DELIVERED** (`test-vectors/v1/certverify-kat.json`, ADR-0011). CertVerify
+- **CertVerify KAT** — **DELIVERED** (`test-vectors/v1/certverify-kat.json`). CertVerify
   value = `u16(0x0807) ‖ Ed25519(priv, signing_input)`, `signing_input = 0x20×64 ‖ context ‖ 0x00 ‖
   transcript_hash` (§6.1 / RFC 9846 §4.5.2). Non-circular: the expected signatures are produced with
   an independent `crypto/ed25519`, with the Ed25519 primitive anchored to **RFC 8032** §7.1 TEST 1/2
@@ -531,7 +531,7 @@ identity re-authentication (the peers are already authenticated). **[D→N-PAMP]
 ### 9.7 Conformance
 
 The master ratchet is graded by two standards-derived, **non-circular** KATs that extend the §8
-key-schedule KAT (ADR-0008) discipline and reuse its EXACT external anchor — no new anchor family:
+key-schedule KAT discipline and reuse its EXACT external anchor — no new anchor family:
 N-PAMP's HKDF-Expand-Label is RFC 9846 §7.1 with the `"n-pamp "` prefix and its HKDF-Extract is
 RFC 5869 §2.2, so the KATs first re-prove an independent Expand-Label/Extract oracle against **RFC
 8448** (TLS 1.3) and **RFC 5869** (raw HKDF), then apply that proven oracle with the `"n-pamp "`

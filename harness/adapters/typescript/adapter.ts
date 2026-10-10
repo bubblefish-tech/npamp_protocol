@@ -153,7 +153,7 @@ function handle(req: Req): Resp {
 
     case "hkdf.expand": {
       const hash = s(i, "hash");
-      if (hash !== "sha256" && hash !== "sha384")
+      if (hash !== "sha256")
         return { skipped: "hash not implemented: " + hash };
       const okm = hkdfExpand(hash, hx(i, "prk"), hx(i, "info"), num(i, "length"));
       return { out: { okm: okm.toString("hex") } };

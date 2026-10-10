@@ -175,3 +175,14 @@ func openFrameWire(f *npamp.Frame, base []byte, dir npamp.Direction, epoch uint6
 func errCodeOutput(code npamp.SessionErrorCode) string {
 	return "ERROR:" + code.String()
 }
+
+// newTranscript returns a fresh transcript for the driver's profile. The
+// driver's profile is the package constant Standard, for which NewTranscript
+// cannot fail, so a failure here is a programming error.
+func newTranscript() *npamp.Transcript {
+	tr, err := npamp.NewTranscript(profile)
+	if err != nil {
+		panic("sul: NewTranscript: " + err.Error())
+	}
+	return tr
+}

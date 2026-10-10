@@ -37,7 +37,7 @@ function check(string $name, bool $ok): void
 }
 
 const VEC_DIR = __DIR__ . '/../../../test-vectors/v1';
-const FINISHED_KAT_SHA256 = '25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f';
+const FINISHED_KAT_SHA256 = '05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d';
 
 /** Load and SHA-256-pin the vector (fail loud on a swapped/corrupt vector). */
 function loadKat(): array

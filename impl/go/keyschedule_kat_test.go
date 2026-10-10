@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// keyScheduleKAT mirrors test-vectors/v1/key-schedule-kat.json (ADR-0008). The
+// keyScheduleKAT mirrors test-vectors/v1/key-schedule-kat.json. The
 // file carries NO N-PAMP output bytes — only external RFC anchors and fixed
 // inputs. The test proves its own HKDF-Expand-Label oracle against RFC 8448
 // ("tls13 " prefix) and RFC 5869, then checks the implementation's key
@@ -118,7 +118,7 @@ func TestKeyScheduleKAT(t *testing.T) {
 	if !bytes.Equal(hs, hsOracle) {
 		t.Fatal("HandshakeSecret != HKDF-Extract(32 zero octets, ML-KEM_SS || X25519_SS)")
 	}
-	// Mutation guard (ADR-0005): the X25519-first IKM order MUST fail.
+	// Mutation guard: the X25519-first IKM order MUST fail.
 	reversed, err := hkdf.Extract(sha256.New, concat(xSS, mlkemSS), make([]byte, 32))
 	if err != nil {
 		t.Fatal(err)

@@ -257,7 +257,7 @@ def _open_frame(f: "n.Frame", base: bytes, direction: int) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# X25519MLKEM768 hybrid KEM (ML-KEM-first, ADR-0005). The client generates
+# X25519MLKEM768 hybrid KEM (ML-KEM-first). The client generates
 # the key pairs and decapsulates; the server encapsulates.
 # ---------------------------------------------------------------------------
 class _KemClient:

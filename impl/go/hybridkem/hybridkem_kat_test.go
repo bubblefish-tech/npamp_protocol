@@ -3,19 +3,21 @@
 package hybridkem_test
 
 // hybridkem_kat_test.go grades the standalone adapter (F3, non-circular):
-// each combiner's output is checked against standards-anchored expected
-// values (NIST ACVP FIPS 203, RFC 7748 section 6.1, RFC 5903 section 8.2 —
-// the same anchors kemwire_kat_test.go and kem1024_kat_test.go use, reused
-// here rather than re-derived), and separately cross-checked byte-identical
-// against the root package's SharedSecrets.Combined() / SharedSecrets1024.
-// Combined() for the SAME real key-exchange inputs, so the extraction cannot
-// silently diverge from the reference it was extracted from.
+// the X25519MLKEM768 combiner's output is checked against standards-anchored
+// expected values (NIST ACVP FIPS 203, RFC 7748 section 6.1 — the same anchors
+// kemwire_kat_test.go uses, reused here rather than re-derived) and is
+// separately cross-checked byte-identical against the root package's
+// SharedSecrets.Combined() for the SAME real key-exchange inputs, so the
+// extraction cannot silently diverge from the reference it was extracted from.
+// The SecP384r1MLKEM1024 group (0x11ed) is graded as a REFUSAL: Combine returns
+// ErrGroupNotSupported and no output (TestCombineRefusesSecP384r1MLKEM1024).
 
 import (
 	"bytes"
 	"crypto/ecdh"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -168,135 +170,55 @@ func TestCombineX25519MLKEM768_CrossCheck(t *testing.T) {
 	}
 }
 
-// RFC 5903 section 8.2 (384-Bit Random ECP Group / Group 20) is the published,
-// standards-anchored secp384r1 ECDH known-answer vector — the same literal
-// values ../kem1024_kat_test.go anchors its ordering leg to, reused here
-// directly from the RFC rather than re-derived from that test file.
-const (
-	rfc5903P384InitiatorPriv = "099F3C7034D4A2C699884D73A375A67F7624EF7C6B3C0F160647B67414DCE655E35B538041E649EE3FAEF896783AB194"
-	rfc5903P384ResponderPriv = "41CB0779B4BDB85D47846725FBEC3C9430FAB46CC8DC5060855CC9BDA0AA2942E0308312916B8ED2960E4BD55A7448FC"
-	rfc5903P384ResponderX    = "E558DBEF53EECDE3D3FCCFC1AEA08A89A987475D12FD950D83CFA41732BC509D0D1AC43A0336DEF96FDA41D0774A3571"
-	rfc5903P384ResponderY    = "DCFBEC7AACF3196472169E838430367F66EEBE3C6E70C416DD5F0C68759DD1FFF83FA40142209DFF5EAAD96DB9E6386C"
-	rfc5903P384SharedX       = "11187331C279962D93D604243FD592CB9D0A926F422E47187521287E7156C5C4D603135569B9E9D09CF5D4A270F59746"
-)
-
-// TestCombineSecP384r1MLKEM1024_RFCAnchored pins the classical(P-384)-first
-// order directly against the RFC 5903 section 8.2 secp384r1 ECDH shared
-// secret (girx), independently recomputed here via crypto/ecdh from the raw
-// RFC private scalars — not taken from the npamp reference implementation.
-func TestCombineSecP384r1MLKEM1024_RFCAnchored(t *testing.T) {
-	iPriv := mustHex(t, "i", rfc5903P384InitiatorPriv)
-	rPriv := mustHex(t, "r", rfc5903P384ResponderPriv)
-	rPubWant := concat(concat([]byte{0x04}, mustHex(t, "grx", rfc5903P384ResponderX)), mustHex(t, "gry", rfc5903P384ResponderY))
-	girxWant := mustHex(t, "girx", rfc5903P384SharedX)
-
-	iKey, err := ecdh.P384().NewPrivateKey(iPriv)
-	if err != nil {
-		t.Fatal(err)
+// TestCombineRefusesSecP384r1MLKEM1024 pins the refusal of the 0x11ed group: Combine returns
+// ErrGroupNotSupported and no output, whatever the component secrets are. It runs every size
+// pairing a caller could pass (the sizes the group's components would have, X25519-sized,
+// empty, nil), because a refusal that held only for malformed input would still combine a
+// well-formed one. The group's code point stays defined so callers can name it.
+func TestCombineRefusesSecP384r1MLKEM1024(t *testing.T) {
+	if uint16(hybridkem.SecP384r1MLKEM1024) != 0x11ed {
+		t.Fatalf("SecP384r1MLKEM1024 = %#04x, want the 0x11ed code point", uint16(hybridkem.SecP384r1MLKEM1024))
 	}
-	rKey, err := ecdh.P384().NewPrivateKey(rPriv)
-	if err != nil {
-		t.Fatal(err)
+	mlkemSS := bytes.Repeat([]byte{0xa5}, hybridkem.MLKEMSharedSecretSize)
+	cases := []struct {
+		name      string
+		mlkem     []byte
+		classical []byte
+	}{
+		{"p384-sized classical secret", mlkemSS, bytes.Repeat([]byte{0x5a}, 48)},
+		{"x25519-sized classical secret", mlkemSS, bytes.Repeat([]byte{0x5a}, hybridkem.X25519SharedSecretSize)},
+		{"empty classical secret", mlkemSS, []byte{}},
+		{"nil classical secret", mlkemSS, nil},
+		{"short ML-KEM secret", mlkemSS[:31], bytes.Repeat([]byte{0x5a}, 48)},
+		{"nil ML-KEM secret", nil, bytes.Repeat([]byte{0x5a}, 48)},
 	}
-	if !bytes.Equal(rKey.PublicKey().Bytes(), rPubWant) {
-		t.Fatal("responder public key does not reproduce RFC 5903 section 8.2 (0x04||grx||gry)")
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := hybridkem.Combine(hybridkem.SecP384r1MLKEM1024, c.mlkem, c.classical)
+			if !errors.Is(err, hybridkem.ErrGroupNotSupported) {
+				t.Fatalf("Combine(SecP384r1MLKEM1024) err = %v, want ErrGroupNotSupported", err)
+			}
+			if got != nil {
+				t.Fatalf("Combine(SecP384r1MLKEM1024) returned %d octets alongside the refusal, want nil", len(got))
+			}
+		})
 	}
-	rPub, err := ecdh.P384().NewPublicKey(rPubWant)
-	if err != nil {
-		t.Fatal(err)
+	// The refusal is specific to that group: the other defined group still combines, and an
+	// undefined code point is still ErrUnknownGroup rather than ErrGroupNotSupported.
+	if _, err := hybridkem.Combine(hybridkem.X25519MLKEM768, mlkemSS, bytes.Repeat([]byte{0x5a}, hybridkem.X25519SharedSecretSize)); err != nil {
+		t.Fatalf("Combine(X25519MLKEM768) after the refusal change: %v", err)
 	}
-	ecdhSS, err := iKey.ECDH(rPub)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(ecdhSS, girxWant) {
-		t.Fatal("secp384r1 ECDH shared secret does not reproduce RFC 5903 section 8.2 girx")
-	}
-
-	// A fixed, arbitrary-but-deterministic ML-KEM-1024 component secret: the
-	// combiner-order assertion below checks only the POSITION of the ML-KEM
-	// component in the concatenation, not its value, so an arbitrary byte
-	// pattern suffices here. A NIST-ACVP-anchored ML-KEM-1024 (d,z,ek) value
-	// (closing the gap this comment used to name as tracked-not-anchored,
-	// T18.3) now exists at ../kem1024_acvp_test.go, which checks the value
-	// crypto/mlkem.NewDecapsulationKey1024 actually produces from a seed —
-	// a different, complementary property from the order check below.
-	mlkemSS := make([]byte, hybridkem.MLKEMSharedSecretSize)
-	for i := range mlkemSS {
-		mlkemSS[i] = byte(0xa0 + i)
-	}
-
-	got, err := hybridkem.Combine(hybridkem.SecP384r1MLKEM1024, mlkemSS, ecdhSS)
-	if err != nil {
-		t.Fatalf("Combine(SecP384r1MLKEM1024): %v", err)
-	}
-	if len(got) != hybridkem.CombinedSecretSizeSecP384r1MLKEM1024 {
-		t.Fatalf("combined secret len = %d, want %d", len(got), hybridkem.CombinedSecretSizeSecP384r1MLKEM1024)
-	}
-	if !bytes.Equal(got, concat(girxWant, mlkemSS)) {
-		t.Fatal("Combine(SecP384r1MLKEM1024) is not ECDHE_ss || ML-KEM_ss (must be classical/P-384-first)")
-	}
-	if bytes.Equal(got, concat(mlkemSS, girxWant)) {
-		t.Fatal("Combine(SecP384r1MLKEM1024) unexpectedly also matches the ML-KEM-first (X25519MLKEM768) order")
+	if _, err := hybridkem.Combine(hybridkem.Group(0xffff), mlkemSS, mlkemSS); !errors.Is(err, hybridkem.ErrUnknownGroup) {
+		t.Fatalf("Combine(0xffff) err = %v, want ErrUnknownGroup", err)
 	}
 }
 
-// TestCombineSecP384r1MLKEM1024_CrossCheck drives the REAL SecP384r1MLKEM1024
-// exchange through the root npamp package, using the RFC 5903 section 8.2
-// keys on both sides (so the ECDHE half is standards-anchored), and asserts
-// hybridkem.Combine on the raw component secrets is byte-identical to
-// SharedSecrets1024.Combined() for the same inputs.
-func TestCombineSecP384r1MLKEM1024_CrossCheck(t *testing.T) {
-	iPriv := mustHex(t, "i", rfc5903P384InitiatorPriv)
-	rPriv := mustHex(t, "r", rfc5903P384ResponderPriv)
-	girxWant := mustHex(t, "girx", rfc5903P384SharedX)
-
-	rKey, err := ecdh.P384().NewPrivateKey(rPriv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	seed := make([]byte, 64)
-	for j := range seed {
-		seed[j] = byte(j)
-	}
-	client, err := npamp.NewKEMClient1024(seed, iPriv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	share := client.KEMShare()
-	ct, serverSS, err := npamp.EncapsulateWith1024(share, rKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	clientSS, err := client.SharedSecrets(ct)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(clientSS.ECDHE, girxWant) {
-		t.Fatal("client-decapsulated ECDHE shared secret does not reproduce RFC 5903 section 8.2 girx")
-	}
-	if !bytes.Equal(clientSS.MLKEM, serverSS.MLKEM) || !bytes.Equal(clientSS.ECDHE, serverSS.ECDHE) {
-		t.Fatal("client/server component shared secrets disagree (exchange broken, not an adapter issue)")
-	}
-
-	adapterOut, err := hybridkem.Combine(hybridkem.SecP384r1MLKEM1024, clientSS.MLKEM, clientSS.ECDHE)
-	if err != nil {
-		t.Fatalf("Combine(SecP384r1MLKEM1024): %v", err)
-	}
-	refOut := clientSS.Combined()
-	if !bytes.Equal(adapterOut, refOut) {
-		t.Fatalf("hybridkem.Combine diverges from npamp.SharedSecrets1024.Combined(): got %x, want %x", adapterOut, refOut)
-	}
-}
-
-// TestCombineErrors exercises the adapter's input-validation surface: an
-// unknown group and wrong-length component secrets must be rejected, never
+// TestCombineErrors exercises the adapter's input-validation surface for the supported
+// group: an unknown group and wrong-length component secrets must be rejected, never
 // silently truncated or padded.
 func TestCombineErrors(t *testing.T) {
 	mlkemSS := make([]byte, hybridkem.MLKEMSharedSecretSize)
 	x25519SS := make([]byte, hybridkem.X25519SharedSecretSize)
-	p384SS := make([]byte, hybridkem.P384SharedSecretSize)
 
 	if _, err := hybridkem.Combine(hybridkem.Group(0xffff), mlkemSS, x25519SS); err != hybridkem.ErrUnknownGroup {
 		t.Fatalf("unknown group: err = %v, want %v", err, hybridkem.ErrUnknownGroup)
@@ -306,11 +228,5 @@ func TestCombineErrors(t *testing.T) {
 	}
 	if _, err := hybridkem.Combine(hybridkem.X25519MLKEM768, mlkemSS, x25519SS[:31]); err != hybridkem.ErrClassicalSecretSize {
 		t.Fatalf("short X25519 secret: err = %v, want %v", err, hybridkem.ErrClassicalSecretSize)
-	}
-	if _, err := hybridkem.Combine(hybridkem.SecP384r1MLKEM1024, mlkemSS, x25519SS); err != hybridkem.ErrClassicalSecretSize {
-		t.Fatalf("X25519-sized secret passed to SecP384r1MLKEM1024: err = %v, want %v", err, hybridkem.ErrClassicalSecretSize)
-	}
-	if _, err := hybridkem.Combine(hybridkem.SecP384r1MLKEM1024, mlkemSS, p384SS); err != nil {
-		t.Fatalf("valid SecP384r1MLKEM1024 inputs: unexpected err = %v", err)
 	}
 }

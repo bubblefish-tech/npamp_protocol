@@ -456,7 +456,7 @@ need only the performative (projected to `method`) and a correlation token, and 
 carriage-class TLV code point is available to define one: the core specification reserves
 TLV tags `0x0010`, `0x0012`, `0x0013`, and `0x0014` for companion specifications, and all
 four are now consumed — NPAMP-BRIDGE has `0x0010` (BridgeEnvelope) and `0x0013`
-(SafetyLabel), NPAMP-CC-OPAQUE has `0x0012` (OpaqueContentType, decisions/adr/0015), and
+(SafetyLabel), NPAMP-CC-OPAQUE has `0x0012` (OpaqueContentType), and
 the remaining reserved companion tag, `0x0014`, is reserved as **handshake-only** and
 **fixed 32-octet** in the core TLV registry — unsuitable for a variable-length,
 per-message metadata TLV. If a future need arises to project message metadata into a

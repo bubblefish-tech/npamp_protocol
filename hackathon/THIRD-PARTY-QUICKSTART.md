@@ -21,7 +21,7 @@ The N-PAMP handshake (spec/10) is a four-frame, 1.5-RTT, mutually-authenticated
 exchange carried directly over a byte stream — it does not depend on TLS, HTTP,
 or any other transport framing. This quickstart runs it **directly over raw TCP**,
 so the only thing under test is the protocol core: the hybrid KEM handshake, the
-HKDF key schedule, transcript hashing, Ed25519/ML-DSA-87 CertVerify + Finished,
+HKDF key schedule, transcript hashing, Ed25519 CertVerify + Finished,
 and the AES-256-GCM record layer.
 
 It does **not** exercise the reference SDK's TLS 1.3 (ALPN `n-pamp/3`) transport
@@ -55,9 +55,8 @@ binary in whichever role your implementation is missing, from **this repository*
 ./run-against-peer.sh --stack rust --role server --addr 0.0.0.0:47700
 ./run-against-peer.sh --stack rust --role client --addr <your-server-host>:47700
 
-# Rust reference also speaks the High / Sovereign profiles (spec/05_profiles.md):
-./run-against-peer.sh --stack rust --role server --addr 0.0.0.0:47700 --profile high
-./run-against-peer.sh --stack rust --role client --addr <peer-host>:47700 --profile sovereign
+# The High and Sovereign profiles (spec/05_profiles.md) are not implemented in this open
+# reference: run-against-peer.sh refuses --profile high|sovereign before any network I/O.
 ```
 
 `run-against-peer.sh` builds the requested stack, runs it, and prints a clearly
@@ -101,7 +100,7 @@ cd impl/rust && cargo build --example interop_server --example interop_client
 ./target/debug/examples/interop_client <peer-host>:47700 --profile standard
 ```
 
-Both binaries generate a fresh Ed25519 (and, for Rust High/Sovereign, ML-DSA-87)
+Both binaries generate a fresh Ed25519
 identity keypair on every run — there is no shared secret material to provision
 in advance, and no configuration file to hand-carry between machines beyond the
 address/port you agree on with your interop partner.

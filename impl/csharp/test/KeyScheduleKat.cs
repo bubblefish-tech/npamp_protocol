@@ -27,7 +27,7 @@ namespace Sh.Bubblefish.Npamp;
 
 public static class KeyScheduleKat
 {
-    private const string KeyScheduleKatSha256 = "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c";
+    private const string KeyScheduleKatSha256 = "dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe";
 
     // The s2c handshake AEAD derivation pins these context fields. The suite is bound via the impl's own
     // Npamp.AeadAes256Gcm: AES-256-GCM = 0x0001 per registries/aead.csv (= the impl's AEAD_AES256_GCM =

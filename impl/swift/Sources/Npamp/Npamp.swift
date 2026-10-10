@@ -29,6 +29,23 @@ public enum Npamp {
         public init(_ m: String) { message = m }
     }
 
+    /// The Standard profile hash length (SHA-256).
+    public static let hashLen = 32
+
+    /// Thrown when a profile other than Standard is requested. This module implements the
+    /// Standard profile only; High and Sovereign are refused, before any I/O, with this error.
+    public struct NoSuiteForProfile: Error, Equatable, CustomStringConvertible {
+        public var description: String {
+            "no cipher suite for this profile: only the Standard profile is implemented"
+        }
+        public init() {}
+    }
+
+    /// Throws `NoSuiteForProfile` unless `standard` is true.
+    static func requireStandard(_ standard: Bool) throws {
+        if !standard { throw NoSuiteForProfile() }
+    }
+
     // -- CRC32C (Castagnoli, reflected) ------------------------------------
 
     public static func crc32c(_ data: [UInt8]) -> UInt32 {
@@ -147,42 +164,38 @@ public enum Npamp {
     // -- Key schedule (HKDF-Expand-Label) ----------------------------------
 
     /// RFC 5869 §2.3 HKDF-Expand over an arbitrary `info`. The supplied secret IS the PRK.
-    /// `hash` selects the underlying HMAC hash ("sha256" or "sha384"); this is the exact
-    /// primitive `hkdfExpandLabel`/the key schedule build on, exposed for KAT/conformance
-    /// drivers that supply a raw (unlabelled) `info`. Returns the first `length` OKM octets.
-    public static func hkdfExpand(hash: String, prk: [UInt8], info: [UInt8], length: Int) -> [UInt8] {
-        hkdfExpand(hash == "sha256", prk, info, length)
+    /// `hash` names the underlying HMAC hash; only "sha256" is implemented, any other name throws
+    /// `NoSuiteForProfile`. This is the exact primitive `hkdfExpandLabel`/the key schedule build on,
+    /// exposed for KAT/conformance drivers that supply a raw (unlabelled) `info`. Returns the first
+    /// `length` OKM octets.
+    public static func hkdfExpand(hash: String, prk: [UInt8], info: [UInt8], length: Int) throws -> [UInt8] {
+        try hkdfExpand(hash == "sha256", prk, info, length)
     }
 
-    // HKDF-Expand only (RFC 5869 2.3); the supplied secret IS the PRK. SHA-256 if standard, else SHA-384.
-    static func hkdfExpand(_ standard: Bool, _ prk: [UInt8], _ info: [UInt8], _ length: Int) -> [UInt8] {
+    // HKDF-Expand only (RFC 5869 2.3); the supplied secret IS the PRK. SHA-256; throws
+    // NoSuiteForProfile unless standard.
+    static func hkdfExpand(_ standard: Bool, _ prk: [UInt8], _ info: [UInt8], _ length: Int) throws -> [UInt8] {
+        try requireStandard(standard)
         let key = SymmetricKey(data: prk)
-        if standard {
-            return HKDF<SHA256>.expand(pseudoRandomKey: key, info: info, outputByteCount: length)
-                .withUnsafeBytes { Array($0) }
-        } else {
-            return HKDF<SHA384>.expand(pseudoRandomKey: key, info: info, outputByteCount: length)
-                .withUnsafeBytes { Array($0) }
-        }
+        return HKDF<SHA256>.expand(pseudoRandomKey: key, info: info, outputByteCount: length)
+            .withUnsafeBytes { Array($0) }
     }
 
-    /// HKDF-Extract (RFC 5869 §2.2): PRK = HMAC-Hash(salt, IKM). SHA-256 if
-    /// `standard`, else SHA-384. RFC 5869 treats an empty salt as HashLen zero
+    /// HKDF-Extract (RFC 5869 §2.2): PRK = HMAC-SHA-256(salt, IKM). Throws `NoSuiteForProfile`
+    /// unless `standard`. RFC 5869 treats an empty salt as HashLen zero
     /// octets (normalized here); the binding always passes an explicit
     /// HashLen-octet zero salt (spec/10 §5).
-    public static func hkdfExtract(_ salt: [UInt8], _ ikm: [UInt8], _ standard: Bool) -> [UInt8] {
-        if standard {
-            let s = salt.isEmpty ? [UInt8](repeating: 0, count: 32) : salt
-            return Array(HKDF<SHA256>.extract(inputKeyMaterial: SymmetricKey(data: ikm), salt: s))
-        }
-        let s = salt.isEmpty ? [UInt8](repeating: 0, count: 48) : salt
-        return Array(HKDF<SHA384>.extract(inputKeyMaterial: SymmetricKey(data: ikm), salt: s))
+    public static func hkdfExtract(_ salt: [UInt8], _ ikm: [UInt8], _ standard: Bool) throws -> [UInt8] {
+        try requireStandard(standard)
+        let s = salt.isEmpty ? [UInt8](repeating: 0, count: hashLen) : salt
+        return Array(HKDF<SHA256>.extract(inputKeyMaterial: SymmetricKey(data: ikm), salt: s))
     }
 
     /// HKDF-Expand-Label: full = labelPrefix + label;
     /// info = u16(length) || u8(len(full)) || full || u8(len(context)) || context.
     public static func hkdfExpandLabel(_ secret: [UInt8], _ label: String, _ context: [UInt8],
-                                       _ length: Int, _ standard: Bool) -> [UInt8] {
+                                       _ length: Int, _ standard: Bool) throws -> [UInt8] {
+        try requireStandard(standard)
         let full = Array((labelPrefix + label).utf8)
         var info = [UInt8]()
         info.append(UInt8((length >> 8) & 0xFF))
@@ -191,62 +204,63 @@ public enum Npamp {
         info.append(contentsOf: full)
         info.append(UInt8(context.count))
         info.append(contentsOf: context)
-        return hkdfExpand(standard, secret, info, length)
+        return try hkdfExpand(standard, secret, info, length)
     }
 
-    /// context = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE); label "traffic"; len 32 (SHA-256) / 48 (SHA-384).
+    /// context = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE); label "traffic"; len 32 (SHA-256).
     public static func deriveTrafficSecret(_ master: [UInt8], _ dir: Int, _ epoch: UInt64,
-                                           _ suite: Int, _ channel: Int, _ standard: Bool) -> [UInt8] {
+                                           _ suite: Int, _ channel: Int, _ standard: Bool) throws -> [UInt8] {
+        try requireStandard(standard)
         var ctx = [UInt8]()
         ctx.append(UInt8(dir))
         ctx.append(contentsOf: u64be(epoch))
         ctx.append(contentsOf: u16be(suite))
         ctx.append(contentsOf: u16be(channel))
-        return hkdfExpandLabel(master, "traffic", ctx, standard ? 32 : 48, standard)
+        return try hkdfExpandLabel(master, "traffic", ctx, hashLen, standard)
     }
 
     /// {key(32), iv(12)} from a traffic secret.
-    public static func deriveKeyIv(_ secret: [UInt8], _ standard: Bool) -> (key: [UInt8], iv: [UInt8]) {
-        (hkdfExpandLabel(secret, "key", [], 32, standard), hkdfExpandLabel(secret, "iv", [], 12, standard))
+    public static func deriveKeyIv(_ secret: [UInt8], _ standard: Bool) throws -> (key: [UInt8], iv: [UInt8]) {
+        (try hkdfExpandLabel(secret, "key", [], 32, standard), try hkdfExpandLabel(secret, "iv", [], 12, standard))
     }
 
     // -- Handshake-secret ladder (binding spec/10 §5) ------------------------
 
-    /// Derives the binding handshake_secret (spec/10 §5; ML-KEM-first per
-    /// ADR-0005). The two inputs are the raw shared secrets from each KEM
+    /// Derives the binding handshake_secret (spec/10 §5; ML-KEM-first). The two inputs are the raw shared secrets from each KEM
     /// component; the combined IKM places the ML-KEM shared secret FIRST, then
     /// the X25519 shared secret. handshake_secret = HKDF-Extract(salt = HashLen
     /// zero octets, IKM). At the Standard profile HashLen is 32.
     public static func deriveHandshakeSecret(_ mlkemSharedSecret: [UInt8],
                                              _ x25519SharedSecret: [UInt8],
-                                             _ standard: Bool) -> [UInt8] {
-        let salt = [UInt8](repeating: 0, count: standard ? 32 : 48)
-        return hkdfExtract(salt, mlkemSharedSecret + x25519SharedSecret, standard)
+                                             _ standard: Bool) throws -> [UInt8] {
+        try requireStandard(standard)
+        let salt = [UInt8](repeating: 0, count: hashLen)
+        return try hkdfExtract(salt, mlkemSharedSecret + x25519SharedSecret, standard)
     }
 
     /// c_hs = HKDF-Expand-Label(handshake_secret, "c hs", TH_kem, HashLen) (spec/10 §5).
     public static func deriveClientHandshakeSecret(_ handshakeSecret: [UInt8], _ thKem: [UInt8],
-                                                   _ standard: Bool) -> [UInt8] {
-        hkdfExpandLabel(handshakeSecret, "c hs", thKem, standard ? 32 : 48, standard)
+                                                   _ standard: Bool) throws -> [UInt8] {
+        try hkdfExpandLabel(handshakeSecret, "c hs", thKem, hashLen, standard)
     }
 
     /// s_hs = HKDF-Expand-Label(handshake_secret, "s hs", TH_kem, HashLen) (spec/10 §5).
     public static func deriveServerHandshakeSecret(_ handshakeSecret: [UInt8], _ thKem: [UInt8],
-                                                   _ standard: Bool) -> [UInt8] {
-        hkdfExpandLabel(handshakeSecret, "s hs", thKem, standard ? 32 : 48, standard)
+                                                   _ standard: Bool) throws -> [UInt8] {
+        try hkdfExpandLabel(handshakeSecret, "s hs", thKem, hashLen, standard)
     }
 
     /// master = HKDF-Expand-Label(handshake_secret, "master", TH_cCV, HashLen) (spec/10 §5).
     public static func deriveMasterSecret(_ handshakeSecret: [UInt8], _ thCcv: [UInt8],
-                                          _ standard: Bool) -> [UInt8] {
-        hkdfExpandLabel(handshakeSecret, "master", thCcv, standard ? 32 : 48, standard)
+                                          _ standard: Bool) throws -> [UInt8] {
+        try hkdfExpandLabel(handshakeSecret, "master", thCcv, hashLen, standard)
     }
 
     /// Derives a Finished key (spec/10 §6.2): finished_key(secret) =
     /// HKDF-Expand-Label(secret, "finished", "", HashLen). The client Finished
     /// key derives from c_hs; the server Finished key derives from s_hs.
-    public static func deriveFinishedKey(_ secret: [UInt8], _ standard: Bool) -> [UInt8] {
-        hkdfExpandLabel(secret, "finished", [], standard ? 32 : 48, standard)
+    public static func deriveFinishedKey(_ secret: [UInt8], _ standard: Bool) throws -> [UInt8] {
+        try hkdfExpandLabel(secret, "finished", [], hashLen, standard)
     }
 
     // -- Hex utility -------------------------------------------------------

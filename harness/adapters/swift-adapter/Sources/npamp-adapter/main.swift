@@ -200,17 +200,19 @@ func handle(_ req: [String: Any]) -> [String: Any] {
         // RFC 5869 HKDF-Expand over the raw (unlabelled) `info`. This dispatches into
         // the reference module's own HKDF-Expand — the exact primitive its key schedule
         // builds HKDF-Expand-Label on — exposed publicly as Npamp.hkdfExpand(hash:...).
-        // No HKDF is reimplemented here. SHA-256/SHA-384 are the reference's supported
-        // hashes; any other hash is reported honestly as unimplemented.
+        // No HKDF is reimplemented here. SHA-256 is the reference's supported
+        // hash; any other hash is reported honestly as unimplemented.
         let hash = str(input, "hash")
-        guard hash == "sha256" || hash == "sha384" else {
+        guard hash == "sha256" else {
             return ["skipped": "hash not implemented: \(hash)"]
         }
         let prk = hexBytes(input, "prk")
         let info = hexBytes(input, "info")
         let length = intVal(input, "length")
-        let okm = Npamp.hkdfExpand(hash: hash, prk: prk, info: info, length: length) // reference
-        return ["out": ["okm": Npamp.toHex(okm)]]
+        do {
+            let okm = try Npamp.hkdfExpand(hash: hash, prk: prk, info: info, length: length) // reference
+            return ["out": ["okm": Npamp.toHex(okm)]]
+        } catch { return ["skipped": "refused: " + String(describing: error)] }
 
     case "profile.check":
         // The reference module implements no profile KEM-acceptance policy.

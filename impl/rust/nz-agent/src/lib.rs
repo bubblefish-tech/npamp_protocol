@@ -25,7 +25,6 @@
 //! | [`tunnel`] | E2.5 | "Node-to-node tunnel" — the HBONE-analogue CONNECT mux |
 //! | [`capture`] | E2.5 | "Captures workload traffic via eBPF redirect (iptables fallback)" |
 //! | [`identity`] | E2.6 | "Identity via SPIFFE/SPIRE" (the [`DelegatedIdentitySource`](identity::DelegatedIdentitySource) trait + the static test double) |
-//! | [`audit_seal`] | decision-B residual (b), pending ratification | Dedicated ML-DSA-87 PQ audit-seal key, cryptographically separate from `identity`'s Ed25519 session-identity key |
 //! | [`spire_client`] | E2.6 | The real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS client implementing that trait |
 //! | [`authz`] | E2.6 | "L4 authorization (which workload may reach which) enforced here, at the node" |
 //! | [`waypoint`] | E2.7 | Component 2 — the optional per-namespace L7 (re-exports `nz-waypoint-core`, shared with the `nz-waypoint-wasm` Envoy proxy-wasm hosting shape) |
@@ -132,7 +131,6 @@
 //!   those seams is unbuilt, not merely untested.
 
 pub mod agent;
-pub mod audit_seal;
 pub mod authz;
 pub mod capture;
 pub mod datapath;

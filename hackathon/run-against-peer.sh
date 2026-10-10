@@ -21,7 +21,7 @@
 #
 # Examples:
 #   ./run-against-peer.sh --stack go   --role server --addr 0.0.0.0:47700
-#   ./run-against-peer.sh --stack rust --role client --addr 198.51.100.7:47700 --profile high
+#   ./run-against-peer.sh --stack rust --role client --addr 198.51.100.7:47700 --profile standard
 #
 # Exit 0 iff the requested stage(s) all pass. All paths are repo-relative
 # (resolved from this script's location); no absolute build path is embedded.
@@ -34,7 +34,8 @@ run-against-peer.sh -- run one side of a live N-PAMP handshake against a peer
   --stack STACK       go | rust                                  (required)
   --role ROLE         server | client                            (required)
   --addr HOST:PORT    address to listen on (server) or dial (client)  (required)
-  --profile PROFILE   standard | high | sovereign (rust only; default standard)
+  --profile PROFILE   standard (default); high and sovereign are refused: this open
+                      reference implements the Standard profile only
   --skip-conformance  run only Stage 1+2 (live interop); skip Stage 3
   -h, --help          show this message
 
@@ -84,8 +85,8 @@ esac
 if [ -z "$ADDR" ]; then
   echo "run-against-peer.sh: --addr HOST:PORT is required" >&2; exit 1
 fi
-if [ "$STACK" = "go" ] && [ "$PROFILE" != "standard" ]; then
-  echo "run-against-peer.sh: --stack go only speaks profile 'standard' today (the Go interop harness does not yet offer High/Sovereign); use --stack rust for High/Sovereign" >&2
+if [ "$PROFILE" != "standard" ]; then
+  echo "run-against-peer.sh: profile '${PROFILE}' is refused: this open reference implements the Standard profile only (no network I/O was attempted)" >&2
   exit 1
 fi
 

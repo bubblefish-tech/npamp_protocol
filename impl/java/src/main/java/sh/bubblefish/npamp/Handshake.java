@@ -57,7 +57,7 @@ public final class Handshake {
      * appends the 2-octet frame type ONLY (NOT the rest of the 36-octet frame header —
      * the spec section 3 / 7.1 divergence from RFC 8446 section 4.4.1); {@link #addTLV}
      * appends Type(2 BE) || Length(2 BE) || Value. A transcript point = the hash over all
-     * bytes absorbed so far (SHA-256 at Standard, SHA-384 at High/Sovereign).
+     * bytes absorbed so far (SHA-256).
      */
     public static final class Transcript {
         private final ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -74,10 +74,14 @@ public final class Handshake {
             buf.writeBytes(value);
         }
 
-        /** Hashes every octet absorbed so far (SHA-256 when {@code standard}, else SHA-384). */
+        /**
+         * Hashes every octet absorbed so far with SHA-256. Throws
+         * {@link Npamp.NoSuiteForProfile} unless {@code standard} is true.
+         */
         public byte[] hash(boolean standard) {
+            Npamp.requireStandard(standard);
             try {
-                MessageDigest md = MessageDigest.getInstance(standard ? "SHA-256" : "SHA-384");
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
                 return md.digest(buf.toByteArray());
             } catch (Exception e) {
                 throw new RuntimeException("transcript hash failed", e);
@@ -89,11 +93,12 @@ public final class Handshake {
 
     /**
      * Finished verify_data = HMAC(finished_key, transcript_hash) under the profile hash
-     * (HmacSHA256 at Standard, HmacSHA384 at High/Sovereign).
+     * (HmacSHA256). Throws {@link Npamp.NoSuiteForProfile} unless {@code standard} is true.
      */
     public static byte[] computeFinished(byte[] finishedKey, byte[] transcriptHash, boolean standard) {
+        Npamp.requireStandard(standard);
         try {
-            String alg = standard ? "HmacSHA256" : "HmacSHA384";
+            String alg = "HmacSHA256";
             Mac mac = Mac.getInstance(alg);
             mac.init(new SecretKeySpec(finishedKey, alg));
             return mac.doFinal(transcriptHash);
@@ -218,13 +223,14 @@ public final class Handshake {
     // -- Key schedule ladder (binding spec/10 section 5) -------------------
 
     /**
-     * Derives the draft-00 handshake_secret (binding spec/10 section 5; ADR-0005):
+     * Derives the draft-00 handshake_secret (binding spec/10 section 5):
      * HKDF-Extract(salt = HashLen zero octets, IKM = ML-KEM_SS || X25519_SS). The two KEM
-     * shared secrets are concatenated ML-KEM-FIRST (ADR-0005). {@code standard} selects the
-     * SHA-256 profile (true, 32-octet zero salt) or SHA-384 (false, 48-octet zero salt).
+     * shared secrets are concatenated ML-KEM-FIRST. SHA-256 with a 32-octet zero salt; throws
+     * {@link Npamp.NoSuiteForProfile} unless {@code standard} is true.
      */
     public static byte[] deriveHandshakeSecret(byte[] mlkemSharedSecret, byte[] x25519SharedSecret, boolean standard) {
-        int hashLen = standard ? 32 : 48;
+        Npamp.requireStandard(standard);
+        int hashLen = Npamp.HASH_LEN;
         byte[] ikm = new byte[mlkemSharedSecret.length + x25519SharedSecret.length];
         System.arraycopy(mlkemSharedSecret, 0, ikm, 0, mlkemSharedSecret.length);
         System.arraycopy(x25519SharedSecret, 0, ikm, mlkemSharedSecret.length, x25519SharedSecret.length);
@@ -236,7 +242,7 @@ public final class Handshake {
      * HKDF-Expand-Label(handshake_secret, "c hs", TH_KEM, HashLen).
      */
     public static byte[] deriveClientHandshakeSecret(byte[] handshakeSecret, byte[] thKem, boolean standard) {
-        return Npamp.hkdfExpandLabel(handshakeSecret, "c hs", thKem, standard ? 32 : 48, standard);
+        return Npamp.hkdfExpandLabel(handshakeSecret, "c hs", thKem, Npamp.HASH_LEN, standard);
     }
 
     /**
@@ -244,7 +250,7 @@ public final class Handshake {
      * HKDF-Expand-Label(handshake_secret, "s hs", TH_KEM, HashLen).
      */
     public static byte[] deriveServerHandshakeSecret(byte[] handshakeSecret, byte[] thKem, boolean standard) {
-        return Npamp.hkdfExpandLabel(handshakeSecret, "s hs", thKem, standard ? 32 : 48, standard);
+        return Npamp.hkdfExpandLabel(handshakeSecret, "s hs", thKem, Npamp.HASH_LEN, standard);
     }
 
     /**
@@ -252,7 +258,7 @@ public final class Handshake {
      * HKDF-Expand-Label(handshake_secret, "master", TH_CCV, HashLen).
      */
     public static byte[] deriveMasterSecret(byte[] handshakeSecret, byte[] thCcv, boolean standard) {
-        return Npamp.hkdfExpandLabel(handshakeSecret, "master", thCcv, standard ? 32 : 48, standard);
+        return Npamp.hkdfExpandLabel(handshakeSecret, "master", thCcv, Npamp.HASH_LEN, standard);
     }
 
     /**
@@ -261,6 +267,6 @@ public final class Handshake {
      * derives from c_hs; the server Finished key derives from s_hs.
      */
     public static byte[] deriveFinishedKey(byte[] secret, boolean standard) {
-        return Npamp.hkdfExpandLabel(secret, "finished", new byte[0], standard ? 32 : 48, standard);
+        return Npamp.hkdfExpandLabel(secret, "finished", new byte[0], Npamp.HASH_LEN, standard);
     }
 }

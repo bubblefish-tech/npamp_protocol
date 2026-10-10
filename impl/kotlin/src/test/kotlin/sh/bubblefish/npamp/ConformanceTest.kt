@@ -57,17 +57,6 @@ object ConformanceTest {
         )
     }
 
-    private fun vecTrafficKey() {
-        val master = ByteArray(48)
-        java.util.Arrays.fill(master, 0x2A.toByte())
-        val ts = Npamp.deriveTrafficSecret(master, 0, 0L, Npamp.AEAD_AES256_GCM, Npamp.CHAN_CONTROL, false)
-        val tk = Npamp.deriveKeyIv(ts, false)[0]
-        check(
-            "vec_traffic_key",
-            Npamp.toHex(tk) == "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc",
-        )
-    }
-
     // --- property tests (mirror the Go/Rust suites) ---
 
     private fun roundtrip() {
@@ -135,7 +124,6 @@ object ConformanceTest {
         vecHeader()
         vecNonce()
         vecAead()
-        vecTrafficKey()
         roundtrip()
         crcValidatedFirst()
         reservedMustBeZero()

@@ -19,8 +19,8 @@ fn main() {
     // 1. Key schedule: derive a per-(direction, channel, suite) traffic key + IV from the master
     //    secret. In a live session the master secret is the handshake output; here it is fixed.
     let master = [0x2Bu8; 32];
-    let ts = derive_traffic_secret(&master, DIR_CLIENT_TO_SERVER, 0, AEAD_AES256_GCM, CHAN_MEMORY, true);
-    let (key, iv) = derive_key_iv(&ts, true);
+    let ts = derive_traffic_secret(&master, DIR_CLIENT_TO_SERVER, 0, AEAD_AES256_GCM, CHAN_MEMORY, true).unwrap();
+    let (key, iv) = derive_key_iv(&ts, true).unwrap();
 
     // 2. Sender: seal an application payload into an AEAD-protected frame on the Memory channel.
     //    The AEAD associated data is the 21-octet header prefix, so the ciphertext is bound to the

@@ -13,11 +13,8 @@ import {
   Frame,
   deriveNonce,
   sealAes256Gcm,
-  deriveTrafficSecret,
-  deriveKeyIv,
   FRAME_PING,
   CHAN_CONTROL,
-  AEAD_AES256_GCM,
 } from "../src/npamp.ts";
 
 // 1. Golden header: PING on Control, seq 0, empty payload.
@@ -33,17 +30,11 @@ const iv2 = Buffer.from(Array.from({ length: 12 }, (_, i) => 0x10 + i));
 const aad = new Frame({ ftype: FRAME_PING, channel: CHAN_CONTROL }).headerPrefix(11);
 const sealed = sealAes256Gcm(key, iv2, 7n, aad, Buffer.from("hello world"));
 
-// 4. Key schedule: master = 48 x 0x2A (SHA-384 length), High profile (standard=false), traffic secret -> key.
-const master = Buffer.alloc(48, 0x2a);
-const ts = deriveTrafficSecret(master, 0, 0n, AEAD_AES256_GCM, CHAN_CONTROL, false);
-const [tk] = deriveKeyIv(ts, false);
-
 const out = {
   spec: "draft-bubblefish-npamp-00",
   header_ping_control_seq0: header.toString("hex"),
   nonce_iv1to12_seq0102: nonce.toString("hex"),
   aes256gcm_seal_helloworld: sealed.toString("hex"),
-  traffic_key_sha384: tk.toString("hex"),
 };
 
 process.stdout.write(JSON.stringify(out, null, 2) + "\n");

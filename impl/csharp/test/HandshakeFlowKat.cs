@@ -8,7 +8,7 @@
 // (test-vectors/v1/handshake-flow-kat.json). This rebuilds every EXPECTED artifact through THIS impl's
 // real code path from the pinned INPUTS:
 //   * kem_share      = ML-KEM-768 encapsulation key (from the d||z seed) || X25519 public (from the
-//                      client private) -- both via BouncyCastle, ML-KEM-first per ADR-0005.
+//                      client private) -- both via BouncyCastle, ML-KEM-first.
 //   * decapsulation  = MLKemDecapsulator over the pinned mlkem_ciphertext under the seed-derived key
 //                      MUST recover mlkem_shared_secret (self-validating input; encaps is
 //                      non-deterministic so the ciphertext is captured-once and pinned). X25519 ECDH

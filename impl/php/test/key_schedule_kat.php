@@ -45,7 +45,7 @@ function check(string $name, bool $ok): void
 }
 
 const VEC_DIR = __DIR__ . '/../../../test-vectors/v1';
-const KEY_SCHEDULE_KAT_SHA256 = 'e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c';
+const KEY_SCHEDULE_KAT_SHA256 = 'dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe';
 
 // AES-256-GCM = 0x0001 per registries/aead.csv (= the impl's AEAD_AES256_GCM =
 // npamp.AEADAES256GCM in the Go reference); 0x0002 is ChaCha20-Poly1305. The

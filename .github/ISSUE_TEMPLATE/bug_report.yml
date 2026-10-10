@@ -2,7 +2,7 @@
 #
 # Aligned with .github/labels.yml and CONTRIBUTING.md: every issue is triaged
 # `design` (substantive protocol effect; requires consensus even if the resolution
-# is "no change"; produces a numbered ADR in decisions/) or `editorial` (no
+# is "no change"; produces a recorded decision) or `editorial` (no
 # substantive effect). Final triage labels are applied by maintainers; this form
 # auto-applies `needs-discussion` so new reports enter the triage queue.
 name: "Spec defect / erratum"
@@ -15,10 +15,10 @@ body:
       value: |
         Thanks for the report. Per `CONTRIBUTING.md`, every issue is triaged
         **design** (substantive protocol effect — requires consensus, even if the
-        resolution is "no change", and produces a numbered ADR in `decisions/`)
+        resolution is "no change", and produces a recorded decision)
         or **editorial** (wording/formatting only). Maintainers apply the final label.
 
-        **Firewall note (ADR-0004):** this repository carries only the public-draft
+        **Scope note:** this repository carries only the public-draft
         primitives. Do not attach controlled-extension material to this issue.
   - type: input
     id: document

@@ -36,7 +36,7 @@
     "th_ccv": "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"
   },
   "construction": {
-    "ikm": "ML-KEM_SS || X25519_SS (ML-KEM-first, ADR-0005) = ikm_mlkem_ss || ikm_x25519_ss",
+    "ikm": "ML-KEM_SS || X25519_SS (ML-KEM-first) = ikm_mlkem_ss || ikm_x25519_ss",
     "handshake_secret": "HKDF-Extract(salt = 32 zero octets, IKM = ikm)",
     "c_hs": "HKDF-Expand-Label(handshake_secret, 'c hs', th_kem, 32)",
     "s_hs": "HKDF-Expand-Label(handshake_secret, 's hs', th_kem, 32)",

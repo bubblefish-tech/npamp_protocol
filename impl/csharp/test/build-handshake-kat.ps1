@@ -1,5 +1,5 @@
 # build-handshake-kat.ps1 — build + run the four draft-00 handshake KATs for the C# reference:
-#   TranscriptKat, FinishedKat, CertVerifyKat, KeyScheduleKat
+#   TranscriptKat, FinishedKat, CertVerifyKat, KeyScheduleKat, HandshakeFlowKat, RefusalKat
 #   (binding spec/10 sections 3, 6.2, 6.1, 5; key schedule per draft-00 sections 7.4 + 7.5).
 #
 # These KATs need Ed25519 (RFC 8032), which the .NET BCL does NOT provide, so the handshake
@@ -31,7 +31,8 @@ $tests = @(
   @{ Class = 'Sh.Bubblefish.Npamp.FinishedKat';   File = 'FinishedKat.cs';   Name = 'finished-kat'   },
   @{ Class = 'Sh.Bubblefish.Npamp.CertVerifyKat'; File = 'CertVerifyKat.cs'; Name = 'certverify-kat' },
   @{ Class = 'Sh.Bubblefish.Npamp.KeyScheduleKat'; File = 'KeyScheduleKat.cs'; Name = 'key-schedule-kat' },
-  @{ Class = 'Sh.Bubblefish.Npamp.HandshakeFlowKat'; File = 'HandshakeFlowKat.cs'; Name = 'handshake-flow-kat' }
+  @{ Class = 'Sh.Bubblefish.Npamp.HandshakeFlowKat'; File = 'HandshakeFlowKat.cs'; Name = 'handshake-flow-kat' },
+  @{ Class = 'Sh.Bubblefish.Npamp.RefusalKat';       File = 'RefusalKat.cs';       Name = 'refusal-kat'        }
 )
 
 $haveSdk = $false

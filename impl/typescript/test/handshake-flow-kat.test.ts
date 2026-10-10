@@ -152,7 +152,7 @@ test("handshake_flow_kat", () => {
 
   // ML-KEM leg: Node's built-in ML-KEM cannot reproduce Go's seed-derived key (the {seed} option is
   // non-deterministic here), so mlkem_shared_secret is the pinned self-validating input. Combine
-  // ML-KEM-first (ADR-0005): combined = ML-KEM_SS || X25519_SS.
+  // ML-KEM-first: combined = ML-KEM_SS || X25519_SS.
   const combined = Buffer.concat([wantMlkemSs, x25519Ss]);
   assert.equal(combined.toString("hex"), k.inputs.combined_secret, "kem: combined_secret != ml-kem_ss || x25519_ss");
   assert.ok(combined.equals(wantCombined), "kem: pinned combined_secret is internally inconsistent");

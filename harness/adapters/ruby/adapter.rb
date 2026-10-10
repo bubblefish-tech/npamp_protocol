@@ -119,7 +119,6 @@ def handle(req)
     digest =
       case hash
       when "sha256" then OpenSSL::Digest.new("SHA256")
-      when "sha384" then OpenSSL::Digest.new("SHA384")
       else
         return { "skipped" => "hash not implemented: #{hash}" }
       end

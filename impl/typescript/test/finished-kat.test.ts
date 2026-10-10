@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { computeFinished, verifyFinished } from "../src/npamp.ts";
 
 const VECTORS = join(import.meta.dirname, "..", "..", "..", "test-vectors", "v1");
-const FINISHED_KAT_SHA256 = "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f";
+const FINISHED_KAT_SHA256 = "05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d";
 
 const hx = (s) => Buffer.from(s, "hex");
 

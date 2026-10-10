@@ -56,15 +56,6 @@ public static class ConformanceTest
             "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf");
     }
 
-    private static void VecTrafficKey()
-    {
-        byte[] master = new byte[48];
-        Array.Fill(master, (byte)0x2A);
-        byte[] ts = Npamp.DeriveTrafficSecret(master, 0, 0UL, Npamp.AeadAes256Gcm, Npamp.ChanControl, false);
-        Check("vec_traffic_key", Npamp.ToHex(Npamp.DeriveKeyIv(ts, false).Key) ==
-            "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc");
-    }
-
     // --- property tests (mirror the Go/Rust/Java suites) ---
 
     private static void Roundtrip()
@@ -120,7 +111,6 @@ public static class ConformanceTest
         VecHeader();
         VecNonce();
         VecAead();
-        VecTrafficKey();
         Roundtrip();
         CrcValidatedFirst();
         ReservedMustBeZero();

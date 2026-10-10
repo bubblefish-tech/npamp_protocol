@@ -13,7 +13,7 @@
 # rust, java, kotlin, ruby, php, csharp, swift (native `swift`, else via WSL Ubuntu on a Windows
 # host). swift additionally executes the KEM-wire KAT's X25519/wire-order/IKM-order legs
 # (test-vectors/v1/kem-wire-kat.json); its two ML-KEM-768 legs are tracked SKIPs inside the runner
-# (no ML-KEM API in swift-crypto's Crypto product — same decaps deferral as Go, ADR-0007).
+# (no ML-KEM API in swift-crypto's Crypto product — same decaps deferral as Go).
 # One language is intentionally NOT run here:
 #   * go     — the Go handshake layer + its KATs run under the module's own `go test` (impl/go),
 #              not this cross-language shell harness.
@@ -51,7 +51,7 @@ skip() { echo "SKIP  $1 ($2)"; skips="$skips $1"; }
 
 # --- typescript (node built-in test runner; positive token: a nonzero 'pass N' with exit 0 => fail 0) ---
 if command -v node >/dev/null; then
-  o="$(node --test "$IMPL/typescript/test/transcript-kat.test.ts" "$IMPL/typescript/test/key-schedule-kat.test.ts" "$IMPL/typescript/test/finished-kat.test.ts" "$IMPL/typescript/test/certverify-kat.test.ts" "$IMPL/typescript/test/handshake-flow-kat.test.ts" 2>&1)"; ec=$?
+  o="$(node --test "$IMPL/typescript/test/transcript-kat.test.ts" "$IMPL/typescript/test/key-schedule-kat.test.ts" "$IMPL/typescript/test/finished-kat.test.ts" "$IMPL/typescript/test/certverify-kat.test.ts" "$IMPL/typescript/test/handshake-flow-kat.test.ts" "$IMPL/typescript/test/refusal.test.ts" 2>&1)"; ec=$?
   chk typescript "$o" "$ec" 'pass [1-9]'
 else skip typescript "no node"; fi
 
@@ -63,6 +63,11 @@ if command -v python >/dev/null; then
     o="$o$out"$'\n'
   done
   chk python "$o" "$ec" 'PASS test_'
+  # Refusal behaviour check (non-Standard profiles are refused): pytest-style, so run it under pytest when present.
+  if python -c "import pytest" >/dev/null 2>&1; then
+    o="$(PYTHONPATH="$IMPL/python" PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q -p no:cacheprovider "$IMPL/python/tests/test_refusal.py" 2>&1)"; ec=$?
+    chk python-refusal "$o" "$ec" '[1-9][0-9]* passed'
+  else skip python-refusal "no pytest"; fi
 else skip python "no python"; fi
 
 # --- rust (integration tests handshake_kat.rs + handshake_flow_kat.rs; positive token: 'N passed' with N>=1) ---
@@ -85,9 +90,10 @@ if command -v javac >/dev/null && command -v java >/dev/null; then
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/KeyScheduleKat.java \
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/FinishedKat.java \
       "$IMPL"/java/src/test/java/sh/bubblefish/npamp/CertVerifyKat.java \
-      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/HandshakeFlowKat.java 2>"$JE"; then
+      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/HandshakeFlowKat.java \
+      "$IMPL"/java/src/test/java/sh/bubblefish/npamp/RefusalKat.java 2>"$JE"; then
     ec=0; jo=""
-    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat; do
+    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat RefusalKat; do
       out="$( cd "$IMPL/java" && java -cp "$JT" "sh.bubblefish.npamp.$K" 2>&1 )" || ec=1
       jo="$jo$out"$'\n'
     done
@@ -108,9 +114,10 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/KeyScheduleKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/FinishedKat.kt \
       "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/CertVerifyKat.kt \
-      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/HandshakeFlowKat.kt -include-runtime -d "$KT/kat.jar" 2>"$KE"; then
+      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/HandshakeFlowKat.kt \
+      "$IMPL"/kotlin/src/test/kotlin/sh/bubblefish/npamp/RefusalKat.kt -include-runtime -d "$KT/kat.jar" 2>"$KE"; then
     ec=0; ko=""
-    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat; do
+    for K in TranscriptKat KeyScheduleKat FinishedKat CertVerifyKat HandshakeFlowKat RefusalKat; do
       out="$( java -cp "$(kp "$KT/kat.jar")" "sh.bubblefish.npamp.$K" "$(kp "$VEC")" 2>&1 )" || ec=1
       ko="$ko$out"$'\n'
     done
@@ -126,6 +133,8 @@ if command -v ruby >/dev/null; then
     out="$(ruby "$IMPL/ruby/test/${t}_kat.rb" 2>&1)" || ec=1
     o="$o$out"$'\n'
   done
+  out="$(ruby "$IMPL/ruby/test/refusal_test.rb" 2>&1)" || ec=1
+  o="$o$out"$'\n'
   chk ruby "$o" "$ec" 'ALL PASS'
 else skip ruby "no ruby"; fi
 
@@ -136,6 +145,8 @@ if command -v php >/dev/null; then
     out="$(php "$IMPL/php/test/${t}_kat.php" 2>&1)" || ec=1
     o="$o$out"$'\n'
   done
+  out="$(php "$IMPL/php/test/refusal_test.php" 2>&1)" || ec=1
+  o="$o$out"$'\n'
   chk php "$o" "$ec" 'ALL PASS'
 else skip php "no php"; fi
 

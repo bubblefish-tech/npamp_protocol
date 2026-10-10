@@ -1,6 +1,6 @@
 // Standards-derived, NON-CIRCULAR known-answer tests for the draft-00 handshake
 // binding layer (spec/10): the transcript hash (§3), the X25519MLKEM768 KEM-wire
-// layout (§4, ADR-0005/0007), the key schedule (§5, ADR-0008), the Finished MAC
+// layout (§4), the key schedule (§5), the Finished MAC
 // (§6.2; RFC 8446 §4.4.4), and the CertVerify signature (§6.1; RFC 8446 §4.4.3
 // structure; Ed25519 per RFC 8032). Swift mirror of the Go/TS/Python/Java/Kotlin/
 // Ruby/PHP/Rust/C# reference tests against the SAME pinned vectors
@@ -24,7 +24,7 @@
 // carries mlkem internally but no Swift-level API is exported), so the NIST
 // d||z -> ek keygen leg and the expanded-dk decapsulation leg are not executable
 // with this port's dependency set (the decaps leg is the same deferral the Go
-// reference documents in ADR-0007).
+// reference documents).
 //
 // Foundation ships JSONSerialization on Linux and Apple platforms, so no JSON
 // dependency is added (the JDK/cargo ports hand-rolled parsers because their
@@ -38,10 +38,10 @@ import Npamp
 // ---------------------------------------------------------------------------
 
 let transcriptKatPin = "fab6d852497b6ff56405595e9a014d0c45cabc5cde80a60a17444b337d556ee5"
-let keyScheduleKatPin = "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c"
-let finishedKatPin = "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f"
+let keyScheduleKatPin = "dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe"
+let finishedKatPin = "05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d"
 let certVerifyKatPin = "ba6e61b3817f666afc84b24740b66c7b6696b631ab728f87364ae60cda49ef67"
-let kemWireKatPin = "3edd3e0c1e96fa8a3b45b0e998a2b12082a7b4e66cd5acf3883f2de8ff12c222"
+let kemWireKatPin = "eb1abf81c1e07fbb795a8ce3f2da6baad57a027c1c0f1b64e1b97ba2fe2c2f5d"
 
 /// Every executable leg below, in order. The summary hard-checks this count so
 /// "ALL PASS" is positive evidence that every leg RAN (exit-0 alone cannot tell
@@ -207,14 +207,14 @@ let transcriptPointOrder = ["th_kem", "th_sid", "th_scv", "th_cid", "th_ccv"]
 func driveTranscript(_ frames: [Any],
                      addFrameType: (Int) -> Void,
                      addTlv: (Int, [UInt8]) -> Void,
-                     snap: () -> String) throws -> [String: String] {
+                     snap: () throws -> String) throws -> [String: String] {
     var points = [String: String]()
     for (fi, f) in frames.enumerated() {
         addFrameType(try parseHexInt(try str(f, "frame_type")))
         for (ti, tl) in (try arr(f, "tlvs")).enumerated() {
             addTlv(try parseHexInt(try str(tl, "type")), try hexBytes(tl, "value"))
             if let name = transcriptCutPoints["\(fi).\(ti)"] {
-                points[name] = snap()
+                points[name] = try snap()
             }
         }
     }
@@ -275,7 +275,7 @@ do {
             frames,
             addFrameType: { tr.addFrameType($0) },
             addTlv: { tr.addTlv($0, $1) },
-            snap: { toHex(tr.hash(true)) }
+            snap: { try toHex(tr.hash(true)) }
         )
         try checkTranscriptPoints("impl", k, points)
     }
@@ -285,7 +285,7 @@ do {
 }
 
 // ---------------------------------------------------------------------------
-// Key-schedule KAT (spec/10 §5) — pin e108f5…, anchors RFC 5869 TC1 + RFC 8448
+// Key-schedule KAT (spec/10 §5) — pin dcf4ba…, anchors RFC 5869 TC1 + RFC 8448
 // ---------------------------------------------------------------------------
 
 /// Standard HMAC-SHA-256, independent of the impl's key-schedule functions.
@@ -357,9 +357,9 @@ do {
         let prkHex = try str(tc, "prk")
         let okmHex = try str(tc, "okm")
 
-        let implPrk = toHex(Npamp.hkdfExtract(salt, ikm, true))
+        let implPrk = try toHex(Npamp.hkdfExtract(salt, ikm, true))
         try check(implPrk == prkHex, "Npamp.hkdfExtract != RFC 5869 prk\n  got  \(implPrk)\n  want \(prkHex)")
-        let implOkm = toHex(Npamp.hkdfExpand(hash: "sha256", prk: try fromHex(prkHex), info: info, length: length))
+        let implOkm = try toHex(Npamp.hkdfExpand(hash: "sha256", prk: try fromHex(prkHex), info: info, length: length))
         try check(implOkm == okmHex, "Npamp.hkdfExpand != RFC 5869 okm\n  got  \(implOkm)\n  want \(okmHex)")
         let oraclePrk = toHex(extractOracle(salt, ikm))
         try check(oraclePrk == prkHex, "extractOracle != RFC 5869 prk\n  got  \(oraclePrk)\n  want \(prkHex)")
@@ -392,37 +392,37 @@ do {
         let zeros32 = [UInt8](repeating: 0, count: 32)
 
         // handshake_secret = HKDF-Extract(32 zero octets, ML-KEM_SS || X25519_SS).
-        let hs = Npamp.deriveHandshakeSecret(mlkem, x25519, true)
+        let hs = try Npamp.deriveHandshakeSecret(mlkem, x25519, true)
         let hsWant = toHex(extractOracle(zeros32, mlkem + x25519))
         try check(toHex(hs) == hsWant, "handshake_secret != oracle\n  got  \(toHex(hs))\n  want \(hsWant)")
 
         // c_hs / s_hs / master.
-        let cHs = Npamp.deriveClientHandshakeSecret(hs, thKem, true)
+        let cHs = try Npamp.deriveClientHandshakeSecret(hs, thKem, true)
         let cHsWant = toHex(expandLabelOracle(hs, "n-pamp ", "c hs", thKem, 32))
         try check(toHex(cHs) == cHsWant, "c_hs != oracle\n  got  \(toHex(cHs))\n  want \(cHsWant)")
 
-        let sHs = Npamp.deriveServerHandshakeSecret(hs, thKem, true)
+        let sHs = try Npamp.deriveServerHandshakeSecret(hs, thKem, true)
         let sHsWant = toHex(expandLabelOracle(hs, "n-pamp ", "s hs", thKem, 32))
         try check(toHex(sHs) == sHsWant, "s_hs != oracle\n  got  \(toHex(sHs))\n  want \(sHsWant)")
 
-        let master = Npamp.deriveMasterSecret(hs, thCcv, true)
+        let master = try Npamp.deriveMasterSecret(hs, thCcv, true)
         let masterWant = toHex(expandLabelOracle(hs, "n-pamp ", "master", thCcv, 32))
         try check(toHex(master) == masterWant, "master != oracle\n  got  \(toHex(master))\n  want \(masterWant)")
 
         // finished_key: client derives from c_hs, server from s_hs.
-        let fkClient = Npamp.deriveFinishedKey(cHs, true)
+        let fkClient = try Npamp.deriveFinishedKey(cHs, true)
         let fkClientWant = toHex(expandLabelOracle(cHs, "n-pamp ", "finished", [], 32))
         try check(toHex(fkClient) == fkClientWant, "finished_key(c_hs) != oracle")
-        let fkServer = Npamp.deriveFinishedKey(sHs, true)
+        let fkServer = try Npamp.deriveFinishedKey(sHs, true)
         let fkServerWant = toHex(expandLabelOracle(sHs, "n-pamp ", "finished", [], 32))
         try check(toHex(fkServer) == fkServerWant, "finished_key(s_hs) != oracle")
 
         // s2c handshake AEAD via the existing deriveTrafficSecret/deriveKeyIv off
         // s_hs: dir=ServerToClient(1), epoch=0, suite=AES-256-GCM(0x0001),
         // channel=Control(0x0000).
-        let traffic = Npamp.deriveTrafficSecret(sHs, dirServerToClient, 0, suiteAes256Gcm,
+        let traffic = try Npamp.deriveTrafficSecret(sHs, dirServerToClient, 0, suiteAes256Gcm,
                                                 Npamp.chanControl, true)
-        let keyIv = Npamp.deriveKeyIv(traffic, true)
+        let keyIv = try Npamp.deriveKeyIv(traffic, true)
         let ctx = trafficContext(dirServerToClient, 0, suiteAes256Gcm, Npamp.chanControl)
         let oracleTraffic = expandLabelOracle(sHs, "n-pamp ", "traffic", ctx, 32)
         let keyWant = toHex(expandLabelOracle(oracleTraffic, "n-pamp ", "key", [], 32))
@@ -436,7 +436,7 @@ do {
 }
 
 // ---------------------------------------------------------------------------
-// Finished KAT (spec/10 §6.2) — pin 25c21b…, anchor RFC 4231 TC1/TC2
+// Finished KAT (spec/10 §6.2) — pin 05a7b3…, anchor RFC 4231 TC1/TC2
 // ---------------------------------------------------------------------------
 
 do {
@@ -475,7 +475,7 @@ do {
             let th = try hexBytes(nn, c.thKey)
             let wantHex = try str(e, c.vdKey)
             let want = try fromHex(wantHex)
-            let got = toHex(Handshake.computeFinished(fk, th, true))
+            let got = try toHex(Handshake.computeFinished(fk, th, true))
             try check(got == wantHex, "[\(c.name)] computeFinished mismatch\n  got  \(got)\n  want \(wantHex)")
             try check(Handshake.verifyFinished(fk, th, want, true),
                       "[\(c.name)] verifyFinished rejected the correct verify_data")
@@ -620,7 +620,7 @@ do {
 }
 
 // ---------------------------------------------------------------------------
-// KEM-wire KAT (spec/10 §4; ADR-0005/0007) — pin 3edd3e…, anchors NIST ACVP
+// KEM-wire KAT (spec/10 §4) — pin eb1abf…, anchors NIST ACVP
 // (FIPS 203) + RFC 7748 §6.1. Executable legs: the X25519 anchor, the
 // ML-KEM-first wire assembly/split order, and the HKDF-Extract IKM order.
 // ML-KEM legs are explicit SKIPs (see header comment).
@@ -699,22 +699,22 @@ do {
 
     // (C) IMPL (IKM order) — handshake_secret = HKDF-Extract(zeros, ML-KEM_SS ||
     // X25519_SS) per wire_layout.combined_secret, and DIFFERS from the
-    // X25519-first IKM (the original defect ADR-0005 fixed).
+    // X25519-first IKM (the original defect, now fixed).
     leg("kemwire_kat_ikm_order_impl") {
         let mlkemSS = try hexBytes(decaps, "shared_secret_K")
         let x25519SS = try hexBytes(x, "shared_secret")
         try check(mlkemSS.count + x25519SS.count == (try int(wire, "combined_secret_len")),
                   "combined secret length != wire_layout.combined_secret_len")
         let zeros32 = [UInt8](repeating: 0, count: 32)
-        let hs = toHex(Npamp.deriveHandshakeSecret(mlkemSS, x25519SS, true))
+        let hs = try toHex(Npamp.deriveHandshakeSecret(mlkemSS, x25519SS, true))
         let want = toHex(extractOracle(zeros32, mlkemSS + x25519SS))
         try check(hs == want, "handshake_secret != HKDF-Extract(zeros, ML-KEM_SS || X25519_SS)\n  got  \(hs)\n  want \(want)")
         let reversed = toHex(extractOracle(zeros32, x25519SS + mlkemSS))
-        try check(hs != reversed, "handshake_secret matches the X25519-first IKM — ML-KEM-first order violated (ADR-0005)")
+        try check(hs != reversed, "handshake_secret matches the X25519-first IKM — ML-KEM-first order violated")
     }
 
-    // Explicit, tracked SKIPs — never silently green (ADR-0007 documents the
-    // same decaps deferral for the Go reference).
+    // Explicit, tracked SKIPs — never silently green (the Go reference has the
+    // same decaps deferral).
     skipLeg("kemwire_kat_mlkem768_keygen_anchor",
             "swift-crypto 3.15.1's Crypto product exposes no ML-KEM API (verified against the "
                 + "pinned checkout), so the NIST ACVP d||z -> ek keygen leg is not executable "
@@ -722,7 +722,7 @@ do {
     skipLeg("kemwire_kat_mlkem768_decaps_anchor",
             "decapsulating the NIST ciphertext c to the NIST K requires importing the record's "
                 + "EXPANDED 2400-octet dk and an ML-KEM API, neither available in this port's "
-                + "dependency set (same deferral as the Go reference, ADR-0007)")
+                + "dependency set (same deferral as the Go reference)")
 } catch {
     failures += 1
     print("FAIL kemwire_kat (vector load): \(error)")

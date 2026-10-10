@@ -23,7 +23,7 @@ require "openssl"
 require_relative "../lib/npamp"
 
 VEC = File.expand_path("../../../test-vectors/v1", __dir__)
-KEY_SCHEDULE_KAT_SHA256 = "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c"
+KEY_SCHEDULE_KAT_SHA256 = "dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe"
 
 $failures = 0
 
@@ -122,7 +122,7 @@ def test_impl
   pfx = nn["label_prefix"] # "n-pamp "
   check("ks_impl_label_prefix_constant", Npamp::LABEL_PREFIX == pfx)
 
-  mlkem_ss = hx(nn["ikm_mlkem_ss"]) # ML-KEM shared secret (IKM, concatenated first per ADR-0005)
+  mlkem_ss = hx(nn["ikm_mlkem_ss"]) # ML-KEM shared secret (IKM, concatenated first)
   x25519_ss = hx(nn["ikm_x25519_ss"]) # X25519 shared secret (IKM, concatenated second)
   th_kem = hx(nn["th_kem"])
   th_ccv = hx(nn["th_ccv"])

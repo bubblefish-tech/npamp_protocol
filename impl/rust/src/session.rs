@@ -42,7 +42,6 @@ use crate::handshake::{
     self, ed25519_signing_key_from_seed, ed25519_verifying_key_from_raw, Transcript,
     FRAME_CLIENT_AUTH, FRAME_CLIENT_HELLO, FRAME_SERVER_AUTH, FRAME_SERVER_HELLO,
 };
-use crate::mldsa87;
 
 // ---------------------------------------------------------------------------
 // Handshake TLV code points (binding spec/10 §1.1). The crate root exposes only
@@ -71,14 +70,11 @@ const TLV_AEAD_SELECT: u16 = 0x0D;
 /// crate's own interop examples — can name the offered/allowed profile
 /// instead of hardcoding its wire byte.
 pub const PROFILE_STANDARD: u8 = 0x01;
-/// High security profile (spec/05_profiles.md; draft-00 section 6). Minimum KEM
-/// SecP384r1MLKEM1024 (0x11ed); allowed signatures Ed25519 OR ML-DSA-87 — this
-/// port, like the Go SDK (`sdk/handshake.go`'s `sigForProfile`), always signs
-/// High with ML-DSA-87.
+/// High security profile code point (spec/05_profiles.md; draft-00 section 6).
+/// This crate implements the Standard profile only: offering or accepting High is
+/// refused with [`crate::NoSuiteForProfile`] before any transport I/O.
 pub const PROFILE_HIGH: u8 = 0x02;
-/// Sovereign security profile: minimum KEM SecP384r1MLKEM1024 (0x11ed); MUST
-/// sign with ML-DSA-87 (spec/10 section 4a "Sovereign MUST NOT accept
-/// X25519MLKEM768").
+/// Sovereign security profile code point. Same status as [`PROFILE_HIGH`].
 pub const PROFILE_SOVEREIGN: u8 = 0x03;
 const STANDARD: bool = true; // SHA-256 profile throughout
 
@@ -211,8 +207,11 @@ fn cleartext_frame(ftype: u16, payload: Vec<u8>) -> Vec<u8> {
 
 /// Derives the epoch-0 (key, iv) for a (base secret, direction, channel).
 fn key_iv(base: &[u8], dir: u8, channel: u16) -> ([u8; 32], [u8; 12]) {
-    let ts = crate::derive_traffic_secret(base, dir, 0, crate::AEAD_AES256_GCM, channel, STANDARD);
-    crate::derive_key_iv(&ts, STANDARD)
+    // STANDARD is the constant `true`, the only profile the key schedule accepts, so neither
+    // call can return NoSuiteForProfile here.
+    let ts = crate::derive_traffic_secret(base, dir, 0, crate::AEAD_AES256_GCM, channel, STANDARD)
+        .expect("the Standard profile is never refused by the key schedule");
+    crate::derive_key_iv(&ts, STANDARD).expect("the Standard profile is never refused by the key schedule")
 }
 
 /// Seals `plaintext` into a marshaled FlagENC frame on `channel` at `seq`.
@@ -251,7 +250,7 @@ fn open_frame(f: &crate::Frame, base: &[u8], dir: u8) -> io::Result<Vec<u8>> {
 }
 
 // ---------------------------------------------------------------------------
-// X25519MLKEM768 hybrid KEM (ML-KEM-first, ADR-0005). The client generates the
+// X25519MLKEM768 hybrid KEM (ML-KEM-first). The client generates the
 // key pairs and decapsulates; the server encapsulates.
 // ---------------------------------------------------------------------------
 struct KemClient {
@@ -350,41 +349,14 @@ fn encapsulate(kem_share: &[u8], mlkem_encap_m: &[u8; 32], x25519_priv: &[u8; 32
 pub struct Session {
     master: Vec<u8>,
     peer_identity: [u8; 32],
-    /// The peer's proven ML-DSA-87 public-key encoding (2592 octets,
-    /// [`mldsa87::PUBLIC_KEY_SIZE`]) when this session was established at the
-    /// High or Sovereign profile via [`Session::dial_with_profiles`]/
-    /// [`Session::accept_with_profiles`] — `None` for every Standard-profile
-    /// session (including every session produced by [`Session::dial`]/
-    /// [`Session::accept`], which never negotiate ML-DSA-87). Mirrors the Go
-    /// reference's `Conn.peerID`/`Conn.PeerMLDSAIdentity()` split: `[u8; 32]`
-    /// cannot widen to hold a 2592-octet key the way Go's `[]byte` can, so
-    /// this is a second field rather than a re-typed `peer_identity`. When
-    /// this is `Some`, [`Session::peer_identity`] is NOT meaningful for this
-    /// session (it holds `[0u8; 32]`, since there is no Ed25519 peer key to
-    /// report) — always check this field first, or use
-    /// [`Session::peer_identity_mldsa87`].
-    peer_identity_mldsa87: Option<Vec<u8>>,
     send_dir: u8,
     recv_dir: u8,
 }
 
 impl Session {
     /// The peer's Ed25519 identity public key, proven during the handshake.
-    /// Meaningful ONLY for a Standard-profile session (every session from
-    /// [`Session::dial`]/[`Session::accept`], and a Standard-negotiated
-    /// [`Session::dial_with_profiles`]/[`Session::accept_with_profiles`]
-    /// session). For a High/Sovereign session (ML-DSA-87 CertVerify), this
-    /// returns `[0u8; 32]` — check [`Session::peer_identity_mldsa87`] first,
-    /// or call [`Session::peer_identity_mldsa87`] to distinguish the two.
     pub fn peer_identity(&self) -> [u8; 32] {
         self.peer_identity
-    }
-
-    /// The peer's proven ML-DSA-87 public-key encoding (2592 octets) when
-    /// this session negotiated the High or Sovereign profile, or `None` at
-    /// Standard — mirrors the Go reference's `Conn.PeerMLDSAIdentity()`.
-    pub fn peer_identity_mldsa87(&self) -> Option<&[u8]> {
-        self.peer_identity_mldsa87.as_deref()
     }
 
     /// The application-phase master secret (draft-01 §5). Exposed for a caller that
@@ -457,26 +429,6 @@ impl Session {
 fn ct_eq(a: &[u8; 32], b: &[u8; 32]) -> bool {
     let mut diff = 0u8;
     for i in 0..32 {
-        diff |= a[i] ^ b[i];
-    }
-    diff == 0
-}
-
-/// Constant-time equality for the variable-length ML-DSA-87 pinned-identity
-/// check (`expected_peer_mldsa87`): an ML-DSA-87 public key
-/// ([`mldsa87::PUBLIC_KEY_SIZE`], 2592 octets) cannot fit `[u8; 32]`, so the
-/// pin is compared as a byte slice rather than the fixed array [`ct_eq`]
-/// takes. The length check short-circuits on mismatch (as
-/// `subtle::ConstantTimeEq`/Go's `crypto/subtle.ConstantTimeCompare` also
-/// do) — length is not the secret here, only content is — then every byte
-/// of the shorter walk is XOR-accumulated so a byte-content mismatch does
-/// not leak *which* byte differs via early return.
-fn ct_eq_slice(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut diff = 0u8;
-    for i in 0..a.len() {
         diff |= a[i] ^ b[i];
     }
     diff == 0
@@ -611,10 +563,10 @@ fn dial_with_ephemeral<T: Read + Write>(
 
     // --- key schedule ---
     let (mlkem_ss, x_ss) = kem.shared_secrets(kem_ct)?;
-    let hs = crate::derive_handshake_secret(&mlkem_ss, &x_ss, STANDARD);
-    let th_kem = t.hash(STANDARD);
-    let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, STANDARD);
-    let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, STANDARD);
+    let hs = crate::derive_handshake_secret(&mlkem_ss, &x_ss, STANDARD)?;
+    let th_kem = t.hash(STANDARD)?;
+    let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, STANDARD)?;
+    let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, STANDARD)?;
 
     // --- SERVER_AUTH (sealed under s_hs, s2c) ---
     let sa_wire = read_frame(transport)?;
@@ -624,12 +576,12 @@ fn dial_with_ephemeral<T: Read + Write>(
     t.add_frame_type(FRAME_SERVER_AUTH);
     t.add_tlv(TLV_IDENTITY_KEY, &sid);
     let server_vk = vk_from(&sid)?;
-    if !handshake::verify_cert_verify(&server_vk, true, &t.hash(STANDARD), &scv) {
+    if !handshake::verify_cert_verify(&server_vk, true, &t.hash(STANDARD)?, &scv) {
         return Err(proto("server CertVerify rejected"));
     }
     t.add_tlv(TLV_CERT_VERIFY, &scv);
-    let s_fin_key = crate::finished_key(&s_hs, STANDARD);
-    if !handshake::verify_finished(&s_fin_key, &t.hash(STANDARD), &sfin, STANDARD) {
+    let s_fin_key = crate::finished_key(&s_hs, STANDARD)?;
+    if !handshake::verify_finished(&s_fin_key, &t.hash(STANDARD)?, &sfin, STANDARD)? {
         return Err(proto("server Finished rejected"));
     }
     t.add_tlv(TLV_FINISHED, &sfin);
@@ -643,17 +595,17 @@ fn dial_with_ephemeral<T: Read + Write>(
     // --- CLIENT_AUTH (sealed under c_hs, c2s) ---
     t.add_frame_type(FRAME_CLIENT_AUTH);
     t.add_tlv(TLV_IDENTITY_KEY, &client_pub);
-    let c_cv = handshake::sign_cert_verify(identity, false, &t.hash(STANDARD));
+    let c_cv = handshake::sign_cert_verify(identity, false, &t.hash(STANDARD)?);
     t.add_tlv(TLV_CERT_VERIFY, &c_cv);
-    let th_ccv = t.hash(STANDARD);
-    let c_fin_key = crate::finished_key(&c_hs, STANDARD);
-    let c_fin = handshake::compute_finished(&c_fin_key, &th_ccv, STANDARD);
+    let th_ccv = t.hash(STANDARD)?;
+    let c_fin_key = crate::finished_key(&c_hs, STANDARD)?;
+    let c_fin = handshake::compute_finished(&c_fin_key, &th_ccv, STANDARD)?;
     let ca_pt = encode_auth(&client_pub, &c_cv, &c_fin);
     let ca_wire = seal_frame(&c_hs, DIR_C2S, crate::CHAN_CONTROL, 0, FRAME_CLIENT_AUTH, &ca_pt);
     write_frame(transport, &ca_wire)?;
 
-    let master = crate::derive_master_secret(&hs, &th_ccv, STANDARD);
-    Ok(Session { master, peer_identity, peer_identity_mldsa87: None, send_dir: DIR_C2S, recv_dir: DIR_S2C })
+    let master = crate::derive_master_secret(&hs, &th_ccv, STANDARD)?;
+    Ok(Session { master, peer_identity, send_dir: DIR_C2S, recv_dir: DIR_S2C })
 }
 
 /// The server side of the handshake, parameterized over the ephemeral ML-KEM
@@ -705,18 +657,18 @@ fn accept_with_ephemeral<T: Read + Write>(
     t.add_tlv(TLV_KEM_CIPHERTEXT, &kem_ct);
 
     // --- key schedule ---
-    let hs = crate::derive_handshake_secret(&mlkem_ss, &x_ss, STANDARD);
-    let th_kem = t.hash(STANDARD);
-    let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, STANDARD);
-    let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, STANDARD);
+    let hs = crate::derive_handshake_secret(&mlkem_ss, &x_ss, STANDARD)?;
+    let th_kem = t.hash(STANDARD)?;
+    let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, STANDARD)?;
+    let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, STANDARD)?;
 
     // --- SERVER_AUTH (sealed under s_hs, s2c) ---
     t.add_frame_type(FRAME_SERVER_AUTH);
     t.add_tlv(TLV_IDENTITY_KEY, &server_pub);
-    let s_cv = handshake::sign_cert_verify(identity, true, &t.hash(STANDARD));
+    let s_cv = handshake::sign_cert_verify(identity, true, &t.hash(STANDARD)?);
     t.add_tlv(TLV_CERT_VERIFY, &s_cv);
-    let s_fin_key = crate::finished_key(&s_hs, STANDARD);
-    let s_fin = handshake::compute_finished(&s_fin_key, &t.hash(STANDARD), STANDARD);
+    let s_fin_key = crate::finished_key(&s_hs, STANDARD)?;
+    let s_fin = handshake::compute_finished(&s_fin_key, &t.hash(STANDARD)?, STANDARD)?;
     t.add_tlv(TLV_FINISHED, &s_fin);
     let sa_pt = encode_auth(&server_pub, &s_cv, &s_fin);
     let sa_wire = seal_frame(&s_hs, DIR_S2C, crate::CHAN_CONTROL, 0, FRAME_SERVER_AUTH, &sa_pt);
@@ -730,13 +682,13 @@ fn accept_with_ephemeral<T: Read + Write>(
     t.add_frame_type(FRAME_CLIENT_AUTH);
     t.add_tlv(TLV_IDENTITY_KEY, &cid);
     let client_vk = vk_from(&cid)?;
-    if !handshake::verify_cert_verify(&client_vk, false, &t.hash(STANDARD), &ccv) {
+    if !handshake::verify_cert_verify(&client_vk, false, &t.hash(STANDARD)?, &ccv) {
         return Err(proto("client CertVerify rejected"));
     }
     t.add_tlv(TLV_CERT_VERIFY, &ccv);
-    let th_ccv = t.hash(STANDARD);
-    let c_fin_key = crate::finished_key(&c_hs, STANDARD);
-    if !handshake::verify_finished(&c_fin_key, &th_ccv, &cfin, STANDARD) {
+    let th_ccv = t.hash(STANDARD)?;
+    let c_fin_key = crate::finished_key(&c_hs, STANDARD)?;
+    if !handshake::verify_finished(&c_fin_key, &th_ccv, &cfin, STANDARD)? {
         return Err(proto("client Finished rejected"));
     }
     let peer_identity = to32(&cid)?;
@@ -746,592 +698,74 @@ fn accept_with_ephemeral<T: Read + Write>(
         }
     }
 
-    let master = crate::derive_master_secret(&hs, &th_ccv, STANDARD);
-    Ok(Session { master, peer_identity, peer_identity_mldsa87: None, send_dir: DIR_S2C, recv_dir: DIR_C2S })
+    let master = crate::derive_master_secret(&hs, &th_ccv, STANDARD)?;
+    Ok(Session { master, peer_identity, send_dir: DIR_S2C, recv_dir: DIR_C2S })
 }
 
 // ---------------------------------------------------------------------------
-// Multi-profile negotiation: Standard (X25519MLKEM768 + Ed25519, unchanged
-// above) plus High/Sovereign (SecP384r1MLKEM1024, `kem1024.rs`, and — closing
-// the former ML-DSA-87 residual, grounded + wired 2026-09-03 against
-// RustCrypto's `ml-dsa` crate v0.1.1 — ML-DSA-87 CertVerify, `mldsa87.rs`),
-// mirroring `impl/go/sdk/handshake.go`'s `kemGroupForProfiles` /
-// `selectProfile` / `requireOffers` / `requireSelections` negotiation shape,
-// its `ErrKEMDowngrade` fail-closed refusal, and its `Config.MLDSAIdentity`
-// (a SEPARATE long-term key from the Ed25519 `identity`, required — fail
-// closed, not silently downgraded to Ed25519 — whenever High/Sovereign is
-// offered/accepted).
+// Multi-profile entry points. The Standard profile (X25519MLKEM768 + Ed25519 +
+// AES-256-GCM + SHA-256) is the only profile this crate implements. High and
+// Sovereign keep their code points and remain nameable and offerable, but an
+// endpoint configured to offer or accept either is refused with
+// [`crate::NoSuiteForProfile`] before any transport I/O.
 // ---------------------------------------------------------------------------
 
 fn profile_valid(p: u8) -> bool {
     (PROFILE_STANDARD..=PROFILE_SOVEREIGN).contains(&p)
 }
 
-/// Mirrors `impl/go/sdk/handshake.go`'s `kemGroupForProfiles`: the single KEM
-/// group a client generates ephemeral key material for and offers — the
-/// stronger group whenever High or Sovereign is among `profiles`, else
-/// X25519MLKEM768.
-fn kem_group_for_profiles(profiles: &[u8]) -> u16 {
-    if profiles.contains(&PROFILE_HIGH) || profiles.contains(&PROFILE_SOVEREIGN) {
-        crate::KEM_SECP384R1_MLKEM1024
-    } else {
-        crate::KEM_X25519_MLKEM768
+/// Validates a configured profile list (`what` names it in the error): it must be
+/// non-empty and every entry a defined profile code point; an entry other than
+/// Standard is refused with [`crate::NoSuiteForProfile`]. Runs before any I/O.
+fn require_only_standard(profiles: &[u8], what: &str) -> io::Result<()> {
+    if profiles.is_empty() {
+        return Err(proto(&format!("{what} is empty")));
     }
-}
-
-/// Mirrors `Profile.MinKEM()` (`impl/go/profiles.go`).
-fn min_kem_for_profile(p: u8) -> u16 {
-    if p == PROFILE_STANDARD {
-        crate::KEM_X25519_MLKEM768
-    } else {
-        crate::KEM_SECP384R1_MLKEM1024
-    }
-}
-
-/// Mirrors `sdk.sigForProfile` (`impl/go/sdk/handshake.go`): Ed25519 at
-/// Standard, ML-DSA-87 at High or Sovereign.
-fn sig_for_profile(p: u8) -> u16 {
-    if p == PROFILE_STANDARD {
-        crate::SIG_ED25519
-    } else {
-        crate::SIG_MLDSA87
-    }
-}
-
-/// Mirrors `sdk.offeredSigs`: the union of `sigForProfile` over `profiles`,
-/// Ed25519 before ML-DSA-87 when both are present.
-fn sig_offer_for_profiles(profiles: &[u8]) -> Vec<u16> {
-    let mut out = Vec::new();
-    if profiles.contains(&PROFILE_STANDARD) {
-        out.push(crate::SIG_ED25519);
-    }
-    if profiles.contains(&PROFILE_HIGH) || profiles.contains(&PROFILE_SOVEREIGN) {
-        out.push(crate::SIG_MLDSA87);
-    }
-    out
-}
-
-/// Mirrors `impl/go/sdk/handshake.go`'s `localIdentityKeyBytes`: the raw
-/// public-key encoding this endpoint sends as the TLV 0x09 IdentityKey value
-/// for the negotiated profile — the Ed25519 verifying key at Standard, the
-/// ML-DSA-87 public key at High/Sovereign. Fails closed (mirroring the Go
-/// SDK's `Config.Profiles offers/accepts High or Sovereign but
-/// Config.MLDSAIdentity is nil` error) when the negotiated profile needs
-/// ML-DSA-87 and no [`mldsa87::Identity`] was supplied.
-fn local_identity_key_bytes(identity: &SigningKey, mldsa_identity: Option<&mldsa87::Identity>, profile: u8) -> io::Result<Vec<u8>> {
-    if profile == PROFILE_STANDARD {
-        Ok(identity.verifying_key().to_bytes().to_vec())
-    } else {
-        match mldsa_identity {
-            Some(id) => Ok(id.public_key_bytes().to_vec()),
-            None => Err(proto(
-                "negotiated profile requires ML-DSA-87 CertVerify, but no mldsa_identity was supplied",
-            )),
+    for &p in profiles {
+        if !profile_valid(p) {
+            return Err(proto(&format!("{what} contains an invalid profile")));
+        }
+        if p != PROFILE_STANDARD {
+            return Err(crate::NoSuiteForProfile.into());
         }
     }
-}
-
-/// Mirrors `sdk.selectProfile`: the first entry of `allowed` (the server's
-/// preference order) that also appears in `offered` (the client's
-/// ProfileOffer). Errors if no entry matches — the server MUST select from
-/// the client's offered set, never invent one.
-fn select_profile(offered: &[u8], allowed: &[u8]) -> io::Result<u8> {
-    for &p in allowed {
-        if offered.contains(&p) {
-            return Ok(p);
-        }
-    }
-    Err(proto("no profile in the client's offer is acceptable to this server"))
-}
-
-/// Big-endian-encodes a list of 16-bit code points (mirrors Go's `u16ListBytes`).
-fn u16_list_bytes(ids: &[u16]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(2 * ids.len());
-    for id in ids {
-        out.extend_from_slice(&id.to_be_bytes());
-    }
-    out
-}
-
-/// Decodes a big-endian list of 16-bit code points (mirrors Go's `parseU16List`):
-/// the value must be non-empty and of even length.
-fn parse_u16_list(v: &[u8]) -> io::Result<Vec<u16>> {
-    if v.is_empty() || v.len() % 2 != 0 {
-        return Err(proto("u16 list TLV value has an invalid length"));
-    }
-    Ok(v.chunks_exact(2).map(|c| u16::from_be_bytes([c[0], c[1]])).collect())
-}
-
-/// Decodes exactly 2 big-endian octets as a `u16` (KEMSelect/SigSelect/AEADSelect).
-fn be_u16(v: &[u8]) -> io::Result<u16> {
-    if v.len() != 2 {
-        return Err(proto("select TLV value is not 2 octets"));
-    }
-    Ok(u16::from_be_bytes([v[0], v[1]]))
-}
-
-/// Either KEM client state the negotiated group needs: the existing
-/// X25519MLKEM768 [`KemClient`] (ML-KEM-first combiner,
-/// [`crate::derive_handshake_secret`]) or the new SecP384r1MLKEM1024
-/// [`crate::kem1024::KemClient1024`] (ECDHE-first combiner,
-/// [`crate::kem1024::handshake_secret_1024`]) — the two hybrid KEMs use
-/// different component orderings (module docs, `kem1024.rs`), so this stays
-/// two explicit arms rather than one generic path.
-enum EitherKemClient {
-    Std(KemClient),
-    High(crate::kem1024::KemClient1024),
-}
-
-impl EitherKemClient {
-    fn kem_share(&self) -> Vec<u8> {
-        match self {
-            EitherKemClient::Std(k) => k.kem_share(),
-            EitherKemClient::High(k) => k.kem_share(),
-        }
-    }
-
-    /// Decapsulates `kem_ct` and returns the combiner's handshake_secret
-    /// output directly — [`crate::derive_handshake_secret`] (ML-KEM-first) for
-    /// the 768 group, [`crate::kem1024::handshake_secret_1024`] (ECDHE-first)
-    /// for the 1024 group — both real HKDF-Extract calls, not stand-ins.
-    fn handshake_secret(&self, kem_ct: &[u8], standard: bool) -> io::Result<Vec<u8>> {
-        match self {
-            EitherKemClient::Std(k) => {
-                let (mlkem_ss, x_ss) = k.shared_secrets(kem_ct)?;
-                Ok(crate::derive_handshake_secret(&mlkem_ss, &x_ss, standard))
-            }
-            EitherKemClient::High(k) => {
-                let ss = k.shared_secrets(kem_ct).map_err(|e| proto(&e.to_string()))?;
-                crate::kem1024::handshake_secret_1024(&ss, standard).map_err(|e| proto(&e.to_string()))
-            }
-        }
-    }
+    Ok(())
 }
 
 impl Session {
-    /// Runs the CLIENT side of the 1.5-RTT N-PAMP handshake with full profile
-    /// negotiation (binding spec/10 + spec/05_profiles.md), offering every
-    /// profile in `offered_profiles` (each MUST be one of `PROFILE_STANDARD`
-    /// (0x01) / `PROFILE_HIGH` (0x02) / `PROFILE_SOVEREIGN` (0x03)). Generates
-    /// ephemeral key material for the single KEM group `offered_profiles`
-    /// requires ([`kem_group_for_profiles`] — SecP384r1MLKEM1024 whenever
-    /// High/Sovereign is offered, mirroring `sdk.kemGroupForProfiles`'s "one
-    /// physical KEMShare" constraint) and rejects any SERVER_HELLO selecting a
-    /// different group as a downgrade ([`ErrKEMDowngrade`]-equivalent,
-    /// fail-closed).
+    /// Runs the CLIENT side of the 1.5-RTT N-PAMP handshake, offering every profile in
+    /// `offered_profiles` (each MUST be a defined profile code point:
+    /// `PROFILE_STANDARD` (0x01) / `PROFILE_HIGH` (0x02) / `PROFILE_SOVEREIGN` (0x03)).
+    /// Only Standard is implemented: an offer naming High or Sovereign is refused with
+    /// [`crate::NoSuiteForProfile`] (as an `io::Error` of kind `Unsupported`) before
+    /// anything is written to `transport`. A Standard-only offer behaves exactly like
+    /// [`Session::dial`].
     ///
-    /// When the negotiated profile is Standard, this completes the full
-    /// mutually-authenticated handshake with Ed25519 CertVerify and returns an
-    /// established `Session`, byte-identical in construction to
-    /// [`Session::dial`]. When the negotiated profile is High or Sovereign,
-    /// this completes the SAME full mutually-authenticated handshake with
-    /// ML-DSA-87 CertVerify instead ([`mldsa87::sign_certverify_mldsa87`]/
-    /// [`mldsa87::verify_certverify_mldsa87`]), using `mldsa_identity` as this
-    /// endpoint's long-term ML-DSA-87 key — `Err` (fail-closed, mirroring the
-    /// Go SDK's `Config.MLDSAIdentity is nil` error) if `mldsa_identity` is
-    /// `None` but the negotiated profile needs it. Kept as a NEW entry point
-    /// rather than changing [`Session::dial`]'s signature: `nz-agent` and this
-    /// crate's own interop examples call `Session::dial` with its existing
-    /// 3-argument shape, and the Standard profile must stay byte-unchanged
-    /// for them.
-    ///
-    /// `expected_peer` pins the peer's Ed25519 identity — meaningful ONLY when
-    /// the negotiated profile is Standard (a High/Sovereign peer's ML-DSA-87
-    /// identity is 2592 octets, which cannot fit `[u8; 32]`; use
-    /// `expected_peer_mldsa87` for that case instead of pinning after the
-    /// fact via [`Session::peer_identity_mldsa87`]).
-    ///
-    /// `expected_peer_mldsa87`, if `Some`, PRE-handshake pins the peer's
-    /// ML-DSA-87 identity (the raw [`mldsa87::PUBLIC_KEY_SIZE`]-octet public
-    /// key), meaningful ONLY when the negotiated profile is High or
-    /// Sovereign — checked, constant-time, at the exact same point in the
-    /// flow the Ed25519 `expected_peer` check occupies (immediately after
-    /// SERVER_AUTH is verified, BEFORE CLIENT_AUTH is sent), so a client
-    /// pinning an ML-DSA-87 identity never authenticates itself to an
-    /// impostor either. This is purely a CLIENT-SIDE VERIFICATION CONFIG: it
-    /// adds no TLV, no wire field, and no byte to any frame — the pin is
-    /// compared against the SAME `sid`/`cid` bytes the unpinned path already
-    /// receives and proves via CertVerify. Fail-closed semantics for the two
-    /// profile/pin combinations that do not naturally overlap:
-    ///   - `Some` pin, but the negotiated profile is Standard (no ML-DSA-87
-    ///     peer identity exists to compare against): the handshake fails
-    ///     closed with an error, rather than silently ignoring the pin —
-    ///     silently ignoring a caller's stated pin would be a fail-OPEN on
-    ///     exactly the input (an unexpected downgrade to Standard) most
-    ///     likely to matter.
-    ///   - `Some` pin, profile is High/Sovereign, proven identity does not
-    ///     match: fails closed with an identity-mismatch error, mirroring
-    ///     the Ed25519 pin.
-    ///   - `None`: no behavior change (this is what every existing caller
-    ///     passes, and continues to compile unchanged).
+    /// `expected_peer` pins the peer's Ed25519 identity, checked BEFORE `CLIENT_AUTH` is
+    /// sent.
     pub fn dial_with_profiles<T: Read + Write>(
         transport: &mut T,
         identity: &SigningKey,
-        mldsa_identity: Option<&mldsa87::Identity>,
         offered_profiles: &[u8],
         expected_peer: Option<[u8; 32]>,
-        expected_peer_mldsa87: Option<&[u8]>,
     ) -> io::Result<Session> {
-        if offered_profiles.is_empty() {
-            return Err(proto("offered_profiles is empty"));
-        }
-        for &p in offered_profiles {
-            if !profile_valid(p) {
-                return Err(proto("offered_profiles contains an invalid profile"));
-            }
-        }
-        let want_kem = kem_group_for_profiles(offered_profiles);
-        let kem = if want_kem == crate::KEM_SECP384R1_MLKEM1024 {
-            EitherKemClient::High(crate::kem1024::KemClient1024::generate().map_err(|e| proto(&e.to_string()))?)
-        } else {
-            EitherKemClient::Std(KemClient::from_seed(&os_random::<64>(), &os_random::<32>()))
-        };
-        let kem_share = kem.kem_share();
-        let sig_offer = sig_offer_for_profiles(offered_profiles);
-        let sig_offer_bytes = u16_list_bytes(&sig_offer);
-
-        // --- CLIENT_HELLO (cleartext) ---
-        let mut ch = Vec::new();
-        tlv(&mut ch, TLV_PROFILE_OFFER, offered_profiles);
-        tlv(&mut ch, TLV_KEM_OFFER, &want_kem.to_be_bytes());
-        tlv(&mut ch, TLV_SIG_OFFER, &sig_offer_bytes);
-        tlv(&mut ch, TLV_AEAD_OFFER, &crate::AEAD_AES256_GCM.to_be_bytes());
-        tlv(&mut ch, TLV_KEM_SHARE, &kem_share);
-        write_frame(transport, &cleartext_frame(FRAME_CLIENT_HELLO, ch))?;
-
-        let mut t = Transcript::new();
-        t.add_frame_type(FRAME_CLIENT_HELLO);
-        t.add_tlv(TLV_PROFILE_OFFER, offered_profiles);
-        t.add_tlv(TLV_KEM_OFFER, &want_kem.to_be_bytes());
-        t.add_tlv(TLV_SIG_OFFER, &sig_offer_bytes);
-        t.add_tlv(TLV_AEAD_OFFER, &crate::AEAD_AES256_GCM.to_be_bytes());
-        t.add_tlv(TLV_KEM_SHARE, &kem_share);
-
-        // --- SERVER_HELLO (cleartext) ---
-        let sh_wire = read_frame(transport)?;
-        let sh = crate::Frame::unmarshal(&sh_wire).map_err(|_| proto("SERVER_HELLO parse"))?;
-        if sh.ftype != FRAME_SERVER_HELLO {
-            return Err(proto("expected SERVER_HELLO"));
-        }
-        let sh_vals = require_tlvs(
-            &decode_tlvs(&sh.payload)?,
-            &[TLV_PROFILE_SELECT, TLV_KEM_SELECT, TLV_SIG_SELECT, TLV_AEAD_SELECT, TLV_KEM_CIPHERTEXT],
-        )?;
-        if sh_vals[0].len() != 1 {
-            return Err(proto("ProfileSelect is not 1 octet"));
-        }
-        let selected_profile = sh_vals[0][0];
-        if !offered_profiles.contains(&selected_profile) {
-            return Err(proto("server selected a profile this client did not offer"));
-        }
-        let kem_select = be_u16(&sh_vals[1])?;
-        if kem_select != want_kem {
-            return Err(proto(
-                "downgrade refused: server selected a KEM group this client did not generate key material for",
-            ));
-        }
-        if min_kem_for_profile(selected_profile) != want_kem {
-            return Err(proto(
-                "downgrade refused: server selected profile's minimum KEM does not match the negotiated KEM group",
-            ));
-        }
-        let sig_select = be_u16(&sh_vals[2])?;
-        if sig_select != sig_for_profile(selected_profile) {
-            return Err(proto("server selected an unsupported signature scheme for the negotiated profile"));
-        }
-        if sh_vals[3] != crate::AEAD_AES256_GCM.to_be_bytes() {
-            return Err(proto("server selected an unsupported AEAD"));
-        }
-        let kem_ct = &sh_vals[4];
-        t.add_frame_type(FRAME_SERVER_HELLO);
-        t.add_tlv(TLV_PROFILE_SELECT, &sh_vals[0]);
-        t.add_tlv(TLV_KEM_SELECT, &sh_vals[1]);
-        t.add_tlv(TLV_SIG_SELECT, &sh_vals[2]);
-        t.add_tlv(TLV_AEAD_SELECT, &sh_vals[3]);
-        t.add_tlv(TLV_KEM_CIPHERTEXT, kem_ct);
-
-        let standard = selected_profile == PROFILE_STANDARD;
-
-        // --- key schedule ---
-        let hs = kem.handshake_secret(kem_ct, standard)?;
-        let th_kem = t.hash(standard);
-        let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, standard);
-        let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, standard);
-
-        // Local IdentityKey bytes for the negotiated profile — Ed25519 at
-        // Standard, this endpoint's mldsa_identity at High/Sovereign
-        // (fail-closed if absent). Computed here, now that the profile is
-        // known, rather than unconditionally at function entry.
-        let client_pub = local_identity_key_bytes(identity, mldsa_identity, selected_profile)?;
-
-        // --- SERVER_AUTH (sealed under s_hs, s2c) ---
-        let sa_wire = read_frame(transport)?;
-        let sa = parse_enc_frame(&sa_wire, FRAME_SERVER_AUTH)?;
-        let sa_pt = open_frame(&sa, &s_hs, DIR_S2C)?;
-        let (sid, scv, sfin) = decode_auth(&sa_pt)?;
-        t.add_frame_type(FRAME_SERVER_AUTH);
-        t.add_tlv(TLV_IDENTITY_KEY, &sid);
-        if standard {
-            let server_vk = vk_from(&sid)?;
-            if !handshake::verify_cert_verify(&server_vk, true, &t.hash(standard), &scv) {
-                return Err(proto("server CertVerify rejected"));
-            }
-        } else if !mldsa87::verify_certverify_mldsa87(&sid, true, &t.hash(standard), &scv) {
-            return Err(proto("server CertVerify rejected"));
-        }
-        t.add_tlv(TLV_CERT_VERIFY, &scv);
-        let s_fin_key = crate::finished_key(&s_hs, standard);
-        if !handshake::verify_finished(&s_fin_key, &t.hash(standard), &sfin, standard) {
-            return Err(proto("server Finished rejected"));
-        }
-        t.add_tlv(TLV_FINISHED, &sfin);
-        // peer_identity ([u8; 32]) is meaningful ONLY at Standard (Ed25519);
-        // at High/Sovereign the peer's proven identity is the raw `sid` bytes
-        // (2592-octet ML-DSA-87 public key), carried in
-        // Session.peer_identity_mldsa87 below — see Session's field docs.
-        let (peer_identity, peer_identity_mldsa87) = if standard {
-            let pid = to32(&sid)?;
-            if let Some(exp) = expected_peer {
-                if !ct_eq(&pid, &exp) {
-                    return Err(proto("server identity does not match the pinned key"));
-                }
-            }
-            // Fail closed: a caller that pinned an ML-DSA-87 identity but
-            // negotiated Standard got the wrong peer (or a downgrade) — there
-            // is no ML-DSA-87 identity here to compare against, so silently
-            // accepting would silently drop the caller's stated pin.
-            if expected_peer_mldsa87.is_some() {
-                return Err(proto(
-                    "expected_peer_mldsa87 pin requires a High or Sovereign profile; server negotiated Standard",
-                ));
-            }
-            (pid, None)
-        } else {
-            // expected_peer (a fixed [u8; 32] Ed25519 pin) cannot represent an
-            // ML-DSA-87 peer key, so it is not checked here — pin via
-            // expected_peer_mldsa87 instead.
-            if let Some(exp) = expected_peer_mldsa87 {
-                if !ct_eq_slice(&sid, exp) {
-                    return Err(proto("server ML-DSA-87 identity does not match the pinned key"));
-                }
-            }
-            ([0u8; 32], Some(sid.clone()))
-        };
-
-        // --- CLIENT_AUTH (sealed under c_hs, c2s) ---
-        t.add_frame_type(FRAME_CLIENT_AUTH);
-        t.add_tlv(TLV_IDENTITY_KEY, &client_pub);
-        let c_cv = if standard {
-            handshake::sign_cert_verify(identity, false, &t.hash(standard))
-        } else {
-            // mldsa_identity.is_some() is guaranteed here: local_identity_key_bytes
-            // above already fails closed (returns Err) when it is None and the
-            // profile is non-Standard, so this function would have returned
-            // before reaching this point.
-            mldsa87::sign_certverify_mldsa87(mldsa_identity.expect("checked by local_identity_key_bytes"), false, &t.hash(standard))
-                .map_err(|e| proto(&e.to_string()))?
-        };
-        t.add_tlv(TLV_CERT_VERIFY, &c_cv);
-        let th_ccv = t.hash(standard);
-        let c_fin_key = crate::finished_key(&c_hs, standard);
-        let c_fin = handshake::compute_finished(&c_fin_key, &th_ccv, standard);
-        let ca_pt = encode_auth(&client_pub, &c_cv, &c_fin);
-        let ca_wire = seal_frame(&c_hs, DIR_C2S, crate::CHAN_CONTROL, 0, FRAME_CLIENT_AUTH, &ca_pt);
-        write_frame(transport, &ca_wire)?;
-
-        let master = crate::derive_master_secret(&hs, &th_ccv, standard);
-        Ok(Session { master, peer_identity, peer_identity_mldsa87, send_dir: DIR_C2S, recv_dir: DIR_S2C })
+        require_only_standard(offered_profiles, "offered_profiles")?;
+        Session::dial(transport, identity, expected_peer)
     }
 
-    /// The SERVER mirror of [`Session::dial_with_profiles`]: `allowed_profiles`
-    /// is this endpoint's accepted-profile preference order (mirrors
-    /// `sdk.selectProfile` — the first entry also present in the client's
-    /// offer wins). Refuses (downgrade, fail-closed) a CLIENT_HELLO that does
-    /// not offer the KEM group the selected profile requires, mirroring
-    /// `sdk.requireOffers`.
-    ///
-    /// `mldsa_identity` is this endpoint's long-term ML-DSA-87 key, required
-    /// (fail-closed) whenever the negotiated profile is High/Sovereign — see
-    /// [`Session::dial_with_profiles`]'s docs for the full behavior this
-    /// mirrors, INCLUDING `expected_peer_mldsa87` (the server-side PRE-
-    /// handshake ML-DSA-87 pin, checked at the mirrored point: immediately
-    /// after CLIENT_AUTH's Finished is verified, BEFORE the `Session` is
-    /// returned) and its fail-closed semantics.
+    /// The SERVER mirror of [`Session::dial_with_profiles`]: `allowed_profiles` is this
+    /// endpoint's accepted-profile list, validated the same way (a High or Sovereign
+    /// entry is refused with [`crate::NoSuiteForProfile`] before any I/O). A client whose
+    /// offer does not include Standard, or does not offer the Standard KEM, signature and
+    /// AEAD, is refused.
     pub fn accept_with_profiles<T: Read + Write>(
         transport: &mut T,
         identity: &SigningKey,
-        mldsa_identity: Option<&mldsa87::Identity>,
         allowed_profiles: &[u8],
         expected_peer: Option<[u8; 32]>,
-        expected_peer_mldsa87: Option<&[u8]>,
     ) -> io::Result<Session> {
-        if allowed_profiles.is_empty() {
-            return Err(proto("allowed_profiles is empty"));
-        }
-        for &p in allowed_profiles {
-            if !profile_valid(p) {
-                return Err(proto("allowed_profiles contains an invalid profile"));
-            }
-        }
-        let mut t = Transcript::new();
-
-        // --- CLIENT_HELLO ---
-        let ch_wire = read_frame(transport)?;
-        let ch = crate::Frame::unmarshal(&ch_wire).map_err(|_| proto("CLIENT_HELLO parse"))?;
-        if ch.ftype != FRAME_CLIENT_HELLO {
-            return Err(proto("expected CLIENT_HELLO"));
-        }
-        let ch_vals = require_tlvs(
-            &decode_tlvs(&ch.payload)?,
-            &[TLV_PROFILE_OFFER, TLV_KEM_OFFER, TLV_SIG_OFFER, TLV_AEAD_OFFER, TLV_KEM_SHARE],
-        )?;
-        if ch_vals[0].is_empty() {
-            return Err(proto("ProfileOffer is empty"));
-        }
-        let offered_profiles = ch_vals[0].clone();
-        for &p in &offered_profiles {
-            if !profile_valid(p) {
-                return Err(proto("client offered an invalid profile"));
-            }
-        }
-        let kem_offer = parse_u16_list(&ch_vals[1])?;
-        let sig_offer = parse_u16_list(&ch_vals[2])?;
-        let aead_offer = parse_u16_list(&ch_vals[3])?;
-        if ch_vals[4].is_empty() {
-            return Err(proto("KEMShare is empty"));
-        }
-        let kem_share = ch_vals[4].clone();
-
-        let selected_profile = select_profile(&offered_profiles, allowed_profiles)?;
-        let want_kem = min_kem_for_profile(selected_profile);
-        if !kem_offer.contains(&want_kem) {
-            return Err(proto(
-                "downgrade refused: client did not offer the KEM group required by the selected profile",
-            ));
-        }
-        if !sig_offer.contains(&sig_for_profile(selected_profile)) {
-            return Err(proto("client did not offer the signature scheme required by the selected profile"));
-        }
-        if !aead_offer.contains(&crate::AEAD_AES256_GCM) {
-            return Err(proto("client did not offer AES-256-GCM"));
-        }
-
-        t.add_frame_type(FRAME_CLIENT_HELLO);
-        t.add_tlv(TLV_PROFILE_OFFER, &ch_vals[0]);
-        t.add_tlv(TLV_KEM_OFFER, &ch_vals[1]);
-        t.add_tlv(TLV_SIG_OFFER, &ch_vals[2]);
-        t.add_tlv(TLV_AEAD_OFFER, &ch_vals[3]);
-        t.add_tlv(TLV_KEM_SHARE, &kem_share);
-
-        let standard = selected_profile == PROFILE_STANDARD;
-
-        // --- SERVER_HELLO ---
-        let (kem_ct, hs) = if want_kem == crate::KEM_SECP384R1_MLKEM1024 {
-            let (ct, ss) = crate::kem1024::encapsulate(&kem_share).map_err(|e| proto(&e.to_string()))?;
-            let hs = crate::kem1024::handshake_secret_1024(&ss, standard).map_err(|e| proto(&e.to_string()))?;
-            (ct, hs)
-        } else {
-            let (ct, mlkem_ss, x_ss) = encapsulate(&kem_share, &os_random::<32>(), &os_random::<32>())?;
-            (ct, crate::derive_handshake_secret(&mlkem_ss, &x_ss, standard))
-        };
-
-        let sig_select = sig_for_profile(selected_profile);
-        let mut sh = Vec::new();
-        tlv(&mut sh, TLV_PROFILE_SELECT, &[selected_profile]);
-        tlv(&mut sh, TLV_KEM_SELECT, &want_kem.to_be_bytes());
-        tlv(&mut sh, TLV_SIG_SELECT, &sig_select.to_be_bytes());
-        tlv(&mut sh, TLV_AEAD_SELECT, &crate::AEAD_AES256_GCM.to_be_bytes());
-        tlv(&mut sh, TLV_KEM_CIPHERTEXT, &kem_ct);
-        write_frame(transport, &cleartext_frame(FRAME_SERVER_HELLO, sh))?;
-        t.add_frame_type(FRAME_SERVER_HELLO);
-        t.add_tlv(TLV_PROFILE_SELECT, &[selected_profile]);
-        t.add_tlv(TLV_KEM_SELECT, &want_kem.to_be_bytes());
-        t.add_tlv(TLV_SIG_SELECT, &sig_select.to_be_bytes());
-        t.add_tlv(TLV_AEAD_SELECT, &crate::AEAD_AES256_GCM.to_be_bytes());
-        t.add_tlv(TLV_KEM_CIPHERTEXT, &kem_ct);
-
-        let th_kem = t.hash(standard);
-        let c_hs = crate::derive_client_handshake_secret(&hs, &th_kem, standard);
-        let s_hs = crate::derive_server_handshake_secret(&hs, &th_kem, standard);
-
-        // Local IdentityKey bytes for the negotiated profile — Ed25519 at
-        // Standard, this endpoint's mldsa_identity at High/Sovereign
-        // (fail-closed if absent). Computed here, now that the profile is
-        // known.
-        let server_pub = local_identity_key_bytes(identity, mldsa_identity, selected_profile)?;
-
-        // --- SERVER_AUTH (sealed under s_hs, s2c) ---
-        t.add_frame_type(FRAME_SERVER_AUTH);
-        t.add_tlv(TLV_IDENTITY_KEY, &server_pub);
-        let s_cv = if standard {
-            handshake::sign_cert_verify(identity, true, &t.hash(standard))
-        } else {
-            // mldsa_identity.is_some() is guaranteed here — see the matching
-            // comment in dial_with_profiles.
-            mldsa87::sign_certverify_mldsa87(mldsa_identity.expect("checked by local_identity_key_bytes"), true, &t.hash(standard))
-                .map_err(|e| proto(&e.to_string()))?
-        };
-        t.add_tlv(TLV_CERT_VERIFY, &s_cv);
-        let s_fin_key = crate::finished_key(&s_hs, standard);
-        let s_fin = handshake::compute_finished(&s_fin_key, &t.hash(standard), standard);
-        t.add_tlv(TLV_FINISHED, &s_fin);
-        let sa_pt = encode_auth(&server_pub, &s_cv, &s_fin);
-        let sa_wire = seal_frame(&s_hs, DIR_S2C, crate::CHAN_CONTROL, 0, FRAME_SERVER_AUTH, &sa_pt);
-        write_frame(transport, &sa_wire)?;
-
-        // --- CLIENT_AUTH (sealed under c_hs, c2s) ---
-        let ca_wire = read_frame(transport)?;
-        let ca = parse_enc_frame(&ca_wire, FRAME_CLIENT_AUTH)?;
-        let ca_pt = open_frame(&ca, &c_hs, DIR_C2S)?;
-        let (cid, ccv, cfin) = decode_auth(&ca_pt)?;
-        t.add_frame_type(FRAME_CLIENT_AUTH);
-        t.add_tlv(TLV_IDENTITY_KEY, &cid);
-        if standard {
-            let client_vk = vk_from(&cid)?;
-            if !handshake::verify_cert_verify(&client_vk, false, &t.hash(standard), &ccv) {
-                return Err(proto("client CertVerify rejected"));
-            }
-        } else if !mldsa87::verify_certverify_mldsa87(&cid, false, &t.hash(standard), &ccv) {
-            return Err(proto("client CertVerify rejected"));
-        }
-        t.add_tlv(TLV_CERT_VERIFY, &ccv);
-        let th_ccv = t.hash(standard);
-        let c_fin_key = crate::finished_key(&c_hs, standard);
-        if !handshake::verify_finished(&c_fin_key, &th_ccv, &cfin, standard) {
-            return Err(proto("client Finished rejected"));
-        }
-        // See the matching comment in dial_with_profiles: peer_identity
-        // ([u8; 32]) is meaningful ONLY at Standard; at High/Sovereign the
-        // peer's proven identity is peer_identity_mldsa87 (the raw `cid`
-        // bytes), and expected_peer (a fixed Ed25519-shaped pin) is not
-        // checked.
-        let (peer_identity, peer_identity_mldsa87) = if standard {
-            let pid = to32(&cid)?;
-            if let Some(exp) = expected_peer {
-                if !ct_eq(&pid, &exp) {
-                    return Err(proto("client identity does not match the pinned key"));
-                }
-            }
-            // See the matching comment in dial_with_profiles: fail closed
-            // rather than silently drop a caller's stated ML-DSA-87 pin when
-            // the negotiated profile turned out to be Standard.
-            if expected_peer_mldsa87.is_some() {
-                return Err(proto(
-                    "expected_peer_mldsa87 pin requires a High or Sovereign profile; client negotiated Standard",
-                ));
-            }
-            (pid, None)
-        } else {
-            if let Some(exp) = expected_peer_mldsa87 {
-                if !ct_eq_slice(&cid, exp) {
-                    return Err(proto("client ML-DSA-87 identity does not match the pinned key"));
-                }
-            }
-            ([0u8; 32], Some(cid.clone()))
-        };
-
-        let master = crate::derive_master_secret(&hs, &th_ccv, standard);
-        Ok(Session { master, peer_identity, peer_identity_mldsa87, send_dir: DIR_S2C, recv_dir: DIR_C2S })
+        require_only_standard(allowed_profiles, "allowed_profiles")?;
+        Session::accept(transport, identity, expected_peer)
     }
 }
 
@@ -1709,10 +1143,9 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Multi-profile negotiation: Standard-unchanged, High/Sovereign wiring the
-    // real SecP384r1MLKEM1024 exchange AND the real ML-DSA-87 CertVerify into
-    // a live client/server handshake (closing the former Mldsa87Residual),
-    // and the downgrade-refusal fail-closed checks.
+    // Multi-profile entry points: a Standard-only offer completes a full
+    // session; an offer or allow-list naming High or Sovereign is refused
+    // with NoSuiteForProfile before any transport I/O.
     // -----------------------------------------------------------------------
 
     /// `Result::expect_err` requires `T: Debug`; [`Session`] deliberately does not
@@ -1725,10 +1158,39 @@ mod tests {
         }
     }
 
+    /// A transport that records every byte written and every read attempted, so a
+    /// test can assert a refusal happened before any I/O.
+    #[derive(Default)]
+    struct CountingTransport {
+        reads: usize,
+        written: usize,
+    }
+
+    impl Read for CountingTransport {
+        fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
+            self.reads += 1;
+            Ok(0)
+        }
+    }
+
+    impl Write for CountingTransport {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.written += buf.len();
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn is_no_suite_for_profile(e: &io::Error) -> bool {
+        e.kind() == io::ErrorKind::Unsupported
+            && e.get_ref().map_or(false, |inner| inner.downcast_ref::<crate::NoSuiteForProfile>().is_some())
+    }
+
     /// `dial_with_profiles`/`accept_with_profiles` offering only Standard MUST
     /// complete a full session, byte-identical in construction to
-    /// `Session::dial`/`Session::accept` (same wire encode: a 1-element
-    /// ProfileOffer/SigOffer list is the same bytes as the old scalar TLVs).
+    /// `Session::dial`/`Session::accept`.
     #[test]
     fn multi_profile_standard_only_completes_full_session() {
         let (mut a, mut b) = duplex_pair();
@@ -1738,330 +1200,90 @@ mod tests {
         let client_pub = client_id.verifying_key().to_bytes();
 
         let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, None, &[PROFILE_STANDARD], Some(client_pub), None)
+            Session::accept_with_profiles(&mut b, &server_id, &[PROFILE_STANDARD], Some(client_pub))
         });
-        let client = Session::dial_with_profiles(&mut a, &client_id, None, &[PROFILE_STANDARD], Some(server_pub), None)
+        let client = Session::dial_with_profiles(&mut a, &client_id, &[PROFILE_STANDARD], Some(server_pub))
             .expect("Standard-only dial_with_profiles must complete");
         let server = server_thread.join().expect("server thread panicked").expect("Standard-only accept_with_profiles must complete");
 
         assert_eq!(client.master, server.master, "client/server master secret disagreement");
         assert_eq!(client.peer_identity(), server_pub);
         assert_eq!(server.peer_identity(), client_pub);
-        assert!(client.peer_identity_mldsa87().is_none(), "Standard session must not carry an ML-DSA-87 peer identity");
-        assert!(server.peer_identity_mldsa87().is_none(), "Standard session must not carry an ML-DSA-87 peer identity");
     }
 
-    /// A client offering ONLY High and a server accepting ONLY High, both with
-    /// an [`mldsa87::Identity`] supplied, MUST negotiate PROFILE_HIGH +
-    /// KEM_SECP384R1_MLKEM1024, run the REAL SecP384r1MLKEM1024 exchange AND
-    /// the REAL ML-DSA-87 CertVerify end-to-end over a live (in-memory) duplex
-    /// transport with write+read on separate threads (never a single-threaded
-    /// blocking sequential read-then-write over the shared-memory duplex), and
-    /// COMPLETE a mutually-authenticated `Session` — genuine client/server
-    /// agreement, not a KAT replay. Closes the former Mldsa87Residual.
+    /// An offer naming High or Sovereign, alone or beside Standard, is refused with
+    /// NoSuiteForProfile and nothing is read from or written to the transport.
     #[test]
-    fn high_profile_negotiates_kem1024_and_completes_mldsa87_certverify() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-        let server_mldsa = mldsa87::Identity::generate();
-        let client_mldsa_pub = client_mldsa.public_key_bytes().to_vec();
-        let server_mldsa_pub = server_mldsa.public_key_bytes().to_vec();
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, Some(&server_mldsa), &[PROFILE_HIGH], None, None)
-        });
-        let client = Session::dial_with_profiles(&mut a, &client_id, Some(&client_mldsa), &[PROFILE_HIGH], None, None)
-            .expect("High profile with an mldsa_identity supplied must complete a session");
-        let server = server_thread.join().expect("server thread panicked").expect("server side must also complete");
-
-        assert_eq!(client.master, server.master, "client/server master secret disagreement");
-        // High/Sovereign is SHA-384: the master secret is derived via SHA-384
-        // throughout (finished/traffic-secret HKDF outputs are 48 octets).
-        assert!(!client.master.is_empty());
-        assert_eq!(
-            client.peer_identity_mldsa87(),
-            Some(server_mldsa_pub.as_slice()),
-            "client must record the server's PROVEN ML-DSA-87 identity"
-        );
-        assert_eq!(
-            server.peer_identity_mldsa87(),
-            Some(client_mldsa_pub.as_slice()),
-            "server must record the client's PROVEN ML-DSA-87 identity"
-        );
-        assert_eq!(client.peer_identity_mldsa87().unwrap().len(), mldsa87::PUBLIC_KEY_SIZE);
-    }
-
-    /// Same as the High test above, for Sovereign — the other profile sharing
-    /// SecP384r1MLKEM1024 as its minimum KEM.
-    #[test]
-    fn sovereign_profile_completes_mldsa87_certverify() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-        let server_mldsa = mldsa87::Identity::generate();
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, Some(&server_mldsa), &[PROFILE_SOVEREIGN], None, None)
-        });
-        let client = Session::dial_with_profiles(&mut a, &client_id, Some(&client_mldsa), &[PROFILE_SOVEREIGN], None, None)
-            .expect("Sovereign profile with an mldsa_identity supplied must complete a session");
-        let server = server_thread.join().expect("server thread panicked").expect("server side must also complete");
-        assert_eq!(client.master, server.master);
-        assert!(client.peer_identity_mldsa87().is_some());
-        assert!(server.peer_identity_mldsa87().is_some());
-    }
-
-    /// A High/Sovereign profile offered/accepted WITHOUT an `mldsa_identity`
-    /// MUST fail closed (mirroring the Go SDK's `Config.MLDSAIdentity is nil`
-    /// error) rather than silently downgrading to Ed25519 or completing
-    /// without authentication.
-    #[test]
-    fn high_profile_without_mldsa_identity_fails_closed() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-
-        // Server has NO mldsa_identity even though it accepts High.
-        let server_thread =
-            std::thread::spawn(move || Session::accept_with_profiles(&mut b, &server_id, None, &[PROFILE_HIGH], None, None));
-        let client = Session::dial_with_profiles(&mut a, &client_id, Some(&client_mldsa), &[PROFILE_HIGH], None, None);
-        // The client may see the connection fail (server errors before its
-        // SERVER_AUTH ever reaches the client) OR its own read fail; either
-        // way this MUST NOT be Ok(Session).
-        assert!(client.is_err(), "client must not complete against a server with no ML-DSA-87 identity");
-        let server_err = must_err(server_thread.join().expect("server thread panicked"), "server must fail closed");
-        assert!(
-            server_err.to_string().contains("no mldsa_identity was supplied"),
-            "unexpected server error: {server_err}"
-        );
-    }
-
-    /// A client offering Standard+High and a server that only accepts High MUST
-    /// negotiate High (server's preference order wins, mirroring `sdk.selectProfile`),
-    /// completing via ML-DSA-87 CertVerify rather than Standard.
-    #[test]
-    fn server_prefers_high_over_client_standard_offer() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-        let server_mldsa = mldsa87::Identity::generate();
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, Some(&server_mldsa), &[PROFILE_HIGH], None, None)
-        });
-        let client = Session::dial_with_profiles(
-            &mut a,
-            &client_id,
-            Some(&client_mldsa),
+    fn dial_refuses_high_and_sovereign_before_any_io() {
+        let id = generate_identity();
+        let offers: [&[u8]; 4] = [
+            &[PROFILE_HIGH],
+            &[PROFILE_SOVEREIGN],
             &[PROFILE_STANDARD, PROFILE_HIGH],
-            None,
-            None,
-        )
-        .expect("must complete via High, not fail on the Standard-offered-but-not-selected path");
-        let server = server_thread.join().expect("server thread panicked").expect("server side must also complete");
-
-        // High was negotiated (not Standard): the completed session carries a
-        // proven ML-DSA-87 peer identity, which only the High/Sovereign
-        // CertVerify path ever populates.
-        assert!(client.peer_identity_mldsa87().is_some(), "server must have selected High, not Standard");
-        assert!(server.peer_identity_mldsa87().is_some());
+            &[PROFILE_SOVEREIGN, PROFILE_STANDARD],
+        ];
+        for offer in offers {
+            let mut t = CountingTransport::default();
+            let err = must_err(Session::dial_with_profiles(&mut t, &id, offer, None), "High/Sovereign offer must be refused");
+            assert!(is_no_suite_for_profile(&err), "offer {offer:?}: wrong error: {err}");
+            assert_eq!((t.reads, t.written), (0, 0), "offer {offer:?}: the refusal must precede any I/O");
+        }
     }
 
-    /// DOWNGRADE REFUSAL (fail-closed), client side: a client that offered only
-    /// High (so it generated SecP384r1MLKEM1024 key material only) MUST refuse a
-    /// SERVER_HELLO that selects X25519MLKEM768 — a deviant/compromised server
-    /// cannot downgrade a High/Sovereign client to the weaker KEM group. This is
-    /// the property [`ErrKEMDowngrade`]-equivalent to `sdk.requireSelections`
-    /// enforces in the Go reference, driven here directly at the wire level
-    /// (a hand-built SERVER_HELLO selecting Standard/768), independent of the
-    /// (nonexistent) ML-DSA-87 layer — downgrade refusal MUST hold regardless of
-    /// whether CertVerify could ever complete.
+    /// The server mirror: an allow-list naming High or Sovereign is refused with
+    /// NoSuiteForProfile before the transport is touched.
     #[test]
-    fn client_refuses_kem_downgrade_from_high_to_standard() {
-        // A real KemClient1024 so the client sends a genuine 1665-octet KEMShare.
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-
-        // The "server": reads CLIENT_HELLO, then replies with a SERVER_HELLO that
-        // dishonestly selects PROFILE_STANDARD/KEM_X25519_MLKEM768 with a
-        // structurally-valid (but semantically wrong-group) 1120-octet ciphertext.
-        let deviant_server = std::thread::spawn(move || {
-            let ch_wire = read_frame(&mut b).expect("read CLIENT_HELLO");
-            let ch = crate::Frame::unmarshal(&ch_wire).expect("parse CLIENT_HELLO");
-            assert_eq!(ch.ftype, FRAME_CLIENT_HELLO);
-
-            let mut sh = Vec::new();
-            tlv(&mut sh, TLV_PROFILE_SELECT, &[PROFILE_STANDARD]);
-            tlv(&mut sh, TLV_KEM_SELECT, &crate::KEM_X25519_MLKEM768.to_be_bytes());
-            tlv(&mut sh, TLV_SIG_SELECT, &crate::SIG_ED25519.to_be_bytes());
-            tlv(&mut sh, TLV_AEAD_SELECT, &crate::AEAD_AES256_GCM.to_be_bytes());
-            tlv(&mut sh, TLV_KEM_CIPHERTEXT, &vec![0u8; KEM_CIPHERTEXT_LEN]);
-            write_frame(&mut b, &cleartext_frame(FRAME_SERVER_HELLO, sh)).expect("write deviant SERVER_HELLO");
-        });
-
-        // Offers Standard AND High: kem_group_for_profiles picks the STRONGER
-        // group (1024) whenever High/Sovereign is present, so this client
-        // generates key material only for SecP384r1MLKEM1024 even though
-        // PROFILE_STANDARD is a legitimately-offered profile — matching
-        // `sdk.kemGroupForProfiles`'s "one physical KEMShare" rule. The deviant
-        // server's PROFILE_STANDARD selection above is therefore a profile this
-        // client DID offer (so the "not offered" check does not fire first) but
-        // whose KEM the client has no key material for: the pure KEM-downgrade case.
-        let err = must_err(
-            Session::dial_with_profiles(&mut a, &client_id, None, &[PROFILE_STANDARD, PROFILE_HIGH], None, None),
-            "a downgrade to X25519MLKEM768 must be refused",
-        );
-        assert!(
-            err.to_string().contains("downgrade refused"),
-            "expected a downgrade-refused error, got: {err}"
-        );
-        deviant_server.join().expect("deviant server thread panicked");
-    }
-
-    /// DOWNGRADE REFUSAL, server side: a server accepting only High MUST refuse a
-    /// CLIENT_HELLO offering only Standard (no SecP384r1MLKEM1024 in KEMOffer) —
-    /// `selectProfile`/`requireOffers`'s server-side half of the same refusal.
-    #[test]
-    fn server_refuses_client_offering_only_standard_when_only_high_is_allowed() {
-        let mut ch = Vec::new();
-        tlv(&mut ch, TLV_PROFILE_OFFER, &[PROFILE_STANDARD]);
-        tlv(&mut ch, TLV_KEM_OFFER, &crate::KEM_X25519_MLKEM768.to_be_bytes());
-        tlv(&mut ch, TLV_SIG_OFFER, &crate::SIG_ED25519.to_be_bytes());
-        tlv(&mut ch, TLV_AEAD_OFFER, &crate::AEAD_AES256_GCM.to_be_bytes());
-        tlv(&mut ch, TLV_KEM_SHARE, &vec![0u8; KEM_SHARE_LEN]);
-        let mut t = Cursor::new(cleartext_frame(FRAME_CLIENT_HELLO, ch));
-
-        let server_id = generate_identity();
-        let err = must_err(
-            Session::accept_with_profiles(&mut t, &server_id, None, &[PROFILE_HIGH], None, None),
-            "a High-only server must refuse a Standard-only offer",
-        );
-        assert!(
-            err.to_string().contains("no profile in the client's offer is acceptable"),
-            "unexpected error: {err}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // PRE-handshake ML-DSA-87 peer-identity pinning (`expected_peer_mldsa87`):
-    // fail-closed, checked at the same point in the flow as the Ed25519
-    // `expected_peer` pin — additive client-side verification config, zero
-    // wire bytes changed.
-    // -----------------------------------------------------------------------
-
-    /// A client pinning the server's REAL ML-DSA-87 identity via
-    /// `expected_peer_mldsa87` on a High negotiation MUST complete the
-    /// session, and the completed session's proven peer identity MUST equal
-    /// the pin.
-    #[test]
-    fn high_profile_correct_mldsa87_pin_succeeds() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-        let server_mldsa = mldsa87::Identity::generate();
-        let server_mldsa_pub = server_mldsa.public_key_bytes().to_vec();
-        let pin = server_mldsa_pub.clone();
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, Some(&server_mldsa), &[PROFILE_HIGH], None, None)
-        });
-        let client = Session::dial_with_profiles(
-            &mut a,
-            &client_id,
-            Some(&client_mldsa),
+    fn accept_refuses_high_and_sovereign_before_any_io() {
+        let id = generate_identity();
+        let allowed: [&[u8]; 4] = [
             &[PROFILE_HIGH],
-            None,
-            Some(&pin),
-        )
-        .expect("a correct expected_peer_mldsa87 pin must not block a completing handshake");
-        let server = server_thread.join().expect("server thread panicked").expect("server side must also complete");
-
-        assert_eq!(client.master, server.master, "client/server master secret disagreement");
-        assert_eq!(
-            client.peer_identity_mldsa87(),
-            Some(server_mldsa_pub.as_slice()),
-            "the completed session's proven peer identity must equal the pin"
-        );
+            &[PROFILE_SOVEREIGN],
+            &[PROFILE_HIGH, PROFILE_STANDARD],
+            &[PROFILE_STANDARD, PROFILE_SOVEREIGN],
+        ];
+        for list in allowed {
+            let mut t = CountingTransport::default();
+            let err = must_err(Session::accept_with_profiles(&mut t, &id, list, None), "High/Sovereign allow-list must be refused");
+            assert!(is_no_suite_for_profile(&err), "allow-list {list:?}: wrong error: {err}");
+            assert_eq!((t.reads, t.written), (0, 0), "allow-list {list:?}: the refusal must precede any I/O");
+        }
     }
 
-    /// A client pinning the WRONG ML-DSA-87 identity via `expected_peer_mldsa87`
-    /// on a High negotiation MUST fail closed with an identity-mismatch error —
-    /// no `Session` is ever returned to the caller, even though the peer's real
-    /// CertVerify signature verified correctly.
+    /// An empty list and an undefined profile code are refused as protocol errors, not
+    /// as a missing suite, and also before any I/O.
     #[test]
-    fn high_profile_wrong_mldsa87_pin_fails_closed() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        let client_mldsa = mldsa87::Identity::generate();
-        let server_mldsa = mldsa87::Identity::generate();
-        // A DIFFERENT ML-DSA-87 identity's public key: the server will never
-        // present this key, so the pin must reject the real (correctly
-        // signed) server.
-        let wrong_pin = mldsa87::Identity::generate().public_key_bytes().to_vec();
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, Some(&server_mldsa), &[PROFILE_HIGH], None, None)
-        });
-        let client = Session::dial_with_profiles(
-            &mut a,
-            &client_id,
-            Some(&client_mldsa),
-            &[PROFILE_HIGH],
-            None,
-            Some(&wrong_pin),
-        );
-        let err = must_err(client, "a wrong expected_peer_mldsa87 pin must fail closed, not complete");
-        assert!(
-            err.to_string().contains("does not match the pinned key"),
-            "expected an identity-mismatch error, got: {err}"
-        );
-        // The client rejected the pin BEFORE sending CLIENT_AUTH, so the server
-        // side is blocked reading it; dropping the client's transport end closes
-        // the channel out from under the server's blocking read (mirrors
-        // peer_identity_pin_mismatch_rejected above), surfacing as an I/O error
-        // rather than a hang or a silent success.
-        drop(a);
-        assert!(server_thread.join().expect("server thread panicked").is_err(), "server must not complete a session with no CLIENT_AUTH");
+    fn profile_list_validation_precedes_any_io() {
+        let id = generate_identity();
+        for list in [&[][..], &[0x00][..], &[0x04][..]] {
+            let mut t = CountingTransport::default();
+            let err = must_err(Session::dial_with_profiles(&mut t, &id, list, None), "invalid profile list must be refused");
+            assert!(!is_no_suite_for_profile(&err), "list {list:?} is invalid, not a missing suite: {err}");
+            assert_eq!((t.reads, t.written), (0, 0));
+        }
     }
 
-    /// `expected_peer_mldsa87` being `Some` while the negotiated profile is
-    /// Standard (no ML-DSA-87 peer identity exists in that case) MUST fail
-    /// closed rather than silently ignore the caller's stated pin — a caller
-    /// pinning an ML-DSA-87 identity but negotiating Standard got the wrong
-    /// peer (or was downgraded), and silently dropping the pin would be a
-    /// fail-open on exactly that case.
+    /// The key-schedule primitives refuse every profile other than Standard and still
+    /// succeed at Standard.
     #[test]
-    fn standard_profile_with_mldsa87_pin_fails_closed() {
-        let (mut a, mut b) = duplex_pair();
-        let client_id = generate_identity();
-        let server_id = generate_identity();
-        // A syntactically-arbitrary pin: the Standard branch fails closed on
-        // Some(_) alone, before ever comparing content.
-        let pin = vec![0xAAu8; mldsa87::PUBLIC_KEY_SIZE];
-
-        let server_thread = std::thread::spawn(move || {
-            Session::accept_with_profiles(&mut b, &server_id, None, &[PROFILE_STANDARD], None, None)
-        });
-        let client = Session::dial_with_profiles(&mut a, &client_id, None, &[PROFILE_STANDARD], None, Some(&pin));
-        let err = must_err(client, "an expected_peer_mldsa87 pin on a Standard negotiation must fail closed");
-        assert!(
-            err.to_string().contains("requires a High or Sovereign profile"),
-            "expected the Standard/ML-DSA-87-pin fail-closed error, got: {err}"
-        );
-        // See high_profile_wrong_mldsa87_pin_fails_closed above: the client
-        // rejected before sending CLIENT_AUTH, so drop its transport end to
-        // unblock the server's blocking read rather than hang the test.
-        drop(a);
-        assert!(
-            server_thread.join().expect("server thread panicked").is_err(),
-            "server must not complete a session with no CLIENT_AUTH"
-        );
+    fn key_schedule_primitives_refuse_non_standard() {
+        let secret = [0x11u8; 32];
+        let th = [0x22u8; 32];
+        assert!(crate::hkdf_expand_label(&secret, "key", &[], 32, true).is_ok());
+        assert_eq!(crate::hkdf_expand_label(&secret, "key", &[], 48, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::hkdf_expand(&secret, b"info", 48, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::hkdf_extract(&[0u8; 48], &secret, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_traffic_secret(&secret, 0, 0, 1, 0, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_key_iv(&secret, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_handshake_secret(&secret, &secret, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_client_handshake_secret(&secret, &th, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_server_handshake_secret(&secret, &th, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::derive_master_secret(&secret, &th, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(crate::finished_key(&secret, false), Err(crate::NoSuiteForProfile));
+        let tr = Transcript::default();
+        assert!(tr.hash(true).is_ok());
+        assert_eq!(tr.hash(false), Err(crate::NoSuiteForProfile));
+        assert_eq!(handshake::compute_finished(&secret, &th, false), Err(crate::NoSuiteForProfile));
+        assert_eq!(handshake::verify_finished(&secret, &th, &th, false), Err(crate::NoSuiteForProfile));
+        assert!(handshake::compute_finished(&secret, &th, true).is_ok());
     }
 }

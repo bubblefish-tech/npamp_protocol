@@ -36,7 +36,6 @@ import (
 	"bufio"
 	"crypto/hkdf"
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -282,8 +281,6 @@ func handle(req request) response {
 		switch s(req.In, "hash") {
 		case "sha256":
 			h = sha256.New
-		case "sha384":
-			h = sha512.New384
 		default:
 			return response{Skipped: "hash not implemented: " + s(req.In, "hash")}
 		}
@@ -557,8 +554,6 @@ func handle(req request) response {
 		switch s(req.In, "hash") {
 		case "sha256":
 			h = sha256.New
-		case "sha384":
-			h = sha512.New384
 		default:
 			return response{Skipped: "hash not implemented: " + s(req.In, "hash")}
 		}

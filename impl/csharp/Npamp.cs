@@ -257,19 +257,47 @@ public static class Npamp
 
     // -- Key schedule (HKDF-Extract / Expand / Expand-Label) ----------------
 
-    // HKDF-Extract (RFC 5869 2.2): extract(salt, ikm) = HMAC-Hash(salt, ikm). The
-    // salt is the HMAC key, the IKM is the message. SHA-256 when standard, else SHA-384.
+    /// <summary>The Standard profile hash length (SHA-256).</summary>
+    public const int HashLen = 32;
+
+    /// <summary>
+    /// Thrown when a profile other than Standard is requested. This module implements the
+    /// Standard profile only; High and Sovereign are refused, before any I/O, with this error.
+    /// </summary>
+    public sealed class NoSuiteForProfileException : InvalidOperationException
+    {
+        public NoSuiteForProfileException()
+            : base("no cipher suite for this profile: only the Standard profile is implemented")
+        {
+        }
+    }
+
+    /// <summary>Throws <see cref="NoSuiteForProfileException"/> unless <paramref name="standard"/> is true.</summary>
+    internal static void RequireStandard(bool standard)
+    {
+        if (!standard)
+        {
+            throw new NoSuiteForProfileException();
+        }
+    }
+
+    // HKDF-Extract (RFC 5869 2.2): extract(salt, ikm) = HMAC-SHA-256(salt, ikm). The
+    // salt is the HMAC key, the IKM is the message. Throws NoSuiteForProfileException
+    // unless standard is true.
     public static byte[] HkdfExtract(byte[] salt, byte[] ikm, bool standard)
     {
-        using HMAC mac = standard ? new HMACSHA256(salt) : new HMACSHA384(salt);
+        RequireStandard(standard);
+        using HMAC mac = new HMACSHA256(salt);
         return mac.ComputeHash(ikm);
     }
 
     // HKDF-Expand (RFC 5869 2.3), expand step only: the supplied secret IS the
-    // PRK, so HKDF-Extract is not run. SHA-256 when standard, else SHA-384.
+    // PRK, so HKDF-Extract is not run. HMAC-SHA-256; throws NoSuiteForProfileException
+    // unless standard is true.
     private static byte[] HkdfExpand(bool standard, byte[] prk, byte[] info, int length)
     {
-        using HMAC mac = standard ? new HMACSHA256(prk) : new HMACSHA384(prk);
+        RequireStandard(standard);
+        using HMAC mac = new HMACSHA256(prk);
         int hashLen = mac.HashSize / 8;
         int n = (length + hashLen - 1) / hashLen;
         byte[] outBuf = new byte[n * hashLen];
@@ -312,7 +340,8 @@ public static class Npamp
     /// <summary>
     /// Derives a directional traffic secret.
     /// context = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE);
-    /// output length 32 (SHA-256) or 48 (SHA-384); label "traffic".
+    /// output length 32 (SHA-256); label "traffic". Throws NoSuiteForProfileException unless
+    /// <paramref name="standard"/> is true.
     /// </summary>
     public static byte[] DeriveTrafficSecret(byte[] master, int dir, ulong epoch, int suite, int channel, bool standard)
     {
@@ -321,8 +350,8 @@ public static class Npamp
         PutU64Be(ctx, 1, epoch);
         PutU16Be(ctx, 9, suite);
         PutU16Be(ctx, 11, channel);
-        int hlen = standard ? 32 : 48;
-        return HkdfExpandLabel(master, "traffic", ctx, hlen, standard);
+        RequireStandard(standard);
+        return HkdfExpandLabel(master, "traffic", ctx, HashLen, standard);
     }
 
     /// <summary>Derives the {key(32), iv(12)} pair from a traffic secret.</summary>
@@ -333,17 +362,17 @@ public static class Npamp
         return (key, iv);
     }
 
-    // -- Handshake-secret ladder (binding spec/10 5; ML-KEM-first per ADR-0005) ----
+    // -- Handshake-secret ladder (binding spec/10 5; ML-KEM-first) ----
 
     /// <summary>
     /// Derives the handshake_secret root. The IKM is the ML-KEM shared secret concatenated
-    /// FIRST with the X25519 shared secret (ML-KEM-first, ADR-0005); the salt is the binding
+    /// FIRST with the X25519 shared secret (ML-KEM-first); the salt is the binding
     /// default of HashLen zero octets. handshake_secret = HKDF-Extract(salt, IKM).
     /// </summary>
     public static byte[] HandshakeSecret(byte[] mlkemSharedSecret, byte[] x25519SharedSecret, bool standard)
     {
-        int hashLen = standard ? 32 : 48;
-        byte[] salt = new byte[hashLen]; // default salt: HashLen zero octets
+        RequireStandard(standard);
+        byte[] salt = new byte[HashLen]; // default salt: HashLen zero octets
         byte[] ikm = new byte[mlkemSharedSecret.Length + x25519SharedSecret.Length];
         Array.Copy(mlkemSharedSecret, 0, ikm, 0, mlkemSharedSecret.Length);
         Array.Copy(x25519SharedSecret, 0, ikm, mlkemSharedSecret.Length, x25519SharedSecret.Length);
@@ -352,22 +381,22 @@ public static class Npamp
 
     /// <summary>Client handshake traffic secret c_hs = HKDF-Expand-Label(handshake_secret, "c hs", th_kem, HashLen).</summary>
     public static byte[] DeriveClientHandshakeSecret(byte[] handshakeSecret, byte[] thKem, bool standard) =>
-        HkdfExpandLabel(handshakeSecret, "c hs", thKem, standard ? 32 : 48, standard);
+        HkdfExpandLabel(handshakeSecret, "c hs", thKem, HashLen, standard);
 
     /// <summary>Server handshake traffic secret s_hs = HKDF-Expand-Label(handshake_secret, "s hs", th_kem, HashLen).</summary>
     public static byte[] DeriveServerHandshakeSecret(byte[] handshakeSecret, byte[] thKem, bool standard) =>
-        HkdfExpandLabel(handshakeSecret, "s hs", thKem, standard ? 32 : 48, standard);
+        HkdfExpandLabel(handshakeSecret, "s hs", thKem, HashLen, standard);
 
     /// <summary>Master secret = HKDF-Expand-Label(handshake_secret, "master", th_ccv, HashLen).</summary>
     public static byte[] DeriveMasterSecret(byte[] handshakeSecret, byte[] thCcv, bool standard) =>
-        HkdfExpandLabel(handshakeSecret, "master", thCcv, standard ? 32 : 48, standard);
+        HkdfExpandLabel(handshakeSecret, "master", thCcv, HashLen, standard);
 
     /// <summary>
     /// Finished key (binding spec/10 6.2 / 5.4) = HKDF-Expand-Label(secret, "finished", "", HashLen).
     /// The client Finished key derives from c_hs; the server Finished key derives from s_hs.
     /// </summary>
     public static byte[] DeriveFinishedKey(byte[] secret, bool standard) =>
-        HkdfExpandLabel(secret, "finished", Array.Empty<byte>(), standard ? 32 : 48, standard);
+        HkdfExpandLabel(secret, "finished", Array.Empty<byte>(), HashLen, standard);
 
     // -- Hex utility -------------------------------------------------------
 

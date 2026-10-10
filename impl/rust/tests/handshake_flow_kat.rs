@@ -337,8 +337,8 @@ fn marshal_frame(ftype: u16, payload: Vec<u8>) -> Vec<u8> {
 /// (GCM tag) is the AEAD associated data.
 fn seal_auth(ftype: u16, base_secret: &[u8], dir: u8, plaintext: &[u8]) -> Vec<u8> {
     // Standard profile => SHA-256 => standard = true throughout.
-    let ts = npamp::derive_traffic_secret(base_secret, dir, 0, npamp::AEAD_AES256_GCM, npamp::CHAN_CONTROL, true);
-    let (key, iv) = npamp::derive_key_iv(&ts, true);
+    let ts = npamp::derive_traffic_secret(base_secret, dir, 0, npamp::AEAD_AES256_GCM, npamp::CHAN_CONTROL, true).unwrap();
+    let (key, iv) = npamp::derive_key_iv(&ts, true).unwrap();
     let mut aad = [0u8; 21];
     npamp::Frame {
         flags: npamp::FLAG_ENC,
@@ -367,9 +367,9 @@ fn assert_hex(name: &str, got: &[u8], want_hex: &str) {
 /// Derives traffic secret + key + iv through the impl and asserts each against the
 /// pinned expected hex (mirrors the Go assertTrafficKeyIV). dir: 0 = c2s, 1 = s2c.
 fn assert_traffic_key_iv(name: &str, parent: &[u8], dir: u8, root: &Json) {
-    let ts = npamp::derive_traffic_secret(parent, dir, 0, npamp::AEAD_AES256_GCM, npamp::CHAN_CONTROL, true);
+    let ts = npamp::derive_traffic_secret(parent, dir, 0, npamp::AEAD_AES256_GCM, npamp::CHAN_CONTROL, true).unwrap();
     assert_hex(&format!("{name}_traffic_secret"), &ts, root.at(&["expected", "secrets", &format!("{name}_traffic_secret")]).s());
-    let (key, iv) = npamp::derive_key_iv(&ts, true);
+    let (key, iv) = npamp::derive_key_iv(&ts, true).unwrap();
     assert_hex(&format!("{name}_key"), &key, root.at(&["expected", "secrets", &format!("{name}_key")]).s());
     assert_hex(&format!("{name}_iv"), &iv, root.at(&["expected", "secrets", &format!("{name}_iv")]).s());
 }
@@ -506,21 +506,21 @@ fn handshake_flow_kat() {
     tr.add_tlv(TLV_SIG_SELECT, &npamp::SIG_ED25519.to_be_bytes());
     tr.add_tlv(TLV_AEAD_SELECT, &npamp::AEAD_AES256_GCM.to_be_bytes());
     tr.add_tlv(TLV_KEM_CIPHERTEXT, &want_kem_ct);
-    let th_kem = tr.hash(true);
+    let th_kem = tr.hash(true).unwrap();
     assert_hex("th_kem", &th_kem, root.at(&["expected", "transcript", "th_kem"]).s());
 
     // handshake_secret = HKDF-Extract(32 zero octets, ML-KEM_SS || X25519_SS).
-    let hs = npamp::derive_handshake_secret(&mlkem_ss, &x25519_ss, true);
+    let hs = npamp::derive_handshake_secret(&mlkem_ss, &x25519_ss, true).unwrap();
     assert_hex("handshake_secret", &hs, root.at(&["expected", "secrets", "handshake_secret"]).s());
-    let c_hs = npamp::derive_client_handshake_secret(&hs, &th_kem, true);
+    let c_hs = npamp::derive_client_handshake_secret(&hs, &th_kem, true).unwrap();
     assert_hex("c_hs_secret", &c_hs, root.at(&["expected", "secrets", "c_hs_secret"]).s());
-    let s_hs = npamp::derive_server_handshake_secret(&hs, &th_kem, true);
+    let s_hs = npamp::derive_server_handshake_secret(&hs, &th_kem, true).unwrap();
     assert_hex("s_hs_secret", &s_hs, root.at(&["expected", "secrets", "s_hs_secret"]).s());
 
     // --- SERVER_AUTH. ---
     tr.add_frame_type(handshake::FRAME_SERVER_AUTH);
     tr.add_tlv(TLV_IDENTITY_KEY, &server_pub);
-    let th_sid = tr.hash(true);
+    let th_sid = tr.hash(true).unwrap();
     assert_hex("th_sid", &th_sid, root.at(&["expected", "transcript", "th_sid"]).s());
     // is_server = true; the CertVerify value = u16(0x0807) || Ed25519 signature.
     let s_cv = handshake::sign_cert_verify(&server_sk, true, &th_sid);
@@ -528,11 +528,11 @@ fn handshake_flow_kat() {
     let server_vk = handshake::ed25519_verifying_key_from_raw(&server_pub).expect("server pubkey");
     assert!(handshake::verify_cert_verify(&server_vk, true, &th_sid, &s_cv), "server CertVerify rejected");
     tr.add_tlv(TLV_CERT_VERIFY, &s_cv);
-    let th_scv = tr.hash(true);
+    let th_scv = tr.hash(true).unwrap();
     assert_hex("th_scv", &th_scv, root.at(&["expected", "transcript", "th_scv"]).s());
-    let s_fin_key = npamp::finished_key(&s_hs, true);
+    let s_fin_key = npamp::finished_key(&s_hs, true).unwrap();
     assert_hex("finished_keys.server", &s_fin_key, root.at(&["expected", "finished_keys", "server"]).s());
-    let s_fin = handshake::compute_finished(&s_fin_key, &th_scv, true);
+    let s_fin = handshake::compute_finished(&s_fin_key, &th_scv, true).unwrap();
     assert_hex("finished.server", &s_fin, root.at(&["expected", "finished", "server"]).s());
     tr.add_tlv(TLV_FINISHED, &s_fin);
     // SERVER_AUTH plaintext = IdentityKey || CertVerify || Finished TLVs.
@@ -547,18 +547,18 @@ fn handshake_flow_kat() {
     // --- CLIENT_AUTH. ---
     tr.add_frame_type(handshake::FRAME_CLIENT_AUTH);
     tr.add_tlv(TLV_IDENTITY_KEY, &client_pub);
-    let th_cid = tr.hash(true);
+    let th_cid = tr.hash(true).unwrap();
     assert_hex("th_cid", &th_cid, root.at(&["expected", "transcript", "th_cid"]).s());
     let c_cv = handshake::sign_cert_verify(&client_sk, false, &th_cid);
     assert_hex("cert_verify.client", &c_cv, root.at(&["expected", "cert_verify", "client"]).s());
     let client_vk = handshake::ed25519_verifying_key_from_raw(&client_pub).expect("client pubkey");
     assert!(handshake::verify_cert_verify(&client_vk, false, &th_cid, &c_cv), "client CertVerify rejected");
     tr.add_tlv(TLV_CERT_VERIFY, &c_cv);
-    let th_ccv = tr.hash(true);
+    let th_ccv = tr.hash(true).unwrap();
     assert_hex("th_ccv", &th_ccv, root.at(&["expected", "transcript", "th_ccv"]).s());
-    let c_fin_key = npamp::finished_key(&c_hs, true);
+    let c_fin_key = npamp::finished_key(&c_hs, true).unwrap();
     assert_hex("finished_keys.client", &c_fin_key, root.at(&["expected", "finished_keys", "client"]).s());
-    let c_fin = handshake::compute_finished(&c_fin_key, &th_ccv, true);
+    let c_fin = handshake::compute_finished(&c_fin_key, &th_ccv, true).unwrap();
     assert_hex("finished.client", &c_fin, root.at(&["expected", "finished", "client"]).s());
     let mut client_auth_plain = Vec::new();
     tlv(&mut client_auth_plain, TLV_IDENTITY_KEY, &client_pub);
@@ -569,7 +569,7 @@ fn handshake_flow_kat() {
     assert_hex("client_auth", &client_auth_frame, root.at(&["expected", "frames", "client_auth"]).s());
 
     // --- Master + application-phase traffic keys. ---
-    let master = npamp::derive_master_secret(&hs, &th_ccv, true);
+    let master = npamp::derive_master_secret(&hs, &th_ccv, true).unwrap();
     assert_hex("master_secret", &master, root.at(&["expected", "secrets", "master_secret"]).s());
 
     assert_traffic_key_iv("c_hs", &c_hs, 0, &root);
@@ -596,13 +596,13 @@ fn handshake_flow_kat() {
     let mut bad_fin = c_fin.clone();
     bad_fin[0] ^= 0x01;
     assert!(
-        !handshake::verify_finished(&c_fin_key, &th_ccv, &bad_fin, true),
+        !handshake::verify_finished(&c_fin_key, &th_ccv, &bad_fin, true).unwrap(),
         "mutation guard: a one-bit-flipped client Finished MAC VERIFIED"
     );
 
     // Sanity: the untouched signature and MAC still verify.
     assert!(handshake::verify_cert_verify(&server_vk, true, &th_sid, &s_cv), "unmutated server CertVerify should verify");
-    assert!(handshake::verify_finished(&c_fin_key, &th_ccv, &c_fin, true), "unmutated client Finished should verify");
+    assert!(handshake::verify_finished(&c_fin_key, &th_ccv, &c_fin, true).unwrap(), "unmutated client Finished should verify");
 
     // Guard the pinned server X25519 private (dead-input guard, mirrors the Go test).
     assert_eq!(server_x25519_priv.len(), 32, "pinned server X25519 private is 32 octets");

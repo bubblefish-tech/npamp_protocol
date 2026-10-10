@@ -3,7 +3,7 @@
 #![cfg(feature = "session")]
 
 // Standards-anchored X25519MLKEM768 KEM-wire known-answer test (spec/10 §4;
-// ADR-0005 ML-KEM-first). Mirrors the Go reference verifier
+// ML-KEM-first). Mirrors the Go reference verifier
 // impl/go/kemwire_kat_test.go against test-vectors/v1/kem-wire-kat.json.
 //
 // NON-CIRCULAR: none of the expected values were produced by an N-PAMP impl.
@@ -274,7 +274,7 @@ fn to_arr32(b: &[u8]) -> [u8; 32] {
 
 // The pinned SHA-256 of test-vectors/v1/kem-wire-kat.json (git-committed bytes).
 const KEM_WIRE_KAT_SHA256: &str =
-    "3edd3e0c1e96fa8a3b45b0e998a2b12082a7b4e66cd5acf3883f2de8ff12c222";
+    "eb1abf81c1e07fbb795a8ce3f2da6baad57a027c1c0f1b64e1b97ba2fe2c2f5d";
 
 // Component wire sizes, spec/10 §4 (FIPS 203 ML-KEM-768 + RFC 7748 X25519).
 const MLKEM768_EK_LEN: usize = 1184;
@@ -354,7 +354,7 @@ fn kem_wire_kat() {
     assert_eq!(to_hex(ab.as_bytes()), to_hex(&want_ss), "X25519 ECDH(alice, bob_pub) != RFC 7748 shared_secret");
     assert_eq!(to_hex(ba.as_bytes()), to_hex(&want_ss), "X25519 ECDH(bob, alice_pub) != RFC 7748 shared_secret");
 
-    // --- 4. Wire layout (ML-KEM-first, ADR-0005). Assemble the on-wire fields
+    // --- 4. Wire layout (ML-KEM-first). Assemble the on-wire fields
     // exactly as spec/10 §4 mandates and check size + ordering against the pinned
     // lengths. This is the combiner-order surface a symmetric self-interop misses. ---
     assert_eq!(root.at(&["wire_layout", "kem_share_len"]).num() as usize, KEM_SHARE_LEN);
@@ -385,7 +385,7 @@ fn kem_wire_kat() {
     combined.extend_from_slice(&mlkem_k);
     combined.extend_from_slice(&want_ss);
     assert_eq!(combined.len(), COMBINED_SECRET_LEN, "combined IKM is 64 octets");
-    assert_eq!(&combined[..32], &mlkem_k[..], "combined IKM leads with the ML-KEM shared secret (ADR-0005)");
+    assert_eq!(&combined[..32], &mlkem_k[..], "combined IKM leads with the ML-KEM shared secret");
     assert_eq!(&combined[32..], &want_ss[..], "combined IKM trails with the X25519 shared secret");
     let mut reversed = Vec::with_capacity(COMBINED_SECRET_LEN);
     reversed.extend_from_slice(&want_ss);

@@ -3,7 +3,7 @@
 // No proprietary methods, parameters, or weights.
 //
 // Pure-Kotlin port of the Java reference (sh.bubblefish.npamp.Npamp). Uses the same
-// JDK crypto providers: java.util.zip.CRC32C, AES/GCM/NoPadding, HmacSHA256/HmacSHA384.
+// JDK crypto providers: java.util.zip.CRC32C, AES/GCM/NoPadding, HmacSHA256.
 package sh.bubblefish.npamp
 
 import java.nio.charset.StandardCharsets
@@ -259,10 +259,27 @@ object Npamp {
 
     // -- Key schedule (HKDF-Expand-Label) ----------------------------------
 
+    /** The Standard profile hash length (SHA-256). */
+    const val HASH_LEN: Int = 32
+
+    /**
+     * Thrown when a profile other than Standard is requested. This module implements the
+     * Standard profile only; High and Sovereign are refused, before any I/O, with this error.
+     */
+    class NoSuiteForProfile :
+        RuntimeException("no cipher suite for this profile: only the Standard profile is implemented")
+
+    /** Throws [NoSuiteForProfile] unless [standard] is true. */
+    internal fun requireStandard(standard: Boolean) {
+        if (!standard) {
+            throw NoSuiteForProfile()
+        }
+    }
+
     /**
      * HKDF-Expand (RFC 5869, section 2.3), expand step only: the supplied secret
-     * IS the PRK, so HKDF-Extract is not run. The hash is selected by the caller
-     * (HmacSHA256 or HmacSHA384).
+     * IS the PRK, so HKDF-Extract is not run. The caller supplies the MAC algorithm
+     * (only HmacSHA256 is reachable from the public entry points).
      */
     private fun hkdfExpand(macAlg: String, prk: ByteArray, info: ByteArray, length: Int): ByteArray {
         try {
@@ -290,7 +307,7 @@ object Npamp {
     /**
      * HKDF-Expand-Label (draft-00 7.4). full = LABEL_PREFIX + label.
      * info = u16(length) || u8(len(full)) || full || u8(len(context)) || context.
-     * [standard] selects SHA-256 (true) or SHA-384 (false).
+     * Throws [NoSuiteForProfile] unless [standard] is true.
      */
     fun hkdfExpandLabel(secret: ByteArray, label: String, context: ByteArray, length: Int, standard: Boolean): ByteArray {
         val full = (LABEL_PREFIX + label).toByteArray(StandardCharsets.US_ASCII)
@@ -303,13 +320,15 @@ object Npamp {
         p += full.size
         info[p++] = context.size.toByte()
         System.arraycopy(context, 0, info, p, context.size)
-        return hkdfExpand(if (standard) "HmacSHA256" else "HmacSHA384", secret, info, length)
+        requireStandard(standard)
+        return hkdfExpand("HmacSHA256", secret, info, length)
     }
 
     /**
      * Derives a directional traffic secret.
      * context = dir(1) || epoch(8 BE) || suite(2 BE) || channel(2 BE);
-     * output length 32 (SHA-256) or 48 (SHA-384); label "traffic".
+     * output length 32 (SHA-256); label "traffic". Throws [NoSuiteForProfile] unless
+     * [standard] is true.
      */
     fun deriveTrafficSecret(master: ByteArray, dir: Int, epoch: Long, suite: Int, channel: Int, standard: Boolean): ByteArray {
         val ctx = ByteArray(1 + 8 + 2 + 2)
@@ -317,8 +336,8 @@ object Npamp {
         putU64BE(ctx, 1, epoch)
         putU16BE(ctx, 9, suite)
         putU16BE(ctx, 11, channel)
-        val hlen = if (standard) 32 else 48
-        return hkdfExpandLabel(master, "traffic", ctx, hlen, standard)
+        requireStandard(standard)
+        return hkdfExpandLabel(master, "traffic", ctx, HASH_LEN, standard)
     }
 
     /** Derives the {key(32), iv(12)} pair from a traffic secret. */
@@ -331,14 +350,15 @@ object Npamp {
     // -- Handshake-secret ladder (binding spec/10 §5) ----------------------
 
     /**
-     * HKDF-Extract (RFC 5869, section 2.2): extract(salt, IKM) = HMAC-Hash(salt, IKM).
-     * The hash is selected by [standard]: HmacSHA256 (true) or HmacSHA384 (false), wired
-     * exactly like the Expand side. RFC 5869 specifies that an empty salt is treated as
-     * HashLen zero octets; the binding always passes an explicit HashLen-octet zero salt.
+     * HKDF-Extract (RFC 5869, section 2.2): extract(salt, IKM) = HMAC-SHA-256(salt, IKM).
+     * Throws [NoSuiteForProfile] unless [standard] is true. RFC 5869 specifies that an empty
+     * salt is treated as HashLen zero octets; the binding always passes an explicit
+     * HashLen-octet zero salt.
      */
     fun hkdfExtract(salt: ByteArray, ikm: ByteArray, standard: Boolean): ByteArray {
+        requireStandard(standard)
         try {
-            val alg = if (standard) "HmacSHA256" else "HmacSHA384"
+            val alg = "HmacSHA256"
             val mac = Mac.getInstance(alg)
             val key = if (salt.isEmpty()) ByteArray(mac.macLength) else salt
             mac.init(SecretKeySpec(key, alg))
@@ -349,7 +369,7 @@ object Npamp {
     }
 
     /**
-     * Derives the binding handshake_secret (binding spec/10 §5; ML-KEM-first per ADR-0005).
+     * Derives the binding handshake_secret (binding spec/10 §5; ML-KEM-first).
      * The two inputs are the raw shared secrets from each KEM share; the combined IKM places
      * the ML-KEM shared secret FIRST, then the X25519 shared secret. handshake_secret =
      * HKDF-Extract(salt = HashLen zero octets, IKM). At the Standard profile HashLen is 32,
@@ -359,23 +379,23 @@ object Npamp {
         val ikm = ByteArray(mlkemSharedSecret.size + x25519SharedSecret.size)
         System.arraycopy(mlkemSharedSecret, 0, ikm, 0, mlkemSharedSecret.size)
         System.arraycopy(x25519SharedSecret, 0, ikm, mlkemSharedSecret.size, x25519SharedSecret.size)
-        val hashLen = if (standard) 32 else 48
-        return hkdfExtract(ByteArray(hashLen), ikm, standard)
+        requireStandard(standard)
+        return hkdfExtract(ByteArray(HASH_LEN), ikm, standard)
     }
 
     /** Derives c_hs = HKDF-Expand-Label(handshake_secret, "c hs", th_kem, HashLen) (binding §5). */
     fun deriveClientHandshakeSecret(handshakeSecret: ByteArray, thKem: ByteArray, standard: Boolean): ByteArray {
-        return hkdfExpandLabel(handshakeSecret, "c hs", thKem, if (standard) 32 else 48, standard)
+        return hkdfExpandLabel(handshakeSecret, "c hs", thKem, HASH_LEN, standard)
     }
 
     /** Derives s_hs = HKDF-Expand-Label(handshake_secret, "s hs", th_kem, HashLen) (binding §5). */
     fun deriveServerHandshakeSecret(handshakeSecret: ByteArray, thKem: ByteArray, standard: Boolean): ByteArray {
-        return hkdfExpandLabel(handshakeSecret, "s hs", thKem, if (standard) 32 else 48, standard)
+        return hkdfExpandLabel(handshakeSecret, "s hs", thKem, HASH_LEN, standard)
     }
 
     /** Derives master = HKDF-Expand-Label(handshake_secret, "master", th_ccv, HashLen) (binding §5). */
     fun deriveMasterSecret(handshakeSecret: ByteArray, thCcv: ByteArray, standard: Boolean): ByteArray {
-        return hkdfExpandLabel(handshakeSecret, "master", thCcv, if (standard) 32 else 48, standard)
+        return hkdfExpandLabel(handshakeSecret, "master", thCcv, HASH_LEN, standard)
     }
 
     /**
@@ -384,7 +404,7 @@ object Npamp {
      * Finished key derives from c_hs; the server Finished key derives from s_hs.
      */
     fun deriveFinishedKey(secret: ByteArray, standard: Boolean): ByteArray {
-        return hkdfExpandLabel(secret, "finished", ByteArray(0), if (standard) 32 else 48, standard)
+        return hkdfExpandLabel(secret, "finished", ByteArray(0), HASH_LEN, standard)
     }
 
     // -- Hex utility -------------------------------------------------------

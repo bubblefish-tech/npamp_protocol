@@ -7,13 +7,13 @@ import (
 )
 
 // EncodeKEMPrivate builds and encodes a versioned KEM private-key record for
-// the named hybrid-KEM group (npamp.KEMX25519MLKEM768 or
-// npamp.KEMSecP384r1MLKEM1024), storing the two component private keys in
-// the fixed post-quantum-first Components order: mlkemSeed (the FIPS 203
-// "d || z" seed crypto/mlkem's DecapsulationKey768/1024.Bytes() returns),
-// then classicalPriv (the raw crypto/ecdh private-key bytes for X25519 or
-// P-384, per group). This storage order is independent of the wire
-// hybrid-KEM combiner order — see KeyRecord's doc comment.
+// the named hybrid-KEM group (npamp.KEMX25519MLKEM768), storing the two
+// component private keys in the fixed post-quantum-first Components order:
+// mlkemSeed (the FIPS 203 "d || z" seed crypto/mlkem's
+// DecapsulationKey768.Bytes() returns), then classicalPriv (the raw
+// crypto/ecdh X25519 private-key bytes). This storage order is independent of
+// the wire hybrid-KEM combiner order — see KeyRecord's doc comment. A
+// npamp.KEMSecP384r1MLKEM1024 group returns ErrGroupNotSupported and no bytes.
 func EncodeKEMPrivate(group npamp.KEMID, mlkemSeed, classicalPriv []byte) ([]byte, error) {
 	return Encode(KeyRecord{
 		FormatVersion: CurrentFormatVersion,
@@ -27,8 +27,8 @@ func EncodeKEMPrivate(group npamp.KEMID, mlkemSeed, classicalPriv []byte) ([]byt
 // EncodeKEMPublic builds and encodes a versioned KEM public-key record for
 // the named hybrid-KEM group, storing the two component public keys
 // post-quantum-first: mlkemEncap (the crypto/mlkem encapsulation-key bytes),
-// then classicalPub (the raw crypto/ecdh public-key bytes for X25519 or
-// P-384, per group).
+// then classicalPub (the raw crypto/ecdh X25519 public-key bytes).
+// npamp.KEMSecP384r1MLKEM1024 returns ErrGroupNotSupported and no bytes.
 func EncodeKEMPublic(group npamp.KEMID, mlkemEncap, classicalPub []byte) ([]byte, error) {
 	return Encode(KeyRecord{
 		FormatVersion: CurrentFormatVersion,
@@ -42,7 +42,8 @@ func EncodeKEMPublic(group npamp.KEMID, mlkemEncap, classicalPub []byte) ([]byte
 // DecodeKEMPrivate decodes a KEM private-key record, requiring rec.Role ==
 // RoleKEMPrivate (ErrRoleMismatch otherwise), and returns the negotiated
 // group and the two component private keys in the same post-quantum-first
-// order EncodeKEMPrivate wrote them.
+// order EncodeKEMPrivate wrote them. A record for npamp.KEMSecP384r1MLKEM1024
+// returns ErrGroupNotSupported and no key material.
 func DecodeKEMPrivate(data []byte, acceptedGenerations ...string) (group npamp.KEMID, mlkemSeed, classicalPriv []byte, err error) {
 	rec, err := Decode(data, acceptedGenerations...)
 	if err != nil {
@@ -60,7 +61,8 @@ func DecodeKEMPrivate(data []byte, acceptedGenerations ...string) (group npamp.K
 // DecodeKEMPublic decodes a KEM public-key record, requiring rec.Role ==
 // RoleKEMPublic (ErrRoleMismatch otherwise), and returns the negotiated
 // group and the two component public keys in the same post-quantum-first
-// order EncodeKEMPublic wrote them.
+// order EncodeKEMPublic wrote them. A record for npamp.KEMSecP384r1MLKEM1024
+// returns ErrGroupNotSupported and no key material.
 func DecodeKEMPublic(data []byte, acceptedGenerations ...string) (group npamp.KEMID, mlkemEncap, classicalPub []byte, err error) {
 	rec, err := Decode(data, acceptedGenerations...)
 	if err != nil {

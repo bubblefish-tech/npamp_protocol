@@ -41,15 +41,9 @@ for ($i = 0; $i < 12; $i++) {
 $aad = (new Frame(Npamp::FRAME_PING, Npamp::CHAN_CONTROL))->headerPrefix(11);
 $sealed = Npamp::sealAes256Gcm($key, $iv2, 7, $aad, 'hello world');
 
-// 4. Key schedule: master = 48 x 0x2A (SHA-384 length), High profile (standard=false), traffic secret -> key.
-$master = str_repeat("\x2a", 48);
-$ts = Npamp::deriveTrafficSecret($master, 0, 0, Npamp::AEAD_AES256_GCM, Npamp::CHAN_CONTROL, false);
-[$tk, ] = Npamp::deriveKeyIv($ts, false);
-
 echo "{\n"
     . '  "spec": "draft-bubblefish-npamp-00",' . "\n"
     . '  "header_ping_control_seq0": "' . bin2hex($header) . '",' . "\n"
     . '  "nonce_iv1to12_seq0102": "' . bin2hex($nonce) . '",' . "\n"
-    . '  "aes256gcm_seal_helloworld": "' . bin2hex($sealed) . '",' . "\n"
-    . '  "traffic_key_sha384": "' . bin2hex($tk) . '"' . "\n"
+    . '  "aes256gcm_seal_helloworld": "' . bin2hex($sealed) . '"' . "\n"
     . "}\n";

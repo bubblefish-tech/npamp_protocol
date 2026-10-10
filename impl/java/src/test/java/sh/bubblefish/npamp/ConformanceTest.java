@@ -54,15 +54,6 @@ public final class ConformanceTest {
                 "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf"));
     }
 
-    private static void vecTrafficKey() {
-        byte[] master = new byte[48];
-        java.util.Arrays.fill(master, (byte) 0x2A);
-        byte[] ts = Npamp.deriveTrafficSecret(master, 0, 0L, Npamp.AEAD_AES256_GCM, Npamp.CHAN_CONTROL, false);
-        byte[] tk = Npamp.deriveKeyIv(ts, false)[0];
-        check("vec_traffic_key", Npamp.toHex(tk).equals(
-                "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc"));
-    }
-
     // --- property tests (mirror the Go/Rust suites) ---
 
     private static void roundtrip() {
@@ -123,7 +114,6 @@ public final class ConformanceTest {
         vecHeader();
         vecNonce();
         vecAead();
-        vecTrafficKey();
         roundtrip();
         crcValidatedFirst();
         reservedMustBeZero();

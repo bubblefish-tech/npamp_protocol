@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"crypto/mldsa"
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
@@ -59,60 +58,22 @@ type Config struct {
 	TLSConfig *tls.Config
 
 	// Identity is the local long-term Ed25519 signing key proven to the peer
-	// during the handshake when the negotiated profile is Standard. A fresh
-	// ephemeral key is generated when nil AND the offered/accepted profile set
-	// includes Standard (the zero-value, single-profile behavior is unchanged).
+	// during the handshake. A fresh ephemeral key is generated when nil.
 	Identity ed25519.PrivateKey
-
-	// MLDSAIdentity is the local long-term ML-DSA-87 (FIPS 204, post-quantum;
-	// IANA TLS SignatureScheme 0x0906) signing key proven to the peer when the
-	// negotiated profile is High or Sovereign (spec/05_profiles.md §"Profile
-	// invariants" — High and Sovereign both require ML-DSA-87; core
-	// npamp.SignCertVerifyMLDSA87 / VerifyCertVerifyMLDSA87). Nil by default:
-	// an endpoint that never sets it can only ever offer or accept the
-	// Standard profile, exactly today's behavior. Construct one with
-	// mldsa.GenerateKey(mldsa.MLDSA87()) or
-	// mldsa.NewPrivateKey(mldsa.MLDSA87(), seed). Offering or accepting High
-	// or Sovereign (via Profiles) with MLDSAIdentity nil is a Config error:
-	// Dial, Listen.Accept, DialConn, AcceptConn, DialRaw, and AcceptRaw all
-	// return it before any wire I/O.
-	//
-	// Residual (tracked, not a silent gap): spec/05_profiles.md's Profile
-	// invariants table sets the High/Sovereign minimum KEM to
-	// SecP384r1MLKEM1024 (kem1024.go), but the core package's exported
-	// combiner (npamp.HandshakeSecret) accepts only the X25519MLKEM768
-	// SharedSecrets type — there is no exported way to combine a
-	// SharedSecrets1024 into a handshake secret today. This SDK therefore
-	// negotiates X25519MLKEM768 for every profile (matching every other
-	// reference driver in this tree, including cmd/npamp-interop); a High or
-	// Sovereign session here diversifies CertVerify (ML-DSA-87) and the KDF
-	// hash (SHA-384, automatic via the negotiated Profile) but not the KEM
-	// group. Closing this gap requires extending the core package's exported
-	// API and is out of this SDK build's scope.
-	MLDSAIdentity *mldsa.PrivateKey
 
 	// Profiles is the ordered set of N-PAMP security profiles (spec/05_profiles.md)
 	// this endpoint offers (client, via Dial/DialConn/DialRaw) or is willing to
 	// select from (server, via Listen/AcceptConn/AcceptRaw). The zero value
-	// (nil or empty) is exactly []npamp.Profile{npamp.ProfileStandard} — the
-	// BYTE-FOR-BYTE same ClientHello/ServerHello a pre-multi-profile caller
-	// produced, so an existing caller's wire behavior is unchanged. On the
-	// server, the FIRST entry of Profiles that also appears in the client's
-	// ProfileOffer is selected (Profiles is therefore the server's preference
-	// order, strongest-first if configured that way); if no entry matches, the
-	// handshake is refused. Offering or accepting npamp.ProfileHigh or
-	// npamp.ProfileSovereign requires MLDSAIdentity to be set.
+	// (nil or empty) is exactly []npamp.Profile{npamp.ProfileStandard}. This
+	// package implements the Standard profile only: a Config.Profiles entry
+	// naming any other profile is refused with npamp.ErrNoSuiteForProfile
+	// before any wire I/O, by Dial, Listen, DialConn, AcceptConn, DialRaw,
+	// AcceptRaw and DialWithFallback.
 	Profiles []npamp.Profile
 
-	// ExpectedPeerKey, when set, pins the peer's identity — the raw public-key
-	// encoding for the NEGOTIATED profile's signature scheme (an Ed25519
-	// public key at Standard, an ML-DSA-87 public-key encoding at High or
-	// Sovereign, per npamp.SignCertVerifyMLDSA87's TLV 0x09 IdentityKey) — and
+	// ExpectedPeerKey, when set, pins the peer's Ed25519 identity public key and
 	// the handshake fails on a mismatch. On the client the check runs BEFORE
 	// CLIENT_AUTH is sent, so the client never authenticates to an impostor.
-	// The field keeps its Ed25519-typed name and type for backward
-	// compatibility; ed25519.PublicKey is itself a []byte and accepts an
-	// ML-DSA-87 encoding unchanged.
 	ExpectedPeerKey ed25519.PublicKey
 
 	// HandshakeTimeout bounds the server-side handshake (TLS + N-PAMP) per
@@ -155,13 +116,7 @@ type Conn struct {
 	masterRecv []byte
 	genSend    atomic.Uint64
 	genRecv    atomic.Uint64
-	// peerID is the peer's authenticated identity-key encoding for the
-	// NEGOTIATED profile: an Ed25519 public key (32 octets) at Standard, or an
-	// ML-DSA-87 public-key encoding (2592 octets, mldsa.MLDSA87PublicKeySize)
-	// at High or Sovereign. []byte rather than ed25519.PublicKey because the
-	// two schemes are different sizes; PeerIdentity() below returns it typed
-	// ed25519.PublicKey for backward compatibility (ed25519.PublicKey is
-	// itself a []byte, so this is a widening, not a truncation).
+	// peerID is the peer's authenticated Ed25519 identity public key (32 octets).
 	peerID []byte
 
 	sendDir npamp.Direction
@@ -285,30 +240,11 @@ func (k *epochKeys) advance(master []byte, dir npamp.Direction, channel npamp.Ch
 	return k.derive(master, dir, channel, p)
 }
 
-// PeerIdentity returns a copy of the peer's authenticated identity-key
-// encoding (proven by the handshake), typed ed25519.PublicKey for backward
-// compatibility. At the Standard profile this IS a genuine Ed25519 public
-// key. At High or Sovereign it is instead the raw ML-DSA-87 public-key
-// encoding (2592 octets) — NOT a valid Ed25519 key; call Profile() first to
-// tell them apart, or use PeerMLDSAIdentity for a typed accessor. A caller
-// can record either encoding for trust-on-first-use pinning via
-// Config.ExpectedPeerKey on a later connection.
+// PeerIdentity returns a copy of the peer's authenticated Ed25519 identity
+// public key (proven by the handshake). A caller can record it for
+// trust-on-first-use pinning via Config.ExpectedPeerKey on a later connection.
 func (c *Conn) PeerIdentity() ed25519.PublicKey {
 	return append(ed25519.PublicKey(nil), c.peerID...)
-}
-
-// PeerMLDSAIdentity returns the peer's authenticated ML-DSA-87 public key
-// when this session negotiated the High or Sovereign profile, or nil at
-// Standard (use PeerIdentity there instead). The error is non-nil only if the
-// recorded peer identity bytes do not decode as an ML-DSA-87 public key,
-// which cannot happen for a Conn produced by this package's own handshake
-// (VerifyCertVerifyMLDSA87 already validated it) but is checked rather than
-// ignored so a hand-built Conn cannot silently return a corrupt key.
-func (c *Conn) PeerMLDSAIdentity() (*mldsa.PublicKey, error) {
-	if c.profile == npamp.ProfileStandard {
-		return nil, nil
-	}
-	return mldsa.NewPublicKey(mldsa.MLDSA87(), c.peerID)
 }
 
 // Profile returns the security profile (spec/05_profiles.md) this session

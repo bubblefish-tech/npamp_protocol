@@ -12,9 +12,9 @@
 #                        then (key,iv) = (ExpandLabel(ts,"key","",32), ExpandLabel(ts,"iv","",12)).
 #                        The per-(direction,epoch,suite,channel) context binding was ungraded as an op.
 #
-# NON-CIRCULARITY (test-vectors/README.md; 55_conformance_requirements.md §5.2; ADR-0008):
+# NON-CIRCULARITY (test-vectors/README.md; 55_conformance_requirements.md §5.2):
 #   ANCHOR-based, like key-schedule-kat.json. The HKDF here is implemented from RFC 5869 §2.2/§2.3
-#   over Python's stdlib hmac + hashlib (an independent HMAC-SHA-256/384, RFC 2104) -- NOT
+#   over Python's stdlib hmac + hashlib (an independent HMAC-SHA-256, RFC 2104) -- NOT
 #   impl/go/crypto/hkdf. Before emitting any "n-pamp " vector the oracle PROVES its own mechanism:
 #     (1) raw HKDF-Extract/Expand == RFC 5869 Appendix-A.1 TC1 (known PRK/OKM), and
 #     (2) HKDF-Expand-Label with prefix "tls13 " == RFC 8448 §3 (known write_key/write_iv/finished_key).
@@ -27,7 +27,7 @@
 import json, sys, hmac, hashlib
 
 # ---------- independent HKDF (RFC 5869) over stdlib hmac/hashlib ----------
-HASHES = {"sha256": hashlib.sha256, "sha384": hashlib.sha384}
+HASHES = {"sha256": hashlib.sha256}
 
 def hkdf_extract(h, salt, ikm):
     return hmac.new(salt, ikm, h).digest()
@@ -70,7 +70,6 @@ NPAMP = "n-pamp "
 
 # ---------- hkdf.expand_label vectors (prefix "n-pamp ") ----------
 SECRET32 = bytes(range(32))
-SECRET48 = bytes(range(48))
 TH_KEM = uh("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
 
 def el(tcid, req, comment, hashname, secret, label, context, length, result, flags=None):
@@ -93,8 +92,6 @@ expand_label_tests = [
        "sha256", SECRET32, "finished", b"", 32, "valid"),
     el(4, "10/5/expand-label-with-context", "'c hs' with a 32-octet transcript context (TH_kem)",
        "sha256", SECRET32, "c hs", TH_KEM, 32, "valid"),
-    el(5, "10/5/expand-label-sha384", "SHA-384 path (High/Sovereign): 'master'(48), empty context",
-       "sha384", SECRET48, "master", b"", 48, "valid"),
     el(6, "10/5/expand-label-length-MUST-reject", "length > 255*HashLen (8161 > 255*32) MUST be rejected (RFC 5869 §2.3)",
        "sha256", SECRET32, "key", b"", 255 * 32 + 1, "invalid", ["MustReject", "HkdfLengthExceeded"]),
 ]
@@ -121,7 +118,6 @@ def tk(tcid, req, comment, profile, hashname, master, dir_, epoch, suite, channe
     return o
 
 MASTER_STD = bytes(range(32))
-MASTER_HIGH = bytes(range(48))
 SUITE_AESGCM, SUITE_CHACHA = 0x0001, 0x0002
 CH_CONTROL, CH_MEMORY, CH_STREAM = 0x0000, 0x0001, 0x000C
 
@@ -134,8 +130,6 @@ traffic_tests = [
        "Standard", "sha256", MASTER_STD, 0, 0, SUITE_AESGCM, CH_MEMORY, ["ChannelDiscriminator"]),
     tk(4, "10/5/traffic-epoch-suite-binding", "epoch 5 + ChaCha20-Poly1305 + Stream channel (epoch/suite binding)",
        "Standard", "sha256", MASTER_STD, 0, 5, SUITE_CHACHA, CH_STREAM),
-    tk(5, "10/5/traffic-sha384-high", "High profile SHA-384 traffic secret -> 32-octet key, 12-octet iv",
-       "High", "sha384", MASTER_HIGH, 0, 0, SUITE_AESGCM, CH_CONTROL),
 ]
 
 groups = [

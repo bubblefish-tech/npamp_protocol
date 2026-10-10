@@ -7,7 +7,7 @@
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use hkdf::Hkdf;
-use sha2::{Sha256, Sha384};
+use sha2::Sha256;
 
 /// Native-channel deterministic-CBOR operation-body decoders (companion specs 84–8b:
 /// Capability, Immune, Settlement, Telemetry, Commerce, Interaction, Workflow, Knowledge).
@@ -30,21 +30,6 @@ pub mod carriage;
 /// module docs for the exact scope and the `no-default-features` opt-out.
 #[cfg(feature = "session")]
 pub mod session;
-
-/// The SecP384r1MLKEM1024 hybrid KEM (KEM 0x11ed, High/Sovereign minimum;
-/// registries/kem.csv, RFC 10024 formerly draft-ietf-tls-ecdhe-mlkem) and its
-/// handshake-secret combiner. Gated behind the `session` Cargo feature like the
-/// X25519MLKEM768 KEM operations `session` uses (same PQ/ECDH dependency
-/// posture); see the module docs.
-#[cfg(feature = "session")]
-pub mod kem1024;
-
-/// ML-DSA-87 (FIPS 204) CertVerify (KEM-independent; spec/10 section 6.1), the
-/// High/Sovereign post-quantum signature scheme (`SIG_MLDSA87` = 0x0906).
-/// Gated behind the `session` Cargo feature like `kem1024`; see the module
-/// docs.
-#[cfg(feature = "session")]
-pub mod mldsa87;
 
 pub const HEADER_SIZE: usize = 36;
 pub const PROTOCOL_VERSION: u8 = 0x2;
@@ -219,9 +204,45 @@ pub fn open_aes256gcm(key: &[u8; 32], iv: &[u8; 12], seq: u64, aad: &[u8], seale
         .map_err(|_| ())
 }
 
+/// Returned when a key-schedule or handshake primitive is asked to work for a
+/// profile other than Standard. This crate implements the Standard profile only;
+/// the High and Sovereign profiles keep their code points and negotiation
+/// behaviour but are refused here, before any computation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoSuiteForProfile;
+
+impl std::fmt::Display for NoSuiteForProfile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("npamp: no cipher suite is implemented for this profile (this crate implements the Standard profile only)")
+    }
+}
+
+impl std::error::Error for NoSuiteForProfile {}
+
+impl From<NoSuiteForProfile> for std::io::Error {
+    /// The refusal as an `io::Error` of kind `Unsupported`; the source error is
+    /// [`NoSuiteForProfile`], recoverable with `get_ref()` and `downcast_ref`.
+    fn from(e: NoSuiteForProfile) -> Self {
+        std::io::Error::new(std::io::ErrorKind::Unsupported, e)
+    }
+}
+
+/// Standard-only gate shared by the key schedule: `standard == false` names a
+/// profile this crate has no suite for.
+fn require_standard(standard: bool) -> Result<(), NoSuiteForProfile> {
+    if standard {
+        Ok(())
+    } else {
+        Err(NoSuiteForProfile)
+    }
+}
+
+/// HashLen of the Standard profile's KDF hash (SHA-256), in octets.
+const HASH_LEN: usize = 32;
+
 /// HKDF-Expand-Label with the N-PAMP prefix (draft-00 7.4). `standard` selects
-/// SHA-256 (Standard profile) vs SHA-384 (High/Sovereign).
-pub fn hkdf_expand_label(secret: &[u8], label: &str, context: &[u8], length: usize, standard: bool) -> Vec<u8> {
+/// the Standard profile (SHA-256); `false` is refused with [`NoSuiteForProfile`].
+pub fn hkdf_expand_label(secret: &[u8], label: &str, context: &[u8], length: usize, standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
     let full = format!("{}{}", LABEL_PREFIX, label);
     let mut info = Vec::with_capacity(2 + 1 + full.len() + 1 + context.len());
     info.extend_from_slice(&(length as u16).to_be_bytes());
@@ -232,106 +253,97 @@ pub fn hkdf_expand_label(secret: &[u8], label: &str, context: &[u8], length: usi
     hkdf_expand(secret, &info, length, standard)
 }
 
-/// HKDF-Expand only (RFC 5869 §2.3): expand the PRK with `info` to `length` octets.
-/// SHA-256 when `standard`, else SHA-384. Exposed for independent known-answer testing
-/// against RFC 5869 / Wycheproof (the label structure above wraps this primitive).
-pub fn hkdf_expand(prk: &[u8], info: &[u8], length: usize, standard: bool) -> Vec<u8> {
+/// HKDF-Expand only (RFC 5869 §2.3): expand the PRK with `info` to `length` octets
+/// under SHA-256; `standard == false` is refused with [`NoSuiteForProfile`]. Exposed for
+/// independent known-answer testing against RFC 5869 / Wycheproof (the label structure
+/// above wraps this primitive).
+pub fn hkdf_expand(prk: &[u8], info: &[u8], length: usize, standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    require_standard(standard)?;
     let mut okm = vec![0u8; length];
-    if standard {
-        Hkdf::<Sha256>::from_prk(prk).expect("prk").expand(info, &mut okm).expect("expand");
-    } else {
-        Hkdf::<Sha384>::from_prk(prk).expect("prk").expand(info, &mut okm).expect("expand");
-    }
-    okm
+    Hkdf::<Sha256>::from_prk(prk).expect("prk").expand(info, &mut okm).expect("expand");
+    Ok(okm)
 }
 
 /// Binds the (direction, epoch, AEAD suite, channel) tuple into the key schedule
 /// (draft-00 7.5).
-pub fn derive_traffic_secret(master: &[u8], dir: u8, epoch: u64, suite: u16, channel: u16, standard: bool) -> Vec<u8> {
+pub fn derive_traffic_secret(master: &[u8], dir: u8, epoch: u64, suite: u16, channel: u16, standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    require_standard(standard)?;
     let mut ctx = Vec::with_capacity(1 + 8 + 2 + 2);
     ctx.push(dir);
     ctx.extend_from_slice(&epoch.to_be_bytes());
     ctx.extend_from_slice(&suite.to_be_bytes());
     ctx.extend_from_slice(&channel.to_be_bytes());
-    let hlen = if standard { 32 } else { 48 };
-    hkdf_expand_label(master, "traffic", &ctx, hlen, standard)
+    hkdf_expand_label(master, "traffic", &ctx, HASH_LEN, standard)
 }
 
-pub fn derive_key_iv(secret: &[u8], standard: bool) -> ([u8; 32], [u8; 12]) {
-    let k = hkdf_expand_label(secret, "key", &[], 32, standard);
-    let v = hkdf_expand_label(secret, "iv", &[], 12, standard);
+pub fn derive_key_iv(secret: &[u8], standard: bool) -> Result<([u8; 32], [u8; 12]), NoSuiteForProfile> {
+    let k = hkdf_expand_label(secret, "key", &[], 32, standard)?;
+    let v = hkdf_expand_label(secret, "iv", &[], 12, standard)?;
     let mut key = [0u8; 32];
     key.copy_from_slice(&k);
     let mut iv = [0u8; 12];
     iv.copy_from_slice(&v);
-    (key, iv)
+    Ok((key, iv))
 }
 
-/// HKDF-Extract (RFC 5869 §2.2): PRK = HMAC-Hash(salt, IKM). SHA-256 at the Standard
-/// profile, SHA-384 at High/Sovereign — wired through `standard` like the rest of the key
-/// schedule. This is the salted HMAC the handshake-secret ladder extracts the two KEM
-/// shared secrets through; the leaf HKDF-Expand-Label (above) wraps the matching Expand.
-pub fn hkdf_extract(salt: &[u8], ikm: &[u8], standard: bool) -> Vec<u8> {
-    if standard {
-        Hkdf::<Sha256>::extract(Some(salt), ikm).0.to_vec()
-    } else {
-        Hkdf::<Sha384>::extract(Some(salt), ikm).0.to_vec()
-    }
+/// HKDF-Extract (RFC 5869 §2.2): PRK = HMAC-Hash(salt, IKM) under SHA-256;
+/// `standard == false` is refused with [`NoSuiteForProfile`]. This is the salted HMAC the
+/// handshake-secret ladder extracts the two KEM shared secrets through; the leaf
+/// HKDF-Expand-Label (above) wraps the matching Expand.
+pub fn hkdf_extract(salt: &[u8], ikm: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    require_standard(standard)?;
+    Ok(Hkdf::<Sha256>::extract(Some(salt), ikm).0.to_vec())
 }
 
 /// handshake_secret = HKDF-Extract(salt = HashLen zero octets, IKM = ML-KEM_SS || X25519_SS)
 /// (binding spec/10 §5). The ML-KEM shared secret is concatenated FIRST and the X25519 shared
-/// secret SECOND (ML-KEM-first, ADR-0005). `mlkem_ss` / `x25519_ss` are the two KEM shared
+/// secret SECOND (ML-KEM-first). `mlkem_ss` / `x25519_ss` are the two KEM shared
 /// secrets; the default salt is HashLen zero octets per RFC 5869 §2.2.
-pub fn derive_handshake_secret(mlkem_ss: &[u8], x25519_ss: &[u8], standard: bool) -> Vec<u8> {
+pub fn derive_handshake_secret(mlkem_ss: &[u8], x25519_ss: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    require_standard(standard)?;
     let mut ikm = Vec::with_capacity(mlkem_ss.len() + x25519_ss.len());
     ikm.extend_from_slice(mlkem_ss);
     ikm.extend_from_slice(x25519_ss);
-    let hlen = if standard { 32 } else { 48 };
-    let salt = vec![0u8; hlen];
+    let salt = vec![0u8; HASH_LEN];
     hkdf_extract(&salt, &ikm, standard)
 }
 
 /// c_hs = HKDF-Expand-Label(handshake_secret, "c hs", th_kem, HashLen) (binding spec/10 §5):
 /// the client handshake-traffic secret. `th_kem` is the transcript hash through the KEM exchange.
-pub fn derive_client_handshake_secret(handshake_secret: &[u8], th_kem: &[u8], standard: bool) -> Vec<u8> {
-    let hlen = if standard { 32 } else { 48 };
-    hkdf_expand_label(handshake_secret, "c hs", th_kem, hlen, standard)
+pub fn derive_client_handshake_secret(handshake_secret: &[u8], th_kem: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    hkdf_expand_label(handshake_secret, "c hs", th_kem, HASH_LEN, standard)
 }
 
 /// s_hs = HKDF-Expand-Label(handshake_secret, "s hs", th_kem, HashLen) (binding spec/10 §5):
 /// the server handshake-traffic secret. `th_kem` is the transcript hash through the KEM exchange.
-pub fn derive_server_handshake_secret(handshake_secret: &[u8], th_kem: &[u8], standard: bool) -> Vec<u8> {
-    let hlen = if standard { 32 } else { 48 };
-    hkdf_expand_label(handshake_secret, "s hs", th_kem, hlen, standard)
+pub fn derive_server_handshake_secret(handshake_secret: &[u8], th_kem: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    hkdf_expand_label(handshake_secret, "s hs", th_kem, HASH_LEN, standard)
 }
 
 /// master = HKDF-Expand-Label(handshake_secret, "master", th_ccv, HashLen) (binding spec/10 §5):
 /// the master secret bound to the client-authenticated transcript. `th_ccv` is the transcript
 /// hash through the client CertVerify.
-pub fn derive_master_secret(handshake_secret: &[u8], th_ccv: &[u8], standard: bool) -> Vec<u8> {
-    let hlen = if standard { 32 } else { 48 };
-    hkdf_expand_label(handshake_secret, "master", th_ccv, hlen, standard)
+pub fn derive_master_secret(handshake_secret: &[u8], th_ccv: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    hkdf_expand_label(handshake_secret, "master", th_ccv, HASH_LEN, standard)
 }
 
 /// finished_key(secret) = HKDF-Expand-Label(secret, "finished", "", HashLen) (binding spec/10
 /// §6.2 / §5.4). The client Finished key derives from c_hs, the server Finished key from s_hs;
 /// the result keys the HMAC in handshake::compute_finished.
-pub fn finished_key(secret: &[u8], standard: bool) -> Vec<u8> {
-    let hlen = if standard { 32 } else { 48 };
-    hkdf_expand_label(secret, "finished", &[], hlen, standard)
+pub fn finished_key(secret: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+    hkdf_expand_label(secret, "finished", &[], HASH_LEN, standard)
 }
 
 /// N-PAMP draft-00 handshake binding layer (binding spec/10): the transcript hash
 /// (section 3), the Finished MAC (section 6.2; RFC 8446 section 4.4.4), and the
 /// CertVerify signature (section 6.1; RFC 8446 section 4.4.3 structure; Ed25519 per
-/// RFC 8032). Big-endian throughout. SHA-256/HMAC-SHA-256 at the Standard profile,
-/// SHA-384/HMAC-SHA-384 at High/Sovereign.
+/// RFC 8032). Big-endian throughout. SHA-256/HMAC-SHA-256 at the Standard profile;
+/// any other profile is refused with [`crate::NoSuiteForProfile`].
 pub mod handshake {
-    use crate::SIG_ED25519;
+    use crate::{require_standard, NoSuiteForProfile, SIG_ED25519};
     use ed25519_dalek::{Signature, SignatureError, Signer, SigningKey, VerifyingKey};
     use hmac::{Hmac, Mac};
-    use sha2::{Digest, Sha256, Sha384};
+    use sha2::{Digest, Sha256};
 
     /// Handshake frame types (binding spec/10 section 1), carried on the control channel.
     pub const FRAME_CLIENT_HELLO: u16 = 0x0100;
@@ -348,7 +360,7 @@ pub mod handshake {
     /// appends the 2-octet frame type ONLY (NOT the rest of the 36-octet frame header — the
     /// spec section 3 / 7.1 divergence from RFC 8446 section 4.4.1); [`Transcript::add_tlv`]
     /// appends Type(2 BE) || Length(2 BE) || Value. A transcript point = the hash over all
-    /// bytes absorbed so far (SHA-256 at Standard, SHA-384 at High/Sovereign).
+    /// bytes absorbed so far (SHA-256 at Standard).
     #[derive(Debug, Clone, Default)]
     pub struct Transcript {
         buf: Vec<u8>,
@@ -371,44 +383,32 @@ pub mod handshake {
             self.buf.extend_from_slice(value);
         }
 
-        /// Hashes every octet absorbed so far (SHA-256 when `standard`, else SHA-384).
-        pub fn hash(&self, standard: bool) -> Vec<u8> {
-            if standard {
-                Sha256::digest(&self.buf).to_vec()
-            } else {
-                Sha384::digest(&self.buf).to_vec()
-            }
+        /// Hashes every octet absorbed so far (SHA-256); `standard == false` is refused with
+        /// [`NoSuiteForProfile`].
+        pub fn hash(&self, standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+            require_standard(standard)?;
+            Ok(Sha256::digest(&self.buf).to_vec())
         }
     }
 
     /// Finished verify_data = HMAC(finished_key, transcript_hash) under the profile hash
-    /// (HMAC-SHA-256 at Standard, HMAC-SHA-384 at High/Sovereign). HMAC accepts a key of
-    /// any length, so `new_from_slice` never fails here.
-    pub fn compute_finished(finished_key: &[u8], transcript_hash: &[u8], standard: bool) -> Vec<u8> {
-        if standard {
-            let mut mac = Hmac::<Sha256>::new_from_slice(finished_key).expect("HMAC accepts any key length");
-            mac.update(transcript_hash);
-            mac.finalize().into_bytes().to_vec()
-        } else {
-            let mut mac = Hmac::<Sha384>::new_from_slice(finished_key).expect("HMAC accepts any key length");
-            mac.update(transcript_hash);
-            mac.finalize().into_bytes().to_vec()
-        }
+    /// (HMAC-SHA-256 at Standard; `standard == false` is refused with [`NoSuiteForProfile`]).
+    /// HMAC accepts a key of any length, so `new_from_slice` never fails here.
+    pub fn compute_finished(finished_key: &[u8], transcript_hash: &[u8], standard: bool) -> Result<Vec<u8>, NoSuiteForProfile> {
+        require_standard(standard)?;
+        let mut mac = Hmac::<Sha256>::new_from_slice(finished_key).expect("HMAC accepts any key length");
+        mac.update(transcript_hash);
+        Ok(mac.finalize().into_bytes().to_vec())
     }
 
     /// Recomputes the Finished MAC and constant-time-compares it to the received verify_data
     /// via [`hmac::Mac::verify_slice`] (which uses `subtle::ConstantTimeEq` and rejects a
-    /// length mismatch).
-    pub fn verify_finished(finished_key: &[u8], transcript_hash: &[u8], verify_data: &[u8], standard: bool) -> bool {
-        if standard {
-            let mut mac = Hmac::<Sha256>::new_from_slice(finished_key).expect("HMAC accepts any key length");
-            mac.update(transcript_hash);
-            mac.verify_slice(verify_data).is_ok()
-        } else {
-            let mut mac = Hmac::<Sha384>::new_from_slice(finished_key).expect("HMAC accepts any key length");
-            mac.update(transcript_hash);
-            mac.verify_slice(verify_data).is_ok()
-        }
+    /// length mismatch). `standard == false` is refused with [`NoSuiteForProfile`].
+    pub fn verify_finished(finished_key: &[u8], transcript_hash: &[u8], verify_data: &[u8], standard: bool) -> Result<bool, NoSuiteForProfile> {
+        require_standard(standard)?;
+        let mut mac = Hmac::<Sha256>::new_from_slice(finished_key).expect("HMAC accepts any key length");
+        mac.update(transcript_hash);
+        Ok(mac.verify_slice(verify_data).is_ok())
     }
 
     /// Builds an Ed25519 signing key from its raw 32-octet seed (RFC 8032).

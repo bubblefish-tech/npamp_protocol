@@ -408,7 +408,7 @@ func (s *responderScenario) establishHandshakeSecrets(sh *npamp.ServerHello, saF
 	}
 	s.hs = hs
 
-	tr := npamp.NewTranscript(profile)
+	tr := newTranscript()
 	tr.AddFrame(npamp.FrameClientHello, s.ch.TLVs())
 	tr.AddFrame(npamp.FrameServerHello, sh.TLVs())
 	cHS, sHS, err := npamp.DeriveHandshakeTrafficSecrets(hs, tr.Sum(), profile)
@@ -445,7 +445,10 @@ func (s *responderScenario) establishHandshakeSecrets(sh *npamp.ServerHello, saF
 	if err != nil {
 		return fmt.Errorf("derive client Finished key: %w", err)
 	}
-	cFin := npamp.ComputeFinished(cFinKey, tr.Sum(), profile)
+	cFin, err := npamp.ComputeFinished(cFinKey, tr.Sum(), profile)
+	if err != nil {
+		return fmt.Errorf("compute client Finished: %w", err)
+	}
 	auth := &npamp.AuthMessage{IdentityKey: driverPub, CertVerify: cCV, Finished: cFin}
 	s.caPlaintext = auth.Encode()
 

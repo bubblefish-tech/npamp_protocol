@@ -2,24 +2,14 @@ package npamp
 
 import (
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/hex"
-	"hash"
 	"testing"
 )
 
 const (
 	xvSecret32 = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
-	xvSecret48 = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"
 	xvTHKem    = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 )
-
-func xvHash(name string) func() hash.Hash {
-	if name == "sha384" {
-		return sha512.New384
-	}
-	return sha256.New
-}
 
 // TestHkdfExpandLabelOracleCrossValidate proves NON-CIRCULARITY for HKDF-Expand-Label (TRACK C6):
 // the OKM bytes below are the ACTUAL output of the independent Python oracle
@@ -32,28 +22,25 @@ func xvHash(name string) func() hash.Hash {
 func TestHkdfExpandLabelOracleCrossValidate(t *testing.T) {
 	cases := []struct {
 		name    string
-		hash    string
 		secret  string
 		label   string
 		context string
 		length  int
 		out     string
 	}{
-		{"key32_prefix_discriminator", "sha256", xvSecret32, "key", "", 32,
+		{"key32_prefix_discriminator", xvSecret32, "key", "", 32,
 			"3ed9435c451cfedb0cbccdb8e5a8fd957f4e942a834fd1de6ac4aa00de088150"},
-		{"iv12", "sha256", xvSecret32, "iv", "", 12, "0d9a0b276cd21e696c09c452"},
-		{"finished", "sha256", xvSecret32, "finished", "", 32,
+		{"iv12", xvSecret32, "iv", "", 12, "0d9a0b276cd21e696c09c452"},
+		{"finished", xvSecret32, "finished", "", 32,
 			"e09de935b094501795c653b885cc9f863a9f79a8054daa522658b0d3f6ff4dba"},
-		{"c_hs_with_context", "sha256", xvSecret32, "c hs", xvTHKem, 32,
+		{"c_hs_with_context", xvSecret32, "c hs", xvTHKem, 32,
 			"01b4c0ef106e5204e5b485fffdea7f8ab7bf08b1960017cd7ecfc3a6d65de82d"},
-		{"master_sha384", "sha384", xvSecret48, "master", "", 48,
-			"336e8b95fe0a85fdb0cdbdb75af6f646b88d5a7461ac3f005ce6045351b558bfd10166c83c869c5b384b6238b086f436"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			secret, _ := hex.DecodeString(c.secret)
 			ctx, _ := hex.DecodeString(c.context)
-			out, err := HkdfExpandLabel(secret, c.label, ctx, c.length, xvHash(c.hash))
+			out, err := HkdfExpandLabel(secret, c.label, ctx, c.length, sha256.New)
 			if err != nil {
 				t.Fatalf("expand-label: %v", err)
 			}
@@ -97,8 +84,6 @@ func TestTrafficKeyIVOracleCrossValidate(t *testing.T) {
 			"f9fd0ac17b096ba2e22ff8f8479d88396f878b0a80da26ddded820a590cc86e0", "89e38010d128513dad30099e"},
 		{"std_epoch5_chacha_stream", ProfileStandard, xvSecret32, DirClientToServer, 5, AEADChaCha20Poly1305, ChanStream,
 			"20024f3e2ae4fdc690cf325c913b703e39a02730bc6c31e15b800eea2068e005", "246cb32f9835b64386faf2b6"},
-		{"high_sha384_c2s_control", ProfileHigh, xvSecret48, DirClientToServer, 0, AEADAES256GCM, ChanControl,
-			"3563a4d0c367f614c66b012790072de040794c1309e98ec1d82d4c6de3e18c98", "796ce4749ebd77d152784b22"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

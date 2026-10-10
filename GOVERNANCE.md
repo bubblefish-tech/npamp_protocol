@@ -149,16 +149,16 @@ bearing:
 
 Every `design`-labeled issue that reaches consensus produces the **three
 artifacts** `CONTRIBUTING.md` already requires: (1) a closing comment recording
-the resolution, (2) a numbered **MADR 4.0 Architecture Decision Record** in
-`decisions/`, and (3) a change-log bullet in the draft's change
+the resolution, (2) a numbered **MADR 4.0 decision record**,
+and (3) a change-log bullet in the draft's change
 appendix and in [`CHANGELOG.md`](CHANGELOG.md). Governance adds no fourth
 artifact and changes none of these three — it only states *who* has the authority
 to declare that consensus was reached (the Author/Editor, for normative content).
 
-> **Why an ADR, not just a merge.** The project's stated value is that every spec
+> **Why a decision record, not just a merge.** The project's stated value is that every spec
 > decision is *traceable* — what was decided, why, which alternatives were weighed,
-> and how the decision is verified (ADR-0001).
-> A merge without an ADR loses the "why." The ADR is the durable record; the merge
+> and how the decision is verified.
+> A merge without a decision record loses the "why." The record is the durable one; the merge
 > is just the mechanics.
 
 ---
@@ -183,7 +183,7 @@ the wire* or *at a security boundary*. This includes, at minimum:
 - the profile parameter rows (KEM, signatures, KDF hash, diversification,
   downgrade rules);
 - any cryptographic-suite code point or its construction (for example the
-  ML-KEM-first combiner order, ADR-0005);
+  ML-KEM-first combiner order);
 - a companion specification's `MUST` / `MUST NOT` / `SHALL` behavior; and
 - any code-point **assignment** or policy change in [`registries/`](registries/).
 

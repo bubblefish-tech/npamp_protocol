@@ -13,7 +13,7 @@ import hmac
 import npamp as n
 
 VEC = os.path.join(os.path.dirname(__file__), "..", "..", "..", "test-vectors", "v1")
-FINISHED_KAT_SHA256 = "25c21b0bd3b3b6b77862f4a819f81ff5e4ff42e4b1d70af81feeedc5aad73c7f"
+FINISHED_KAT_SHA256 = "05a7b33729eeae9d065b88f8947c728d1b9435628b2aeba86837e3068ff1713d"
 
 
 def _load():

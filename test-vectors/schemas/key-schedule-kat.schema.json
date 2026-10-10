@@ -65,7 +65,7 @@
         "profile": { "const": "Standard" },
         "hash": { "const": "SHA-256" },
         "label_prefix": { "const": "n-pamp " },
-        "ikm_mlkem_ss": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte ML-KEM shared secret (ML-KEM-first, ADR-0005)" },
+        "ikm_mlkem_ss": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte ML-KEM shared secret (ML-KEM-first)" },
         "ikm_x25519_ss": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte X25519 shared secret" },
         "th_kem": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte KEM-phase transcript-hash input" },
         "th_ccv": { "type": "string", "pattern": "^[0-9a-fA-F]+$", "minLength": 64, "maxLength": 64, "description": "32-byte CCV-phase transcript-hash input" }

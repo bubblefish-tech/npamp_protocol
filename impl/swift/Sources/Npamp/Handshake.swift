@@ -1,10 +1,10 @@
 // Handshake binding layer for the N-PAMP wire format (draft-bubblefish-npamp-00).
 // OPEN protocol layer only: the transcript construction (spec/10 §3), the
-// X25519MLKEM768 KEM wire layout (spec/10 §4; ML-KEM-first per ADR-0005), the
+// X25519MLKEM768 KEM wire layout (spec/10 §4; ML-KEM-first), the
 // Finished MAC (spec/10 §6.2), and the CertVerify signature (spec/10 §6.1).
 // No proprietary methods, parameters, or weights.
 //
-// Pure-Swift sibling of Npamp.swift. Crypto via swift-crypto: SHA-256/SHA-384
+// Pure-Swift sibling of Npamp.swift. Crypto via swift-crypto: SHA-256
 // digests, HMAC, and Curve25519.Signing (Ed25519). On Linux swift-crypto backs
 // Ed25519 with BoringSSL's ED25519_sign, which is RFC 8032-deterministic; Apple
 // CryptoKit randomizes Ed25519 signatures, which the deterministic-equality KAT
@@ -46,8 +46,8 @@ public enum Handshake {
     /// at a cut point. Per-TLV granularity: `addFrameType` appends the 2-octet
     /// frame type ONLY (not the rest of the 36-octet header — the §3/§7.1
     /// divergence from RFC 8446 §4.4.1); `addTlv` appends
-    /// Type(2 BE) || Length(2 BE) || Value. A point = the profile hash (SHA-256
-    /// at Standard, SHA-384 at High/Sovereign) over all bytes absorbed so far.
+    /// Type(2 BE) || Length(2 BE) || Value. A point = SHA-256
+    /// over all bytes absorbed so far.
     public final class Transcript {
         private var buf = [UInt8]()
 
@@ -68,35 +68,32 @@ public enum Handshake {
             buf.append(contentsOf: value)
         }
 
-        /// Hashes all absorbed bytes: SHA-256 at Standard, SHA-384 otherwise.
-        public func hash(_ standard: Bool) -> [UInt8] {
-            standard ? Array(SHA256.hash(data: buf)) : Array(SHA384.hash(data: buf))
+        /// Hashes all absorbed bytes with SHA-256; throws `Npamp.NoSuiteForProfile` unless `standard`.
+        public func hash(_ standard: Bool) throws -> [UInt8] {
+            try Npamp.requireStandard(standard)
+            return Array(SHA256.hash(data: buf))
         }
     }
 
     // -- Finished (spec/10 §6.2; RFC 8446 §4.4.4) ----------------------------
 
     /// Finished verify_data = HMAC(finished_key, transcript_hash) under the
-    /// profile hash (HMAC-SHA-256 at Standard, HMAC-SHA-384 at High/Sovereign).
+    /// HMAC-SHA-256; throws `Npamp.NoSuiteForProfile` unless `standard`.
     public static func computeFinished(_ finishedKey: [UInt8], _ transcriptHash: [UInt8],
-                                       _ standard: Bool) -> [UInt8] {
+                                       _ standard: Bool) throws -> [UInt8] {
+        try Npamp.requireStandard(standard)
         let key = SymmetricKey(data: finishedKey)
-        if standard {
-            return Array(HMAC<SHA256>.authenticationCode(for: transcriptHash, using: key))
-        }
-        return Array(HMAC<SHA384>.authenticationCode(for: transcriptHash, using: key))
+        return Array(HMAC<SHA256>.authenticationCode(for: transcriptHash, using: key))
     }
 
     /// Recomputes the Finished MAC and constant-time-compares it to the received
     /// verify_data (HMAC.isValidAuthenticationCode is swift-crypto's constant-time
     /// MAC comparison).
     public static func verifyFinished(_ finishedKey: [UInt8], _ transcriptHash: [UInt8],
-                                      _ verifyData: [UInt8], _ standard: Bool) -> Bool {
+                                      _ verifyData: [UInt8], _ standard: Bool) throws -> Bool {
+        try Npamp.requireStandard(standard)
         let key = SymmetricKey(data: finishedKey)
-        if standard {
-            return HMAC<SHA256>.isValidAuthenticationCode(verifyData, authenticating: transcriptHash, using: key)
-        }
-        return HMAC<SHA384>.isValidAuthenticationCode(verifyData, authenticating: transcriptHash, using: key)
+        return HMAC<SHA256>.isValidAuthenticationCode(verifyData, authenticating: transcriptHash, using: key)
     }
 
     // -- CertVerify (spec/10 §6.1; RFC 8446 §4.4.3; Ed25519 RFC 8032) --------
@@ -151,7 +148,7 @@ public enum Handshake {
                                                                            transcriptHash: transcriptHash))
     }
 
-    // -- KEM wire layout (spec/10 §4; ML-KEM-first per ADR-0005) -------------
+    // -- KEM wire layout (spec/10 §4; ML-KEM-first) -------------
     //
     // The suite name lists X25519 first; the BYTES are ML-KEM-first, in the wire
     // fields and in the HKDF-Extract IKM (Npamp.deriveHandshakeSecret). These

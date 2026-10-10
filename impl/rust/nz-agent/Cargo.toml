@@ -66,20 +66,6 @@ opentelemetry = { version = "0.32.0", features = ["trace"] }
 opentelemetry_sdk = { version = "0.32.1", features = ["trace"] }
 opentelemetry-stdout = { version = "0.32.0", features = ["trace"] }
 prometheus = "0.14.0"
-# N-PAMP decision-B residual (b), PQ-audit-seal signer key-provisioning
-# (`src/audit_seal.rs`): a DEDICATED ML-DSA-87 audit-seal key, cryptographically
-# separate from the Ed25519 session-identity key in `src/identity.rs`. Already an
-# indirect (transitive) dependency of npamp's default "session" feature (npamp's own
-# `mldsa87.rs` uses it for CertVerify) — declared directly here, at the SAME "0.1"
-# version constraint npamp itself pins, so Cargo unifies both requirements against one
-# resolved `ml-dsa` release in this crate's own Cargo.lock (no new crate enters the
-# dependency graph). Same `default-features = false` + `alloc`-only posture as npamp's
-# own pin (see that crate's Cargo.toml comment): this module supplies its own OS-entropy
-# seed via `getrandom` (already a direct/transitive dependency here too), never uses
-# ML-DSA's PKCS#8 encoding, and avoids a possible `getrandom` version clash with the
-# workspace's own pinned `getrandom = "0.2"`.
-ml-dsa = { version = "0.1", default-features = false, features = ["alloc"] }
-getrandom = "0.2"
 
 [build-dependencies]
 # tonic 0.14 moved prost-based proto compilation out of `tonic-build` into

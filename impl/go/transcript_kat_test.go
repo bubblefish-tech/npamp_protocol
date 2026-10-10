@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// transcriptKAT mirrors test-vectors/v1/transcript-kat.json (ADR-0009): fixed
+// transcriptKAT mirrors test-vectors/v1/transcript-kat.json: fixed
 // frame/TLV fixtures whose expected TH_* points were produced by an
 // independent per-TLV byte-constructor + FIPS 180-4 SHA-256, pinning the
 // spec/10 section 3 divergence from RFC 9846 section 4.4.1 (2-octet frame
@@ -69,7 +69,7 @@ func TestTranscriptKAT(t *testing.T) {
 	// TLV.Encode or Transcript cannot hide here.
 	var oracleBuf []byte
 	oracleAt := map[string]string{}
-	implT := NewTranscript(ProfileStandard)
+	implT := mustTranscript(t, ProfileStandard)
 	implAt := map[string]string{}
 
 	next := 0
@@ -107,4 +107,24 @@ func TestTranscriptKAT(t *testing.T) {
 			t.Errorf("impl leg: Transcript %s = %s, want %s", p.key, implAt[p.key], want)
 		}
 	}
+}
+
+// mustTranscript builds a Standard-profile transcript or fails the test.
+func mustTranscript(tb testing.TB, p Profile) *Transcript {
+	tb.Helper()
+	tr, err := NewTranscript(p)
+	if err != nil {
+		tb.Fatalf("NewTranscript(%s): %v", p, err)
+	}
+	return tr
+}
+
+// mustFinished computes a Finished verify_data or fails the test.
+func mustFinished(tb testing.TB, key, th []byte, p Profile) []byte {
+	tb.Helper()
+	vd, err := ComputeFinished(key, th, p)
+	if err != nil {
+		tb.Fatalf("ComputeFinished(%s): %v", p, err)
+	}
+	return vd
 }

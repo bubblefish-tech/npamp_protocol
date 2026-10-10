@@ -111,9 +111,10 @@ contract, `../../harness/INSTRUCTIONS.md`):
    derived vectors. Open MUST fail on a tampered authentication tag (corpus
    flag `AeadTagMismatch`); tag verification MUST precede any payload
    processing (core specification §10.3).
-5. **`hkdf.expand`** — HKDF-Expand per RFC 5869 for SHA-256 and SHA-384,
-   graded against Project-Wycheproof-derived vectors (core specification §7.4
-   uses HKDF for all key derivation).
+5. **`hkdf.expand`** — HKDF-Expand per RFC 5869 for SHA-256 (the Standard
+   profile hash), graded against Project-Wycheproof-derived vectors (core
+   specification §7.4 uses HKDF for all key derivation). This public set carries
+   no SHA-384 vectors.
 6. **`profile.check`** — the public profile KEM-acceptance invariants (core
    specification §6): Standard accepts X25519MLKEM768; High and Sovereign
    accept SecP384r1MLKEM1024; Sovereign MUST NOT accept X25519MLKEM768. These are
@@ -314,11 +315,11 @@ The composition below is stated from the corpus file itself (all groups carry
 | `tlv.decode` | 3 | 1 | 2 | Unknown TLV type with high bit 0x8000 set; declared TLV Length exceeding the remaining buffer |
 | `aead.seal` | 39 | 39 | 0 | — (AES-256-GCM, Wycheproof-derived) |
 | `aead.open` | 40 | 39 | 1 | Tampered GCM authentication tag |
-| `hkdf.expand` | 163 | 163 | 0 | — (83 SHA-256, 80 SHA-384, Wycheproof-derived) |
+| `hkdf.expand` | 83 | 83 | 0 | — (SHA-256, Wycheproof-derived) |
 | `profile.check` | 4 | 3 | 1 | Sovereign MUST NOT accept X25519MLKEM768 |
-| **Total (table above)** | **257** | **250** | **9** | |
+| **Total (table above)** | **177** | **168** | **9** | |
 
-Nine of the 257 cases tallied above are negative (MUST-reject) cases. They
+Nine of the 177 cases tallied above are negative (MUST-reject) cases. They
 cover eight distinct rejection rules of the core specification:
 reserved-octet-non-zero, CRC mismatch, bad frame magic, unsupported wire
 version, short header, forward-incompatible TLV, truncated TLV length, AEAD
@@ -353,6 +354,14 @@ tag mismatch — plus the Sovereign KEM-refusal invariant.
 > every row in the table above. Closing that gap needs a stateful (not
 > single-shot) extension to the `npamp-conform` harness and is out of this
 > addendum's scope.
+
+> **Corpus scope update (this revision, non-wire).** The corpus no longer carries
+> the HKDF-Expand SHA-384 vectors, the High-profile `keys.derive_traffic` case or
+> the SHA-384 `hkdf.expand_label` case, because the High and Sovereign profile
+> key-derivation material is not part of this open reference. It now carries
+> **410** cases across the same **27** operation groups; the figures in the
+> addendum above describe the earlier corpus. The `profile.check` cases (the
+> public KEM-acceptance invariants) are unchanged.
 
 ## 8. Coverage gaps — what the current corpus does NOT cover
 
@@ -395,21 +404,15 @@ Tier A or Tier B run.
 - **KEM primitives:** the corpus has no KEM operation. ML-KEM-768 keygen and
   X25519 are anchored only inside the X25519MLKEM768 KEM-wire KAT (Class H), with
   the documented ML-KEM decapsulation-anchor limitation (§4.3 item 4). The
-  SecP384r1MLKEM1024 KEM has a Go reference KEM-wire KAT
-  (`impl/go/kem1024_kat_test.go`) anchoring the secp384r1 leg to RFC 5903 §8.2 and
-  asserting the ECDHE-first (P-384-first) wire and IKM order; a cross-language JSON
-  corpus vector for it is planned but not yet available (tracked).
+  SecP384r1MLKEM1024 KEM has no vector in this public set.
 
 ### 8.4 Profile coverage limits
 
 Every KAT in the `test-vectors/v1` corpus is Standard-profile (SHA-256, HashLen
 32, Ed25519, X25519MLKEM768); each corpus KAT's own `not_covered_here` list says
 so explicitly. The corpus touches the High and Sovereign profiles only at the
-public KEM-acceptance invariants (`profile.check`, 4 cases). Separately, the
-cross-language reference-implementation vectors (`impl/*/*-vectors`) pin one
-SHA-384 key-schedule value (`traffic_key_sha384`) that exercises the High/Sovereign
-KDF row (SHA-384) but no High-only PQ primitive (ML-KEM-1024, ML-DSA-87). Beyond
-that KDF-row value and the KEM-acceptance table, nothing in this public set
+public KEM-acceptance invariants (`profile.check`, 4 cases). Beyond the
+KEM-acceptance table, nothing in this public set
 verifies High- or Sovereign-profile operation — including per-frame AEAD
 diversification and downgrade-refusal behavior — and no class defined here may
 be claimed for those profiles.

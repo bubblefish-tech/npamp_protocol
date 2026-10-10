@@ -175,7 +175,7 @@ Code points `0x0001`–`0x0004` are the values NPAMP-BRIDGE names directly; this
 document records them with their carriage class and mapping reference and MUST NOT
 reassign them. Code points `0x0005`–`0x000A` are assigned under the §8 registration
 procedure — `0x0005` mirroring the `0x0004` WebSocket row's own "generic carriage"
-pattern (decisions/adr/0015), and `0x0006`–`0x000A` assigned together as the first
+pattern, and `0x0006`–`0x000A` assigned together as the first
 wave of agent-protocol registrations under §8 — and likewise MUST NOT be reassigned.
 Code points `0x000B`–`0x000F` are unassigned and available under the registration
 procedure of §8, as is the extended range `0x0100`–`0xFFFF` opened by §8.4.

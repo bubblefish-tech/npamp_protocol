@@ -11,7 +11,7 @@ import (
 
 // FormatVersion identifies the versioned key-storage format's OWN schema
 // version. It is independent of both the N-PAMP wire-format version (the
-// frame header Ver nibble, frozen per decisions/adr/0014) and the crypto
+// frame header Ver nibble, frozen) and the crypto
 // generation carried in KeyRecord.Generation: this format's own on-disk
 // layout could change (a sixth field added, say) without either of those
 // other axes moving, and vice versa.
@@ -63,13 +63,13 @@ func (r Role) String() string {
 //
 // Generation is the ALPN-style N-PAMP crypto-generation token (e.g. the
 // current npamp.ALPN, "n-pamp/3") that Algorithm must be resolved against.
-// It is REQUIRED and load-bearing, not cosmetic: per decisions/adr/0014,
+// It is REQUIRED and load-bearing, not cosmetic:
 // N-PAMP's KEM and signature code points have been re-anchored across crypto
 // generations, so an Algorithm value has no fixed meaning without knowing
 // which generation's registry to read it under. Decode refuses to resolve a
 // record's Algorithm against any Generation the caller has not explicitly
 // opted into (ErrGenerationNotAccepted) — the same generation-confusion
-// defense ADR-0014 requires of a live wire endpoint, applied here to a
+// defense a live wire endpoint needs, applied here to a
 // stored key.
 type KeyRecord struct {
 	FormatVersion FormatVersion
@@ -84,7 +84,7 @@ type KeyRecord struct {
 	// (hybridkem.Combine, which orders SHARED SECRETS during a live
 	// handshake): component[0] is always the post-quantum (ML-KEM) half of a
 	// hybrid KEM key, component[1] (when present) is always the classical
-	// (X25519 or P-384) half. A plain, non-hybrid algorithm (Ed25519 or an
+	// (X25519) half. A plain, non-hybrid algorithm (Ed25519 or an
 	// ML-DSA parameter set) has exactly one component.
 	Components [][]byte
 }
@@ -129,6 +129,13 @@ var (
 	// DecodeKEMPrivate) when a record decodes cleanly but carries a
 	// different Role than the accessor requires.
 	ErrRoleMismatch = errors.New("keyformat: decoded record's role does not match the requested accessor")
+
+	// ErrGroupNotSupported is returned when Encode or Decode is given KEM key material
+	// for SecP384r1MLKEM1024 (code point 0x11ed). The group is a known code point, so this
+	// is distinct from ErrUnknownAlgorithm, and it is returned before any component count
+	// or size check: this reference stores no key material for that group, whatever the
+	// components are.
+	ErrGroupNotSupported = errors.New("keyformat: SecP384r1MLKEM1024 (0x11ed) key material is not supported by this reference implementation")
 )
 
 // algSpec is one registered (role, algorithm) entry: the expected byte
@@ -141,8 +148,8 @@ type algSpec struct {
 //
 // Only npamp.ALPN ("n-pamp/3", the current N-PAMP crypto generation) has a
 // populated entry here. N-PAMP's prior generation, "n-pamp/2", was never
-// implemented as working Go code in this tree — it was superseded (per
-// decisions/adr/0014) before this package existed — so this reference cannot
+// implemented as working Go code in this tree — it was superseded
+// before this package existed — so this reference cannot
 // honestly claim to validate an "n-pamp/2"-tagged record's algorithm/size
 // pairing. Decode reflects that honestly: a caller MAY explicitly accept a
 // non-npamp.ALPN generation (e.g. to structurally recognize an old key for a
@@ -152,10 +159,12 @@ type algSpec struct {
 // Sizes are taken from the code points this module's own registries define
 // (registries/kem.csv, registries/signatures.csv) and from the underlying
 // providers' own published sizes:
-//   - ML-KEM-768/1024 seed (64) and encapsulation-key sizes, and X25519/P-384
+//   - ML-KEM-768 seed (64) and encapsulation-key sizes, and X25519
 //     private/public key sizes, are the exact byte lengths crypto/mlkem and
 //     crypto/ecdh (Go 1.26) produce — see keyformat_test.go, which measures
 //     them from the real stdlib types rather than restating a constant.
+//   - KEM key material for SecP384r1MLKEM1024 (0x11ed) has no row: it is
+//     refused with ErrGroupNotSupported before this table is consulted.
 //   - crypto/ed25519 private/public key sizes are ed25519.PrivateKeySize
 //     (64, the stdlib's seed||public-key form) and ed25519.PublicKeySize
 //     (32).
@@ -169,12 +178,10 @@ type algSpec struct {
 var registry = map[string]map[Role]map[uint64]algSpec{
 	npamp.ALPN: {
 		RoleKEMPrivate: {
-			uint64(npamp.KEMX25519MLKEM768):     {sizes: []int{64, 32}},  // ML-KEM-768 seed || X25519 private
-			uint64(npamp.KEMSecP384r1MLKEM1024): {sizes: []int{64, 48}},  // ML-KEM-1024 seed || P-384 private
+			uint64(npamp.KEMX25519MLKEM768): {sizes: []int{64, 32}}, // ML-KEM-768 seed || X25519 private
 		},
 		RoleKEMPublic: {
-			uint64(npamp.KEMX25519MLKEM768):     {sizes: []int{1184, 32}}, // ML-KEM-768 ek || X25519 public
-			uint64(npamp.KEMSecP384r1MLKEM1024): {sizes: []int{1568, 97}}, // ML-KEM-1024 ek || P-384 public
+			uint64(npamp.KEMX25519MLKEM768): {sizes: []int{1184, 32}}, // ML-KEM-768 ek || X25519 public
 		},
 		RoleSigPrivate: {
 			uint64(npamp.SigEd25519): {sizes: []int{64}},   // crypto/ed25519.PrivateKey (seed || public key)
@@ -218,7 +225,10 @@ func Encode(rec KeyRecord) ([]byte, error) {
 //  2. its Generation is one of acceptedGenerations — a generation the caller
 //     did not explicitly opt into is refused even if the record structurally
 //     decodes cleanly (else ErrGenerationNotAccepted); and
-//  3. when Generation == npamp.ALPN (the one generation this Go reference has
+//  3. it is not KEM key material for npamp.KEMSecP384r1MLKEM1024, which is
+//     refused under every accepted generation, ahead of any generation-specific
+//     check (else ErrGroupNotSupported); and
+//  4. when Generation == npamp.ALPN (the one generation this Go reference has
 //     a populated registry for), its (Role, Algorithm) pair is registered and
 //     every component's length matches (else ErrUnknownAlgorithm /
 //     ErrComponentCount / ErrComponentSize).
@@ -226,9 +236,9 @@ func Encode(rec KeyRecord) ([]byte, error) {
 // acceptedGenerations MUST be non-empty (ErrNoAcceptedGenerations otherwise):
 // there is no default accept-set, so a caller cannot forget to state one.
 //
-// A record accepted under a Generation OTHER than npamp.ALPN is returned
-// with its five fields structurally decoded but WITHOUT algorithm/size
-// validation (this package has no registry for any other generation — see
+// A record accepted under a Generation OTHER than npamp.ALPN, and not refused
+// by item 3, is returned with its five fields structurally decoded but WITHOUT
+// algorithm/size validation (this package has no registry for any other generation — see
 // the registry doc comment). Callers that opt into a non-current generation
 // are choosing to treat its key material as opaque pending their own
 // migration handling; Decode never fabricates a validation result it cannot
@@ -254,6 +264,9 @@ func Decode(data []byte, acceptedGenerations ...string) (KeyRecord, error) {
 	if !accepted {
 		return KeyRecord{}, ErrGenerationNotAccepted
 	}
+	if refusedKEMGroup(rec) {
+		return KeyRecord{}, ErrGroupNotSupported
+	}
 	if rec.Generation == npamp.ALPN {
 		if err := validateAgainstRegistry(rec); err != nil {
 			return KeyRecord{}, err
@@ -262,9 +275,21 @@ func Decode(data []byte, acceptedGenerations ...string) (KeyRecord, error) {
 	return rec, nil
 }
 
+// refusedKEMGroup reports whether rec is KEM key material (either role) for a group this
+// package refuses to store or load: npamp.KEMSecP384r1MLKEM1024. The answer depends only on
+// the record's role and algorithm, never on its generation or component sizes.
+func refusedKEMGroup(rec KeyRecord) bool {
+	return (rec.Role == RoleKEMPrivate || rec.Role == RoleKEMPublic) && rec.Algorithm == uint64(npamp.KEMSecP384r1MLKEM1024)
+}
+
 // validateAgainstRegistry checks rec's (Generation, Role, Algorithm) against
-// registry and, if found, that every component's length matches.
+// registry and, if found, that every component's length matches. KEM key material for
+// SecP384r1MLKEM1024 is refused first, with ErrGroupNotSupported. Decode applies the same
+// refusal itself, before this function, for every accepted generation.
 func validateAgainstRegistry(rec KeyRecord) error {
+	if refusedKEMGroup(rec) {
+		return ErrGroupNotSupported
+	}
 	genReg, ok := registry[rec.Generation]
 	if !ok {
 		// No populated registry for this generation. Reachable only from

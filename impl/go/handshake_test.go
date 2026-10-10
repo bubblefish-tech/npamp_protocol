@@ -147,7 +147,7 @@ func TestHandshakeFlowStandard(t *testing.T) {
 	}
 	chWire := ch.Encode()
 
-	clientT := NewTranscript(p)
+	clientT := mustTranscript(t, p)
 	clientT.AddFrame(FrameClientHello, ch.TLVs())
 
 	// --- Server: decode CH, encapsulate, send SERVER_HELLO (cleartext) ---
@@ -155,7 +155,7 @@ func TestHandshakeFlowStandard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	serverT := NewTranscript(p)
+	serverT := mustTranscript(t, p)
 	serverT.AddFrame(FrameClientHello, chRecv.TLVs())
 
 	kemCT, serverSS, err := Encapsulate(chRecv.KEMShare)
@@ -273,7 +273,7 @@ func TestHandshakeFlowStandard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sFin := ComputeFinished(sFinKey, serverT.Sum(), p) // MACs TH_sCV
+	sFin := mustFinished(t, sFinKey, serverT.Sum(), p) // MACs TH_sCV
 	serverAuth := &AuthMessage{IdentityKey: serverPub, CertVerify: sCV, Finished: sFin}
 	serverT.AddTLV(TLV{Type: TLVFinished, Value: sFin})
 	serverAuthWire := sealAuth(FrameServerAuth, sHS, DirServerToClient, serverAuth.Encode())
@@ -308,7 +308,7 @@ func TestHandshakeFlowStandard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cFin := ComputeFinished(cFinKey, thCCVClient, p)
+	cFin := mustFinished(t, cFinKey, thCCVClient, p)
 	clientAuth := &AuthMessage{IdentityKey: clientPub, CertVerify: cCV, Finished: cFin}
 	clientAuthWire := sealAuth(FrameClientAuth, cHS, DirClientToServer, clientAuth.Encode())
 
@@ -345,7 +345,7 @@ func TestHandshakeFlowStandard(t *testing.T) {
 	// Downgrade protection (section 6.3): a peer whose transcript saw a
 	// different (e.g. stripped) offer computes a different TH and the
 	// Finished MAC fails.
-	tampered := NewTranscript(p)
+	tampered := mustTranscript(t, p)
 	chTampered := *ch
 	chTampered.ProfileOffer = []Profile{ProfileStandard} // same
 	chTampered.AEADOffer = []AEADID{AEADChaCha20Poly1305} // forced different suite

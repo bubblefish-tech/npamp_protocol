@@ -23,7 +23,7 @@
 //     Finished MAC must REJECT; the untouched values must still verify.
 //
 // ML-KEM NOTE (honest scope): swift-crypto 3.15.1's Crypto product exposes NO ML-KEM API
-// (verified against the pinned checkout; same deferral the Go reference records in ADR-0007 and
+// (verified against the pinned checkout; same deferral the Go reference records and
 // the Python module records in its docstring). So this verifier does NOT decapsulate the pinned
 // ML-KEM ciphertext — that leg is a TRACKED SKIP, never silently green. It DOES perform every KEM
 // check Swift CAN do through a real code path: the pinned kem_ciphertext front == mlkem_ciphertext;
@@ -227,8 +227,8 @@ func cleartextFrame(_ ftype: Int, _ payload: [UInt8]) -> [UInt8] {
 /// Npamp.sealAes256Gcm over the plaintext with the 21-octet header prefix as AAD (payload_len =
 /// len(plaintext)+16 for the GCM tag), matching impl/go sealAuthKAT and impl/python _seal_auth_frame.
 func sealAuthFrame(_ ftype: Int, _ baseSecret: [UInt8], _ direction: Int, _ plaintext: [UInt8]) throws -> [UInt8] {
-    let ts = Npamp.deriveTrafficSecret(baseSecret, direction, 0, Npamp.aeadAes256Gcm, Npamp.chanControl, true)
-    let keyIv = Npamp.deriveKeyIv(ts, true)
+    let ts = try Npamp.deriveTrafficSecret(baseSecret, direction, 0, Npamp.aeadAes256Gcm, Npamp.chanControl, true)
+    let keyIv = try Npamp.deriveKeyIv(ts, true)
     var f = Npamp.Frame(ftype: ftype, channel: Npamp.chanControl, seq: 0, flags: Npamp.flagEnc)
     let aad = f.headerPrefix(plaintext.count + 16)
     let sealed = try Npamp.sealAes256Gcm(keyIv.key, keyIv.iv, 0, aad, plaintext)
@@ -263,7 +263,7 @@ do {
         tr.addTlv(tlvProfileOffer, [0x01])
         tr.addTlv(tlvKemShare, [0xaa, 0xbb, 0xcc])
         let manual = tlv(tlvProfileOffer, [0x01]) + tlv(tlvKemShare, [0xaa, 0xbb, 0xcc])
-        let implHash = toHex(tr.hash(true))
+        let implHash = try toHex(tr.hash(true))
         let manualHash = toHex(Array(SHA256.hash(data: manual)))
         try check(implHash == manualHash, "in-test TLV encoder diverged from Handshake.Transcript.addTlv")
     }
@@ -367,32 +367,32 @@ do {
         tr.addTlv(tlvSigSelect, u16list([Npamp.sigEd25519]))
         tr.addTlv(tlvAeadSelect, u16list([Npamp.aeadAes256Gcm]))
         tr.addTlv(tlvKemCiphertext, kemCt)
-        let thKem = tr.hash(true)
+        let thKem = try tr.hash(true)
         try check(toHex(thKem) == (try str(transcript, "th_kem")), "th_kem != expected")
 
         // handshake_secret / c_hs / s_hs through the real ladder (ML-KEM-first IKM).
-        let hs = Npamp.deriveHandshakeSecret(mlkemSS, xSS, true)
+        let hs = try Npamp.deriveHandshakeSecret(mlkemSS, xSS, true)
         try check(toHex(hs) == (try str(secrets, "handshake_secret")), "handshake_secret != expected")
-        let cHs = Npamp.deriveClientHandshakeSecret(hs, thKem, true)
+        let cHs = try Npamp.deriveClientHandshakeSecret(hs, thKem, true)
         try check(toHex(cHs) == (try str(secrets, "c_hs_secret")), "c_hs_secret != expected")
-        let sHs = Npamp.deriveServerHandshakeSecret(hs, thKem, true)
+        let sHs = try Npamp.deriveServerHandshakeSecret(hs, thKem, true)
         try check(toHex(sHs) == (try str(secrets, "s_hs_secret")), "s_hs_secret != expected")
 
         // --- SERVER_AUTH. ---
         tr.addFrameType(Handshake.frameServerAuth)
         tr.addTlv(tlvIdentityKey, serverPub)
-        let thSid = tr.hash(true)
+        let thSid = try tr.hash(true)
         try check(toHex(thSid) == (try str(transcript, "th_sid")), "th_sid != expected")
         let sCv = try Handshake.signCertVerify(serverPrivKey, isServer: true, transcriptHash: thSid)
         try check(toHex(sCv) == (try str(certVerify, "server")), "server cert_verify != expected")
         try check(Handshake.verifyCertVerify(serverPubKey, isServer: true, transcriptHash: thSid, value: sCv),
                   "server CertVerify rejected")
         tr.addTlv(tlvCertVerify, sCv)
-        let thScv = tr.hash(true)
+        let thScv = try tr.hash(true)
         try check(toHex(thScv) == (try str(transcript, "th_scv")), "th_scv != expected")
-        let sFinKey = Npamp.deriveFinishedKey(sHs, true)
+        let sFinKey = try Npamp.deriveFinishedKey(sHs, true)
         try check(toHex(sFinKey) == (try str(finishedKeys, "server")), "server finished_key != expected")
-        let sFin = Handshake.computeFinished(sFinKey, thScv, true)
+        let sFin = try Handshake.computeFinished(sFinKey, thScv, true)
         try check(toHex(sFin) == (try str(finished, "server")), "server finished != expected")
         tr.addTlv(tlvFinished, sFin)
         let serverAuthPlain = tlv(tlvIdentityKey, serverPub) + tlv(tlvCertVerify, sCv) + tlv(tlvFinished, sFin)
@@ -404,18 +404,18 @@ do {
         // --- CLIENT_AUTH. ---
         tr.addFrameType(Handshake.frameClientAuth)
         tr.addTlv(tlvIdentityKey, clientPub)
-        let thCid = tr.hash(true)
+        let thCid = try tr.hash(true)
         try check(toHex(thCid) == (try str(transcript, "th_cid")), "th_cid != expected")
         let cCv = try Handshake.signCertVerify(clientPrivKey, isServer: false, transcriptHash: thCid)
         try check(toHex(cCv) == (try str(certVerify, "client")), "client cert_verify != expected")
         try check(Handshake.verifyCertVerify(clientPubKey, isServer: false, transcriptHash: thCid, value: cCv),
                   "client CertVerify rejected")
         tr.addTlv(tlvCertVerify, cCv)
-        let thCcv = tr.hash(true)
+        let thCcv = try tr.hash(true)
         try check(toHex(thCcv) == (try str(transcript, "th_ccv")), "th_ccv != expected")
-        let cFinKey = Npamp.deriveFinishedKey(cHs, true)
+        let cFinKey = try Npamp.deriveFinishedKey(cHs, true)
         try check(toHex(cFinKey) == (try str(finishedKeys, "client")), "client finished_key != expected")
-        let cFin = Handshake.computeFinished(cFinKey, thCcv, true)
+        let cFin = try Handshake.computeFinished(cFinKey, thCcv, true)
         try check(toHex(cFin) == (try str(finished, "client")), "client finished != expected")
         let clientAuthPlain = tlv(tlvIdentityKey, clientPub) + tlv(tlvCertVerify, cCv) + tlv(tlvFinished, cFin)
         try check(clientAuthPlain == (try hexBytes(authPlaintext, "client_auth")),
@@ -424,15 +424,15 @@ do {
         try check(clientAuthFrame == (try hexBytes(frames, "client_auth")), "CLIENT_AUTH frame != expected")
 
         // --- master_secret binds th_ccv (real ladder). ---
-        let master = Npamp.deriveMasterSecret(hs, thCcv, true)
+        let master = try Npamp.deriveMasterSecret(hs, thCcv, true)
         try check(toHex(master) == (try str(secrets, "master_secret")), "master_secret != expected")
 
         // --- Traffic secret/key/iv for both handshake directions and both application directions. ---
         func assertTraffic(_ name: String, _ parent: [UInt8], _ direction: Int,
                            _ tsHex: String, _ keyHex: String, _ ivHex: String) throws {
-            let ts = Npamp.deriveTrafficSecret(parent, direction, 0, Npamp.aeadAes256Gcm, Npamp.chanControl, true)
+            let ts = try Npamp.deriveTrafficSecret(parent, direction, 0, Npamp.aeadAes256Gcm, Npamp.chanControl, true)
             try check(toHex(ts) == tsHex, "\(name)_traffic_secret != expected")
-            let keyIv = Npamp.deriveKeyIv(ts, true)
+            let keyIv = try Npamp.deriveKeyIv(ts, true)
             try check(toHex(keyIv.key) == keyHex, "\(name)_key != expected")
             try check(toHex(keyIv.iv) == ivHex, "\(name)_iv != expected")
         }
@@ -469,13 +469,13 @@ do {
 }
 
 // Tracked SKIP — never silently green: swift-crypto 3.15.1's Crypto product exposes no ML-KEM API,
-// so the pinned ML-KEM ciphertext cannot be decapsulated in Swift (same deferral as Go/ADR-0007 and
+// so the pinned ML-KEM ciphertext cannot be decapsulated in Swift (same deferral as Go and
 // the Python module). The X25519 half of the pinned ciphertext IS decapsulated (leg above); only the
 // ML-KEM half is deferred. mlkem_shared_secret is a pinned self-validating input.
 skipLeg("handshake_flow_kat_mlkem_decapsulation",
         "swift-crypto 3.15.1's Crypto product exposes no ML-KEM API (verified against the pinned "
             + "checkout), so the pinned ML-KEM ciphertext cannot be decapsulated to mlkem_shared_secret; "
-            + "consumed as a pinned self-validating input (same deferral as Go ADR-0007 and the Python module)")
+            + "consumed as a pinned self-validating input (same deferral as Go and the Python module)")
 
 // ---------------------------------------------------------------------------
 // Summary — 'ALL PASS' is the positive gate token, printed ONLY when every expected executable leg

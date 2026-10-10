@@ -10,7 +10,7 @@ not by a fresh reimplementation:
   - npamp.Frame.header_prefix -> header.encode octet layout
   - npamp.seal_aes256gcm    -> aead.seal  (called with seq=0 so derive_nonce(nonce,0)==nonce)
   - npamp.open_aes256gcm    -> aead.open  (same nonce trick)
-  - npamp.hkdf_expand       -> hkdf.expand (standard=True->SHA-256, False->SHA-384)
+  - npamp.hkdf_expand       -> hkdf.expand (SHA-256 only)
 
 tlv.decode is a pure wire-format parse not exposed as a standalone function in the
 reference package, so it is implemented inline per the spec's TLV rules. profile.check
@@ -125,8 +125,6 @@ def handle(req):
         hn = i.get("hash")
         if hn == "sha256":
             standard = True
-        elif hn == "sha384":
-            standard = False
         else:
             return {"skipped": "hash not implemented: %s" % hn}
         okm = npamp.hkdf_expand(hx(i, "prk"), hx(i, "info"), int(i["length"]), standard)

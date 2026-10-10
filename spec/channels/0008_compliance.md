@@ -44,7 +44,7 @@ interface at the level the core specification actually fixes — the operation
 field structures, attestation formats, or export schemas that the core specification
 does not state. Because the channel is firewall-gated (minimum profile High), its
 operational and cryptographic internals are **controlled/private-track** material
-(per the project's firewall/publication policy, ADR-0004/ADR-0003) and are **out of
+(per the project's firewall/publication policy) and are **out of
 scope** for this public reference. This page documents only the channel's public
 existence, identity, direction, minimum profile, and public frame-type
 reservations — all of which the core specification already exposes in §5 — and does
@@ -179,7 +179,7 @@ Notes and honest boundaries:
   is firewall-gated at minimum profile High (§2, §5). Its operational contract and
   its cryptographic internals — the concrete behavior of attestation and
   regulatory-export operations at the High and Sovereign profiles — are
-  **controlled/private-track** material (ADR-0004/ADR-0003) and are deliberately
+  **controlled/private-track** material and are deliberately
   **out of scope** for this public reference. This page describes neither the
   channel's High- or Sovereign-profile cryptographic behavior nor any operation
   semantics beyond the two public operation-class names above. An implementation
@@ -214,7 +214,7 @@ channel: its operations require the High or Sovereign profile.
   surface the core specification already exposes in §5 — the channel's existence,
   identity, purpose, direction, minimum profile, and public frame-type namespace.
   Its operational and cryptographic internals, which require the High or Sovereign
-  profile, live in the controlled/private track (ADR-0004/ADR-0003) and are
+  profile, live in the controlled/private track and are
   **not** published here.
 - **Scheduling.** The core specification's congestion-scheduling recommendation names
   the Control and Immune channels as SHOULD-be-higher-priority than the bulk channels
@@ -247,7 +247,7 @@ contract is exactly what §2–§5 restate:
   convention with no core- or public-companion-defined frame (§3.3).
 
 The channel's operational and cryptographic internals — required at the High and
-Sovereign profiles — are **controlled/private-track** material (ADR-0004/ADR-0003)
+Sovereign profiles — are **controlled/private-track** material
 and are out of scope for this public reference (§1, §4, §5). This reference points to
 their existence and profile gating and defines no such behavior of its own. Should a
 public, interoperable Compliance operation encoding ever be wanted, the path is the

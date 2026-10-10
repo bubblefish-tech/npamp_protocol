@@ -1,5 +1,5 @@
 """Standards-derived, NON-CIRCULAR known-answer test for the draft-00 handshake key schedule
-(binding spec/10 section 5; ML-KEM-first per ADR-0005; draft-00 7.4 HKDF-Expand-Label + 7.5 traffic
+(binding spec/10 section 5; ML-KEM-first; draft-00 7.4 HKDF-Expand-Label + 7.5 traffic
 keys). Python mirror of the sibling KATs (transcript/finished/certverify) against the SAME pinned
 vector (test-vectors/v1/key-schedule-kat.json). N-PAMP's HKDF-Expand-Label is RFC 8446 7.1 with the
 prefix swapped from "tls13 " to "n-pamp " - so RFC 8448 (which uses "tls13 ") validates the
@@ -25,7 +25,7 @@ import hmac
 import npamp as n
 
 VEC = os.path.join(os.path.dirname(__file__), "..", "..", "..", "test-vectors", "v1")
-KEY_SCHEDULE_KAT_SHA256 = "e108f5cfdf99a378d7b677792448c8046abf3c630fc23fd8ea2ccb3927f2691c"
+KEY_SCHEDULE_KAT_SHA256 = "dcf4bacab35ccd5be6adc58c3e16c278e5c28e7a4dda1e42d55068d3dbc914fe"
 
 # Direction byte (binding section 5 / 7.5 traffic context): ServerToClient = 1.
 DIR_S2C = 1

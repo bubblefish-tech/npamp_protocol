@@ -182,15 +182,14 @@ Hybrid post-quantum key establishment combining an elliptic-curve ECDH with ML-K
 (FIPS 203), per RFC 10024 (formerly `draft-ietf-tls-ecdhe-mlkem`, published August
 2026). The concatenation order is **per-group**:
 X25519MLKEM768 is **ML-KEM-first**, and SecP384r1MLKEM1024 is **ECDHE-first (P-384
-first)** — each places the FIPS-approved component first (ADR-0005 for the 768 group;
-NIST SP 800-56C Rev. 2).
+first)** — each places the FIPS-approved component first (NIST SP 800-56C Rev. 2).
 
 Machine-readable: `../registries/kem.csv` · Authoritative:
 [core specification §Cryptographic suites](../spec/06_cryptographic_suites.md).
 
 | Code point | Name | Profiles | Construction |
 |---|---|---|---|
-| 0x11ec | X25519MLKEM768 | Standard, High | Hybrid X25519MLKEM768 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-768_SS \|\| X25519_SS (ML-KEM-first; ADR-0005 / NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. |
+| 0x11ec | X25519MLKEM768 | Standard, High | Hybrid X25519MLKEM768 (FIPS 203); the suite name lists X25519 first, but the shared secrets are concatenated ML-KEM-768_SS \|\| X25519_SS (ML-KEM-first; NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. |
 | 0x11ed | SecP384r1MLKEM1024 | High, Sovereign | Hybrid SecP384r1MLKEM1024 (secp384r1 + FIPS 203 ML-KEM-1024) per RFC 10024 (formerly draft-ietf-tls-ecdhe-mlkem): the SecP* groups are ECDHE-first. KEMShare = secp384r1 public key (97) \|\| ML-KEM-1024 encapsulation key (1568) = 1665; KEMCiphertext = server secp384r1 public key (97) \|\| ML-KEM-1024 ciphertext (1568) = 1665; shared secrets concatenated ECDHE_SS (48, secp384r1 x-coordinate) \|\| ML-KEM-1024_SS (32) = 80 (P-384-first; NIST SP 800-56C Rev.2) as input keying material to HKDF-Extract. Sovereign MUST NOT accept X25519MLKEM768. |
 
 ## AEAD-suite registry

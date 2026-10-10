@@ -151,17 +151,20 @@ func parseReKEMAck(payload []byte) (kemCT []byte, gen uint64, err error) {
 // the same per-TLV canonical Type||Length||Value construction as the handshake
 // transcript. Both peers assemble it identically from the wire bytes they
 // exchanged, so a spliced or reflected exchange yields a divergent root.
-func thRekem(p npamp.Profile, kemShare, kemCT []byte, gen uint64) []byte {
+func thRekem(p npamp.Profile, kemShare, kemCT []byte, gen uint64) ([]byte, error) {
 	var g [8]byte
 	binary.BigEndian.PutUint64(g[:], gen)
-	tr := npamp.NewTranscript(p)
+	tr, err := npamp.NewTranscript(p)
+	if err != nil {
+		return nil, err
+	}
 	tr.AddFrameType(frameReKEM)
 	tr.AddTLV(npamp.TLV{Type: npamp.TLVKEMShare, Value: kemShare})
 	tr.AddTLV(npamp.TLV{Type: npamp.TLVRatchetGeneration, Value: g[:]})
 	tr.AddFrameType(frameReKEMAck)
 	tr.AddTLV(npamp.TLV{Type: npamp.TLVKEMCiphertext, Value: kemCT})
 	tr.AddTLV(npamp.TLV{Type: npamp.TLVRatchetGeneration, Value: g[:]})
-	return tr.Sum()
+	return tr.Sum(), nil
 }
 
 // --- Tier 1: symmetric forward step (cheap, frequent) → forward secrecy ---
@@ -366,7 +369,10 @@ func (c *Conn) respondReKEM(kemShare []byte, target uint64) {
 		return
 	}
 	newSS := ss.Combined()
-	th := thRekem(c.profile, kemShare, kemCT, target)
+	th, err := thRekem(c.profile, kemShare, kemCT, target)
+	if err != nil {
+		return
+	}
 	defer func() {
 		wipeRoot(newSS)
 		wipeRoot(ss.MLKEM)
@@ -445,7 +451,10 @@ func (c *Conn) handleReKEMAck(plaintext []byte) error {
 		return fmt.Errorf("npamp/sdk: re-KEM decapsulate: %w", err)
 	}
 	newSS := ss.Combined()
-	th := thRekem(c.profile, pend.kemShare, kemCT, gen)
+	th, err := thRekem(c.profile, pend.kemShare, kemCT, gen)
+	if err != nil {
+		return fmt.Errorf("npamp/sdk: re-KEM transcript: %w", err)
+	}
 	nr, err := npamp.RatchetMasterTier2(c.masterRecv, newSS, th, c.profile)
 	wipeRoot(newSS)
 	wipeRoot(ss.MLKEM)

@@ -23,7 +23,7 @@ requires (NIST SP 800-56C Rev. 2), so the two groups differ:
   shared secret `(ML-KEM-768 SS || X25519 SS)`; KEMShare `ML-KEM-768 ek (1184) ||
   X25519 pub (32)` = 1216; KEMCiphertext `ML-KEM-768 ct (1088) || server X25519 pub
   (32)` = 1120. The suite name lists X25519 first, but the bytes are ML-KEM-first
-  (RFC 10024 records this reversed order as historical; ADR-0005).
+  (RFC 10024 records this reversed order as historical).
 - **SecP384r1MLKEM1024 (`0x11ed`)** combines secp384r1 (P-384) with ML-KEM-1024,
   **ECDHE-first (P-384 first)**: shared secret `(ECDHE SS (48) || ML-KEM-1024 SS
   (32))` = 80; KEMShare `secp384r1 pub (97) || ML-KEM-1024 ek (1568)` = 1665;

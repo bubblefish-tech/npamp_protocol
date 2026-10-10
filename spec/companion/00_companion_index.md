@@ -143,7 +143,7 @@ implemented once per language instead of re-derived.
 
 | File | Short name | Defines | Status |
 |---|---|---|---|
-| `90_hybrid_kem_adapter.md` | NPAMP-HYBRIDKEM | The provider-agnostic hybrid-KEM combiner adapter: raw ML-KEM + classical (X25519/P-384) component shared secrets in, per-group-ordered concatenated `HKDF-Extract` IKM out (spec/06's per-group order — `X25519MLKEM768` ML-KEM-first, `SecP384r1MLKEM1024` classical-first — is NOT universal). Go reference `impl/go/hybridkem`, graded against NIST ACVP/RFC 7748/RFC 5903 vectors and cross-checked byte-identical against `impl/go/kem.go`/`kem1024.go`. | **DRAFT** |
+| `90_hybrid_kem_adapter.md` | NPAMP-HYBRIDKEM | The provider-agnostic hybrid-KEM combiner adapter: raw ML-KEM + classical (X25519/P-384) component shared secrets in, per-group-ordered concatenated `HKDF-Extract` IKM out (spec/06's per-group order — `X25519MLKEM768` ML-KEM-first, `SecP384r1MLKEM1024` classical-first — is NOT universal). Go reference `impl/go/hybridkem`, graded against NIST ACVP/RFC 7748 vectors for `X25519MLKEM768` and cross-checked byte-identical against `impl/go/kem.go`; the open reference refuses `SecP384r1MLKEM1024`. | **DRAFT** |
 
 ### Per-channel interface references
 

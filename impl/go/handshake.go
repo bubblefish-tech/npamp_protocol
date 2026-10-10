@@ -3,7 +3,6 @@ package npamp
 import (
 	"crypto/ed25519"
 	"crypto/hmac"
-	"crypto/mldsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -53,8 +52,6 @@ var (
 	ErrCertVerifySignature = errors.New("npamp: CertVerify signature verification failed")
 	ErrCertVerifyKeySize   = errors.New("npamp: identity key is not an Ed25519 public key")
 	ErrFinishedMismatch    = errors.New("npamp: Finished verify_data mismatch")
-	ErrCertVerifyMLDSAKey  = errors.New("npamp: identity key is not an ML-DSA-87 public key")
-	ErrCertVerifyMLDSASize = errors.New("npamp: CertVerify value has an invalid ML-DSA-87 signature size")
 )
 
 // certVerifyContext returns the role's CertVerify context string
@@ -376,57 +373,6 @@ func VerifyCertVerify(pub []byte, role Role, transcriptHash, certVerifyValue []b
 	return nil
 }
 
-// SignCertVerifyMLDSA87 produces the TLV 0x0A value for the given role using
-// ML-DSA-87 (FIPS 204, IANA TLS SignatureScheme 0x0906 — spec/10 section 6.1,
-// suites.go SigMLDSA87), the post-quantum signature scheme required at the
-// High and Sovereign profiles. It signs the same CertVerifySigningInput as
-// SignCertVerify — 64 x 0x20 || context || 0x00 || transcript_hash — directly
-// in ML-DSA's pure (non-prehashed) mode with an empty ML-DSA context string
-// (the N-PAMP role/context separation already lives inside the signing
-// input, per CertVerifySigningInput; ML-DSA's own Options.Context is left
-// unused to avoid a second, redundant domain-separation mechanism).
-// SignDeterministic is used (not the randomized Sign) so the CertVerify
-// value is reproducible for known-answer testing, matching this package's
-// deterministic-KAT convention for every other primitive.
-func SignCertVerifyMLDSA87(priv *mldsa.PrivateKey, role Role, transcriptHash []byte) ([]byte, error) {
-	input, err := CertVerifySigningInput(role, transcriptHash)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := priv.SignDeterministic(input, nil)
-	if err != nil {
-		return nil, fmt.Errorf("npamp: ML-DSA-87 CertVerify signing failed: %w", err)
-	}
-	out := binary.BigEndian.AppendUint16(make([]byte, 0, 2+len(sig)), uint16(SigMLDSA87))
-	return append(out, sig...), nil
-}
-
-// VerifyCertVerifyMLDSA87 checks a TLV 0x0A value against the peer's
-// ML-DSA-87 identity key, role, and transcript hash (spec/10 section 6.1).
-// It rejects a signature scheme other than the negotiated ML-DSA-87
-// (0x0906) and — because the role selects the context string — a server
-// CertVerify presented as a client one, mirroring VerifyCertVerify's
-// Ed25519 checks for the post-quantum scheme.
-func VerifyCertVerifyMLDSA87(pub *mldsa.PublicKey, role Role, transcriptHash, certVerifyValue []byte) error {
-	if pub == nil {
-		return ErrCertVerifyMLDSAKey
-	}
-	if len(certVerifyValue) != 2+mldsa.MLDSA87SignatureSize {
-		return fmt.Errorf("%w: value is %d octets, want %d", ErrCertVerifyMLDSASize, len(certVerifyValue), 2+mldsa.MLDSA87SignatureSize)
-	}
-	if SigID(binary.BigEndian.Uint16(certVerifyValue[:2])) != SigMLDSA87 {
-		return ErrCertVerifyScheme
-	}
-	input, err := CertVerifySigningInput(role, transcriptHash)
-	if err != nil {
-		return err
-	}
-	if err := mldsa.Verify(pub, input, certVerifyValue[2:], nil); err != nil {
-		return ErrCertVerifySignature
-	}
-	return nil
-}
-
 // ComputeFinished produces the TLV 0x0B verify_data (spec/10 section 6.2, per
 // RFC 9846 section 4.4.4):
 //
@@ -435,17 +381,24 @@ func VerifyCertVerifyMLDSA87(pub *mldsa.PublicKey, role Role, transcriptHash, ce
 // with HMAC over the profile's KDF hash. transcript_hash is TH_sCV (server) /
 // TH_cCV (client) — the transcript through the sender's own CertVerify,
 // excluding its own Finished. finished_key comes from DeriveFinishedKey.
-func ComputeFinished(finishedKey, transcriptHash []byte, p Profile) []byte {
-	m := hmac.New(hashForProfile(p), finishedKey)
+func ComputeFinished(finishedKey, transcriptHash []byte, p Profile) ([]byte, error) {
+	h, err := hashForProfile(p)
+	if err != nil {
+		return nil, err
+	}
+	m := hmac.New(h, finishedKey)
 	m.Write(transcriptHash)
-	return m.Sum(nil)
+	return m.Sum(nil), nil
 }
 
 // VerifyFinished recomputes the Finished MAC and compares it to verifyData in
 // constant time, returning ErrFinishedMismatch on any difference (spec/10
 // section 6.2 requires constant-time verification and abort on mismatch).
 func VerifyFinished(finishedKey, transcriptHash, verifyData []byte, p Profile) error {
-	want := ComputeFinished(finishedKey, transcriptHash, p)
+	want, err := ComputeFinished(finishedKey, transcriptHash, p)
+	if err != nil {
+		return err
+	}
 	if !hmac.Equal(want, verifyData) {
 		return ErrFinishedMismatch
 	}

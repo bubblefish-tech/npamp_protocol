@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// certVerifyKAT mirrors test-vectors/v1/certverify-kat.json (ADR-0011):
+// certVerifyKAT mirrors test-vectors/v1/certverify-kat.json:
 // CertVerify value = u16(0x0807) || Ed25519(priv, signing_input), with
 // signing_input = 0x20 x 64 || context || 0x00 || transcript_hash (spec/10
 // section 6.1). The Ed25519 primitive is anchored to RFC 8032 section 7.1

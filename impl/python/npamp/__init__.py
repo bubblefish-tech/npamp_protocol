@@ -26,6 +26,7 @@ TLV_PROFILE_OFFER, TLV_KEM_CIPHERTEXT = 0x01, 0x08
 KEM_X25519_MLKEM768, KEM_X25519_MLKEM1024 = 0x11ec, 0x11ed
 AEAD_AES256_GCM, AEAD_CHACHA20_POLY1305 = 0x0001, 0x0002
 SIG_ED25519, SIG_MLDSA87 = 0x0807, 0x0906
+HASH_LEN = 32  # SHA-256, the Standard profile hash
 
 
 def crc32c(data: bytes) -> int:
@@ -108,17 +109,32 @@ def open_aes256gcm(key: bytes, iv: bytes, seq: int, aad: bytes, sealed: bytes) -
     return AESGCM(key).decrypt(derive_nonce(iv, seq), sealed, aad)
 
 
+class NoSuiteForProfile(Exception):
+    """Raised when a profile other than Standard is requested. This module implements the Standard
+    profile only; High and Sovereign are refused, before any I/O, with this error."""
+
+    def __init__(self):
+        super().__init__("no cipher suite for this profile: only the Standard profile is implemented")
+
+
+def _require_standard(standard: bool) -> None:
+    if not standard:
+        raise NoSuiteForProfile()
+
+
 def hkdf_extract(salt: bytes, ikm: bytes, standard: bool) -> bytes:
-    """HKDF-Extract (RFC 5869 2.2): PRK = HMAC-Hash(salt, IKM). Standard profile uses SHA-256,
-    High/Sovereign uses SHA-384. With a HashLen-zero salt this is the binding's handshake-secret
-    extraction step (spec/10 5). Exposed for independent KAT against RFC 5869 TC1."""
-    return hmac.new(salt, ikm, hashlib.sha256 if standard else hashlib.sha384).digest()
+    """HKDF-Extract (RFC 5869 2.2): PRK = HMAC-SHA-256(salt, IKM). Raises NoSuiteForProfile unless
+    standard is true. With a HashLen-zero salt this is the binding's handshake-secret extraction
+    step (spec/10 5). Exposed for independent KAT against RFC 5869 TC1."""
+    _require_standard(standard)
+    return hmac.new(salt, ikm, hashlib.sha256).digest()
 
 
 def hkdf_expand(prk: bytes, info: bytes, length: int, standard: bool) -> bytes:
-    """HKDF-Expand only (RFC 5869 2.3). Exposed for independent KAT against RFC 5869 / Wycheproof."""
-    algo = hashes.SHA256() if standard else hashes.SHA384()
-    return HKDFExpand(algorithm=algo, length=length, info=info).derive(prk)
+    """HKDF-Expand only (RFC 5869 2.3). Exposed for independent KAT against RFC 5869 / Wycheproof.
+    Raises NoSuiteForProfile unless standard is true."""
+    _require_standard(standard)
+    return HKDFExpand(algorithm=hashes.SHA256(), length=length, info=info).derive(prk)
 
 
 def hkdf_expand_label(secret: bytes, label: str, context: bytes, length: int, standard: bool) -> bytes:
@@ -129,8 +145,8 @@ def hkdf_expand_label(secret: bytes, label: str, context: bytes, length: int, st
 
 def derive_traffic_secret(master: bytes, direction: int, epoch: int, suite: int, channel: int, standard: bool) -> bytes:
     ctx = bytes([direction]) + epoch.to_bytes(8, "big") + suite.to_bytes(2, "big") + channel.to_bytes(2, "big")
-    hlen = 32 if standard else 48
-    return hkdf_expand_label(master, "traffic", ctx, hlen, standard)
+    _require_standard(standard)
+    return hkdf_expand_label(master, "traffic", ctx, HASH_LEN, standard)
 
 
 def derive_key_iv(secret: bytes, standard: bool):
@@ -138,30 +154,30 @@ def derive_key_iv(secret: bytes, standard: bool):
 
 
 def derive_handshake_secret(mlkem_ss: bytes, x25519_ss: bytes, standard: bool) -> bytes:
-    """Handshake secret (binding spec/10 5; ADR-0005 ML-KEM-first). The IKM is the ML-KEM shared
-    secret concatenated FIRST, then the X25519 shared secret; the handshake secret is HKDF-Extracted
-    under a HashLen-zero salt (32 zero octets at Standard/SHA-256, 48 at High/Sovereign/SHA-384)."""
-    hlen = 32 if standard else 48
+    """Handshake secret (binding spec/10 5). The IKM is the ML-KEM shared secret concatenated FIRST,
+    then the X25519 shared secret; the handshake secret is HKDF-Extracted under a HashLen-zero salt
+    (32 zero octets, SHA-256)."""
+    _require_standard(standard)
     ikm = mlkem_ss + x25519_ss
-    return hkdf_extract(b"\x00" * hlen, ikm, standard)
+    return hkdf_extract(b"\x00" * HASH_LEN, ikm, standard)
 
 
 def derive_handshake_traffic_secrets(handshake_secret: bytes, th_kem: bytes, th_ccv: bytes, standard: bool):
     """The c_hs/s_hs/master ladder off the handshake secret (binding spec/10 5). c_hs and s_hs bind
     the post-KEM transcript hash (th_kem); master binds the post-CertVerify transcript hash (th_ccv).
-    Each output is HashLen octets (32 at Standard/SHA-256). Returns (c_hs, s_hs, master)."""
-    hlen = 32 if standard else 48
-    c_hs = hkdf_expand_label(handshake_secret, "c hs", th_kem, hlen, standard)
-    s_hs = hkdf_expand_label(handshake_secret, "s hs", th_kem, hlen, standard)
-    master = hkdf_expand_label(handshake_secret, "master", th_ccv, hlen, standard)
+    Each output is HashLen octets (32, SHA-256). Returns (c_hs, s_hs, master)."""
+    _require_standard(standard)
+    c_hs = hkdf_expand_label(handshake_secret, "c hs", th_kem, HASH_LEN, standard)
+    s_hs = hkdf_expand_label(handshake_secret, "s hs", th_kem, HASH_LEN, standard)
+    master = hkdf_expand_label(handshake_secret, "master", th_ccv, HASH_LEN, standard)
     return c_hs, s_hs, master
 
 
 def derive_finished_key(secret: bytes, standard: bool) -> bytes:
     """Finished key (binding spec/10 6.2 / 5.4): HKDF-Expand-Label(secret, 'finished', '', HashLen).
     The client Finished key derives from c_hs; the server Finished key derives from s_hs."""
-    hlen = 32 if standard else 48
-    return hkdf_expand_label(secret, "finished", b"", hlen, standard)
+    _require_standard(standard)
+    return hkdf_expand_label(secret, "finished", b"", HASH_LEN, standard)
 
 
 # ----------------------------------------------------------------------------
@@ -180,8 +196,7 @@ class Transcript:
     """Accumulates the draft-00 handshake transcript (binding spec/10 3) and hashes it at a cut
     point. Per-TLV granularity: add_frame_type appends the 2-octet frame type ONLY (not the rest of
     the 36-octet header - the spec 3/7.1 divergence from RFC 8446); add_tlv appends
-    Type(2 BE) | Length(2 BE) | Value. A point = hash over all bytes absorbed so far (SHA-256 at
-    Standard, SHA-384 at High/Sovereign)."""
+    Type(2 BE) | Length(2 BE) | Value. A point = SHA-256 over all bytes absorbed so far."""
     __slots__ = ("_buf",)
 
     def __init__(self):
@@ -194,13 +209,15 @@ class Transcript:
         self._buf += (type_ & 0xFFFF).to_bytes(2, "big") + len(value).to_bytes(2, "big") + value
 
     def hash(self, standard: bool) -> bytes:
-        return hashlib.sha256(self._buf).digest() if standard else hashlib.sha384(self._buf).digest()
+        _require_standard(standard)
+        return hashlib.sha256(self._buf).digest()
 
 
 def compute_finished(finished_key: bytes, transcript_hash: bytes, standard: bool) -> bytes:
     """Finished (binding spec/10 6.2; RFC 8446 4.4.4): HMAC(finished_key, transcript_hash) under
-    the profile hash (SHA-256 at Standard, SHA-384 at High/Sovereign)."""
-    return hmac.new(finished_key, transcript_hash, hashlib.sha256 if standard else hashlib.sha384).digest()
+    SHA-256. Raises NoSuiteForProfile unless standard is true."""
+    _require_standard(standard)
+    return hmac.new(finished_key, transcript_hash, hashlib.sha256).digest()
 
 
 def verify_finished(finished_key: bytes, transcript_hash: bytes, verify_data: bytes, standard: bool) -> bool:

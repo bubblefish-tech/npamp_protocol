@@ -21,8 +21,8 @@ do {
     // 1. Key schedule: derive a per-(direction, channel, suite) traffic key + IV from the master
     //    secret. In a live session the master secret is the handshake output; here it is fixed.
     let master = [UInt8](repeating: 0x2B, count: 32)
-    let ts = Npamp.deriveTrafficSecret(master, dirClientToServer, 0, Npamp.aeadAes256Gcm, Npamp.chanMemory, true)
-    let (key, iv) = Npamp.deriveKeyIv(ts, true)
+    let ts = try Npamp.deriveTrafficSecret(master, dirClientToServer, 0, Npamp.aeadAes256Gcm, Npamp.chanMemory, true)
+    let (key, iv) = try Npamp.deriveKeyIv(ts, true)
 
     // 2. Sender: seal an application payload into an AEAD-protected frame on the Memory channel.
     //    The AEAD associated data is the 21-octet header prefix, so the ciphertext is bound to

@@ -96,7 +96,7 @@ func TestGenHandshakeFlow(t *testing.T) {
 	chPayload := ch.Encode()
 	chFrame := mustMarshalFrame(t, FrameClientHello, 0, chPayload)
 
-	clientT := NewTranscript(p)
+	clientT := mustTranscript(t, p)
 	clientT.AddFrame(FrameClientHello, ch.TLVs())
 
 	// Server: decode CH, encapsulate with the fixed server X25519 private.
@@ -126,7 +126,7 @@ func TestGenHandshakeFlow(t *testing.T) {
 	shPayload := sh.Encode()
 	shFrame := mustMarshalFrame(t, FrameServerHello, 0, shPayload)
 
-	serverT := NewTranscript(p)
+	serverT := mustTranscript(t, p)
 	serverT.AddFrame(FrameClientHello, chRecv.TLVs())
 	serverT.AddFrame(FrameServerHello, sh.TLVs())
 
@@ -174,7 +174,7 @@ func TestGenHandshakeFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sFin := ComputeFinished(sFinKey, thSCV, p)
+	sFin := mustFinished(t, sFinKey, thSCV, p)
 	serverT.AddTLV(TLV{Type: TLVFinished, Value: sFin})
 	serverAuth := &AuthMessage{IdentityKey: serverPub, CertVerify: sCV, Finished: sFin}
 	serverAuthPlain := serverAuth.Encode()
@@ -200,7 +200,7 @@ func TestGenHandshakeFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cFin := ComputeFinished(cFinKey, thCCV, p)
+	cFin := mustFinished(t, cFinKey, thCCV, p)
 	clientAuth := &AuthMessage{IdentityKey: clientPub, CertVerify: cCV, Finished: cFin}
 	clientAuthPlain := clientAuth.Encode()
 	clientAuthFrame := mustSealAuth(t, FrameClientAuth, cHS, DirClientToServer, clientAuthPlain, p)

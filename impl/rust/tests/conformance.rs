@@ -34,14 +34,6 @@ fn vec_aead() {
     assert_eq!(hexs(&seal_aes256gcm(&key, &iv, 7, &aad, b"hello world")), "3fe8b79f95b5697926b3395429c2c2466999c652f9346aeebb30bf");
 }
 
-#[test]
-fn vec_traffic_key() {
-    let master = vec![0x2Au8; 48];
-    let ts = derive_traffic_secret(&master, 0, 0, AEAD_AES256_GCM, CHAN_CONTROL, false);
-    let (tk, _) = derive_key_iv(&ts, false);
-    assert_eq!(hexs(&tk), "79372e2fb7f92d63e3a68099ff72514f310ebf6773deb0fa7ef45d013c652dcc");
-}
-
 // --- property tests (mirror the Go suite) ---
 
 #[test]

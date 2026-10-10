@@ -26,6 +26,19 @@ final class FrameException extends \RuntimeException
  * Raised when an AEAD open (decrypt) is rejected: authentication failure,
  * truncated tag, or any input the cipher will not accept.
  */
+/**
+ * Thrown when a profile other than Standard is requested. This module implements
+ * the Standard profile only; High and Sovereign are refused, before any I/O, with
+ * this error.
+ */
+final class NoSuiteForProfile extends \RuntimeException
+{
+    public function __construct()
+    {
+        parent::__construct('no cipher suite for this profile: only the Standard profile is implemented');
+    }
+}
+
 final class AeadException extends \RuntimeException
 {
 }
@@ -189,16 +202,16 @@ final class Npamp
      *
      * info = u16(length) | u8(len(full)) | full | u8(len(context)) | context
      * where full = LABEL_PREFIX . label (ASCII).
-     * Hash is SHA-256 when $standard is true, SHA-384 when false (the "high" profile).
+     * Hash is SHA-256; throws NoSuiteForProfile unless $standard is true.
      */
     public static function hkdfExpandLabel(string $secret, string $label, string $context, int $length, bool $standard): string
     {
+        self::requireStandard($standard);
         $full = self::LABEL_PREFIX . $label;
         $info = self::uintToBytes($length, 2)
             . chr(strlen($full)) . $full
             . chr(strlen($context)) . $context;
-        $algo = $standard ? 'sha256' : 'sha384';
-        return self::hkdfExpand($secret, $info, $length, $algo);
+        return self::hkdfExpand($secret, $info, $length, 'sha256');
     }
 
     /**
@@ -227,7 +240,7 @@ final class Npamp
      * Derive a traffic secret (draft-00 key schedule).
      *
      * context = dir(1) | epoch(8 BE) | suite(2 BE) | channel(2 BE); label "traffic";
-     * output 32 octets (SHA-256, standard) or 48 octets (SHA-384, high).
+     * output 32 octets (SHA-256). Throws NoSuiteForProfile unless $standard is true.
      */
     public static function deriveTrafficSecret(string $master, int $direction, int $epoch, int $suite, int $channel, bool $standard): string
     {
@@ -235,8 +248,8 @@ final class Npamp
             . self::uintToBytes($epoch, 8)
             . self::uintToBytes($suite, 2)
             . self::uintToBytes($channel, 2);
-        $hlen = $standard ? 32 : 48;
-        return self::hkdfExpandLabel($master, 'traffic', $ctx, $hlen, $standard);
+        self::requireStandard($standard);
+        return self::hkdfExpandLabel($master, 'traffic', $ctx, self::HASH_LEN, $standard);
     }
 
     /**
@@ -256,17 +269,17 @@ final class Npamp
      * HKDF-Extract (RFC 5869 sec 2.2): PRK = HMAC-Hash(salt, IKM).
      *
      * The salt is the HMAC key; the IKM (input keying material) is the HMAC
-     * message. Hash is SHA-256 when $standard is true, SHA-384 when false (the
-     * "high" profile), wired the same way as the rest of the key schedule.
+     * message. Hash is SHA-256; throws NoSuiteForProfile unless $standard is true.
      */
     public static function hkdfExtract(string $salt, string $ikm, bool $standard): string
     {
-        return hash_hmac($standard ? 'sha256' : 'sha384', $ikm, $salt, true);
+        self::requireStandard($standard);
+        return hash_hmac('sha256', $ikm, $salt, true);
     }
 
     /**
      * Derive the handshake secret from the two KEM shared secrets (binding
-     * spec/10 sec 5; ML-KEM-first per ADR-0005).
+     * spec/10 sec 5; ML-KEM-first).
      *
      * IKM = ML-KEM shared secret || X25519 shared secret (the ML-KEM shared
      * secret is concatenated FIRST). The binding's default salt is HashLen zero
@@ -275,7 +288,8 @@ final class Npamp
     public static function deriveHandshakeSecret(string $mlkemSharedSecret, string $x25519SharedSecret, bool $standard): string
     {
         $ikm = $mlkemSharedSecret . $x25519SharedSecret;
-        $salt = str_repeat("\0", $standard ? 32 : 48);
+        self::requireStandard($standard);
+        $salt = str_repeat("\0", self::HASH_LEN);
         return self::hkdfExtract($salt, $ikm, $standard);
     }
 
@@ -286,7 +300,7 @@ final class Npamp
      */
     public static function deriveClientHandshakeSecret(string $handshakeSecret, string $thKem, bool $standard): string
     {
-        return self::hkdfExpandLabel($handshakeSecret, 'c hs', $thKem, $standard ? 32 : 48, $standard);
+        return self::hkdfExpandLabel($handshakeSecret, 'c hs', $thKem, self::HASH_LEN, $standard);
     }
 
     /**
@@ -295,7 +309,7 @@ final class Npamp
      */
     public static function deriveServerHandshakeSecret(string $handshakeSecret, string $thKem, bool $standard): string
     {
-        return self::hkdfExpandLabel($handshakeSecret, 's hs', $thKem, $standard ? 32 : 48, $standard);
+        return self::hkdfExpandLabel($handshakeSecret, 's hs', $thKem, self::HASH_LEN, $standard);
     }
 
     /**
@@ -305,7 +319,7 @@ final class Npamp
      */
     public static function deriveMasterSecret(string $handshakeSecret, string $thCcv, bool $standard): string
     {
-        return self::hkdfExpandLabel($handshakeSecret, 'master', $thCcv, $standard ? 32 : 48, $standard);
+        return self::hkdfExpandLabel($handshakeSecret, 'master', $thCcv, self::HASH_LEN, $standard);
     }
 
     /**
@@ -316,7 +330,18 @@ final class Npamp
      */
     public static function deriveFinishedKey(string $secret, bool $standard): string
     {
-        return self::hkdfExpandLabel($secret, 'finished', '', $standard ? 32 : 48, $standard);
+        return self::hkdfExpandLabel($secret, 'finished', '', self::HASH_LEN, $standard);
+    }
+
+    /** The Standard profile hash length (SHA-256). */
+    public const HASH_LEN = 32;
+
+    /** Throw NoSuiteForProfile unless $standard is true. */
+    public static function requireStandard(bool $standard): void
+    {
+        if (!$standard) {
+            throw new NoSuiteForProfile();
+        }
     }
 }
 
@@ -430,8 +455,7 @@ final class Frame
  * Per-TLV granularity: addFrameType appends the 2-octet frame type ONLY (not the
  * rest of the 36-octet header - the spec section 3/7.1 divergence from RFC 8446
  * section 4.4.1); addTlv appends Type(2 BE) | Length(2 BE) | Value. A point =
- * hash over all bytes absorbed so far (SHA-256 at Standard, SHA-384 at
- * High/Sovereign).
+ * SHA-256 over all bytes absorbed so far.
  */
 final class Transcript
 {
@@ -452,12 +476,13 @@ final class Transcript
     }
 
     /**
-     * Hash over all bytes absorbed so far: SHA-256 when $standard is true,
-     * SHA-384 when false. Returns raw (binary) digest.
+     * SHA-256 over all bytes absorbed so far; throws NoSuiteForProfile unless
+     * $standard is true. Returns raw (binary) digest.
      */
     public function hash(bool $standard): string
     {
-        return hash($standard ? 'sha256' : 'sha384', $this->buf, true);
+        Npamp::requireStandard($standard);
+        return hash('sha256', $this->buf, true);
     }
 }
 
@@ -481,11 +506,12 @@ final class Handshake
     /**
      * Finished (binding spec/10 section 6.2; RFC 8446 section 4.4.4):
      * verify_data = HMAC(finished_key, transcript_hash) under the profile hash
-     * (SHA-256 at Standard, SHA-384 at High/Sovereign). Returns raw bytes.
+     * (SHA-256). Throws NoSuiteForProfile unless $standard is true. Returns raw bytes.
      */
     public static function computeFinished(string $finishedKey, string $transcriptHash, bool $standard): string
     {
-        return hash_hmac($standard ? 'sha256' : 'sha384', $transcriptHash, $finishedKey, true);
+        Npamp::requireStandard($standard);
+        return hash_hmac('sha256', $transcriptHash, $finishedKey, true);
     }
 
     /**

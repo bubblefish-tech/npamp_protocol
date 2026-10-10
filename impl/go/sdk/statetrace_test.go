@@ -381,7 +381,7 @@ func TestStateTable_PostKeyHandshakeDeviants_Error(t *testing.T) {
 		if err != nil {
 			t.Fatalf("decode CLIENT_HELLO: %v", err)
 		}
-		tr := npamp.NewTranscript(p)
+		tr := mustTranscript(t, p)
 		tr.AddFrame(npamp.FrameClientHello, ch.TLVs())
 		kemCT, ss, err := npamp.Encapsulate(ch.KEMShare)
 		if err != nil {
@@ -476,7 +476,7 @@ func TestStateTable_PostKeyHandshakeDeviants_Error(t *testing.T) {
 	deviantClientToWaitCA := func(t *testing.T, a net.Conn) (cHS, sHS []byte) {
 		t.Helper()
 		ch, kem := stStandardCH(t)
-		tr := npamp.NewTranscript(p)
+		tr := mustTranscript(t, p)
 		stSetDeadline(t, a)
 		if err := sendCleartext(a, npamp.FrameClientHello, ch.Encode()); err != nil {
 			t.Fatalf("send CLIENT_HELLO: %v", err)
@@ -935,4 +935,14 @@ func TestStateTable_GeneratorConsumesTable(t *testing.T) {
 			t.Fatalf("table for %s/%s/%s = %q, want SILENT_ABORT", c.role, c.state, c.input, got)
 		}
 	}
+}
+
+// mustTranscript builds a Standard-profile transcript or fails the test.
+func mustTranscript(tb testing.TB, p npamp.Profile) *npamp.Transcript {
+	tb.Helper()
+	tr, err := npamp.NewTranscript(p)
+	if err != nil {
+		tb.Fatalf("NewTranscript(%s): %v", p, err)
+	}
+	return tr
 }
