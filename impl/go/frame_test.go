@@ -185,7 +185,7 @@ func TestProfileInvariants(t *testing.T) {
 	if !ProfileStandard.Valid() || !ProfileSovereign.Valid() || Profile(0x04).Valid() {
 		t.Fatal("profile validity")
 	}
-	if ProfileStandard.KDFHash() != "SHA-256" || ProfileHigh.KDFHash() == ProfileStandard.KDFHash() {
+	if ProfileStandard.KDFHash() != "SHA-256" || ProfileHigh.KDFHash() != "SHA-384" {
 		t.Fatal("kdf hash")
 	}
 	if ProfileStandard.MinKEM() != KEMX25519MLKEM768 || ProfileSovereign.MinKEM() != KEMSecP384r1MLKEM1024 {

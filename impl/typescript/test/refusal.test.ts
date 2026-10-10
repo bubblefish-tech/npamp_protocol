@@ -41,6 +41,7 @@ test("standard profile control succeeds", () => {
 });
 
 const refused: Array<[string, () => unknown]> = [
+  ["hkdfExpand sha384", () => hkdfExpand("sha384", secret, Buffer.from("info"), 48)],
   ["hkdfExpand sha512", () => hkdfExpand("sha512", secret, Buffer.from("info"), 48)],
   ["hkdfExpandLabel", () => hkdfExpandLabel(secret, "key", Buffer.alloc(0), 32, false)],
   ["hkdfExtract", () => hkdfExtract(Buffer.alloc(48), secret, false)],

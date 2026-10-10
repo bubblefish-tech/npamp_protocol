@@ -32,7 +32,7 @@ the wire bytes are fixed by the spec regardless of which library computes them.
 - **FIPS boundary caveat:** "ML-KEM is present in the OpenSSL 3.5 *library*" is a separate
   claim from "ML-KEM is in a FIPS-140-3-validated OpenSSL *module*" — the two are validated on
   different CMVP timelines. Whether a deployment needs library-level or validated-module-level
-  PQC is a per-deployment decision, tracked in the crypto-agility runbook (E0.3), not here.
+  PQC is a per-deployment decision, tracked in the crypto-agility runbook, not here.
 - **Profile alignment:** the SecP384r1MLKEM1024 group (ML-KEM-1024 + P-384) is the one aligned
   with an ML-KEM-1024-only posture; X25519MLKEM768 (ML-KEM-768) is the broader-interop group.
   This mirrors `RFC 10024`'s (formerly `draft-ietf-tls-ecdhe-mlkem`) own two-suite structure.
@@ -64,16 +64,16 @@ implement SecP384r1MLKEM1024):
 runs a live X25519MLKEM768 exchange using those stdlib providers,
 then feeds the resulting raw component secrets into the standalone combiner adapter
 (`hybridkem.Combine`) and asserts the adapter reproduces the reference key-schedule input
-byte-for-byte, in the ML-KEM-first order of 0x11ec. This is the concrete link between the provider (E0.2) and the combiner spec (E0.1).
+byte-for-byte, in the ML-KEM-first order of 0x11ec. This is the concrete link between the provider and the combiner specification.
 
-## Notes, gaps, and pre-E1 checks
+## Notes, gaps, and checks still to make
 
 - **Ruby is the one language without a mature native ML-KEM path today.** The `ruby/openssl`
   gem (latest 4.0.2, 2026-05-13) tracks PQC support upstream at `ruby/openssl#894`, and the
   broader Ruby-stdlib effort is `bugs.ruby-lang.org` Feature #22068 — both open and in active,
   dated development as of 2026-08-21. There is no OQS-official liboqs-ruby wrapper and no
-  dedicated ML-KEM gem was located. The Ruby SDK's live ML-KEM path is therefore an **E1
-  prerequisite to re-confirm**, not a settled dependency: re-check whether the tracking issue
+  dedicated ML-KEM gem was located. The Ruby SDK's live ML-KEM path is therefore a
+  **prerequisite to re-confirm**, not a settled dependency: re-check whether the tracking issue
   has landed before the Ruby stack is built, since the upstream work is moving.
 - **PHP** has no core-`openssl` ML-KEM (confirmed absent from the PHP 8.6 RFC roster); it
   depends on a non-core extension (`paragonie/ext-pqcrypto`, or a liboqs FFI binding). This is
@@ -82,7 +82,7 @@ byte-for-byte, in the ML-KEM-first order of 0x11ec. This is the concrete link be
   vectors through the real code path) is confirmed present for Go, Rust, Node, and Swift. For
   **Python `cryptography`, Java Bouncy Castle, .NET, and PHP `ext-pqcrypto`**, the exact
   deterministic-keygen call surface was not confirmed in this pass — verify it before wiring
-  each language's KAT harness (a pre-E1 to-do, tracked per language).
+  each language's KAT harness.
 - **CNSA 2.0 posture** (ML-KEM-1024-only, milestone dates) is recorded from secondary
   summaries in this pass; open the NSA CNSA 2.0 FAQ directly before any CNSA-2.0 conformance
   claim.

@@ -45,6 +45,7 @@ mac = Npamp.compute_finished(secret, th, true)
 check("standard control: finished verifies", Npamp.verify_finished(secret, th, mac, true))
 
 refused("hkdf_extract") { Npamp.hkdf_extract("\x00".b * 48, secret, false) }
+refused("hkdf_expand sha384") { Npamp.hkdf_expand(secret, "info".b, 48, OpenSSL::Digest.new("SHA384")) }
 refused("hkdf_expand sha512") { Npamp.hkdf_expand(secret, "info".b, 48, OpenSSL::Digest.new("SHA512")) }
 refused("hkdf_expand_label") { Npamp.hkdf_expand_label(secret, "key", "".b, 32, false) }
 refused("derive_traffic_secret") do

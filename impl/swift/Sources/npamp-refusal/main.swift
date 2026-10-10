@@ -42,6 +42,7 @@ do {
 }
 
 refused("hkdfExtract") { _ = try Npamp.hkdfExtract(zero48, secret, false) }
+refused("hkdfExpand sha384") { _ = try Npamp.hkdfExpand(hash: "sha384", prk: secret, info: [1], length: 48) }
 refused("hkdfExpand sha512") { _ = try Npamp.hkdfExpand(hash: "sha512", prk: secret, info: [1], length: 48) }
 refused("hkdfExpandLabel") { _ = try Npamp.hkdfExpandLabel(secret, "key", [], 32, false) }
 refused("deriveTrafficSecret") {

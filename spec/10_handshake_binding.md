@@ -147,7 +147,7 @@ HKDF-Expand-Label(Secret, Label, Context, Length) =
 HkdfLabel = uint16(Length) ‖ opaque label<7..255> = ("n-pamp " ‖ Label) ‖ opaque context<0..255> = Context
 ```
 
-Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM = the per-group combined KEM shared secret of §4/§4a — ML-KEM-first for X25519MLKEM768, ECDHE-first for SecP384r1MLKEM1024 — per D2 / {{RFC10024}}, superseding the earlier universal ML-KEM-first order)
+Extract and the secret tree (`H`/`HashLen` per profile): **[D→N-PAMP]** (IKM = the per-group combined KEM shared secret of §4/§4a — ML-KEM-first for X25519MLKEM768, ECDHE-first for SecP384r1MLKEM1024 — per {{RFC10024}}, superseding the earlier universal ML-KEM-first order)
 
 ```
 handshake_secret = HKDF-Extract(salt = HashLen·0x00, IKM = per-group KEM shared secret §4/§4a)
