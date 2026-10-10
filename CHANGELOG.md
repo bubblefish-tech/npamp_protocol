@@ -10,6 +10,18 @@ Independent version axes apply (see the README "Versioning" section):
 - the **Internet-Draft revision** (`-NN`), which advances with each published
   revision of the document.
 
+## impl/go v0.3.0 (2026-10-09)
+
+Release of the Go reference implementation module.
+
+- **Removed:** the High and Sovereign key schedule, ML-DSA-87 and ML-KEM-1024
+  computation, and the audit seal. The module implements the Standard profile.
+- **Kept:** the High and Sovereign profile, KEM and signature code points, and
+  negotiation and fallback. An offer of High or Sovereign is refused with the
+  profile-refusal error before any I/O.
+- **Changed:** the module requires Go 1.26 (was 1.27).
+- **Retracted:** v0.1.0 to v0.2.1, which carry the removed code.
+
 ## draft-bubblefish-npamp-02
 
 Revision of the Internet-Draft. Wire-breaking vs draft-01.
