@@ -44,7 +44,7 @@ const quicInitialPad = 1200
 // this file's only source of an authenticated N-PAMP session is the real
 // TCP+TLS leg (Dial). Concretely this means DialWithFallback exercises the
 // FAILURE side of the race today (QUIC-blocked / ECN-blackholed /
-// PMTU-blackholed all fall through to TCP+TLS, per R11's three named
+// PMTU-blackholed all fall through to TCP+TLS, per the three named
 // scenarios); a future QUIC transport binding would only need to replace
 // probeQUICPath's success path with a real N-PAMP-over-QUIC Dial, keeping
 // this file's racing and FallbackTelemetry contract unchanged.
@@ -164,7 +164,7 @@ func probeQUICPath(ctx context.Context, addr string, timeout time.Duration, ecnM
 // ("n-pamp/3", enforced inside Dial), the SAME Profile negotiation, and the
 // SAME mutual-authentication guarantees a direct Dial(ctx, addr, cfg.Config)
 // would produce. A caller cannot observe, from the Conn alone, that a QUIC
-// path was attempted and failed — the fallback is transparent (R11).
+// path was attempted and failed — the fallback is transparent.
 //
 // DialWithFallback waits for both legs to settle (bounded by
 // QUICProbeTimeout) before returning, so FallbackTelemetry is always

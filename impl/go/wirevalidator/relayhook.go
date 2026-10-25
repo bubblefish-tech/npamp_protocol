@@ -9,7 +9,7 @@ import (
 	"github.com/bubblefish-tech/npamp_protocol/impl/go/relay"
 )
 
-// RelayHook returns a relay.HookFunc backed by reg: E2.2's firewall seam
+// RelayHook returns a relay.HookFunc backed by reg: the firewall seam
 // (impl/go/relay.Relay.Hook) plugs this in directly to reject any relayed
 // frame whose frame type is reserved (0x0000), whose channel is not a
 // registered channel, whose frame type is not registered for that channel,

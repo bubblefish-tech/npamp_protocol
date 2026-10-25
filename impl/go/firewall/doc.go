@@ -12,7 +12,7 @@
 // an existing impl/go/relay.Relay by building a single relay.HookFunc that
 // runs, per frame, in this fixed order:
 //
-//  1. impl/go/wirevalidator's own RelayHook (R3.2): structural + registry
+//  1. impl/go/wirevalidator's own RelayHook: structural + registry
 //     validation -- a reserved frame type, an unregistered channel, an
 //     unregistered (channel, frame-type) pair, or an oversized frame is
 //     rejected here, before this package's policy is even consulted.

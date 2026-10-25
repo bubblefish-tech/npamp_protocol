@@ -15,7 +15,7 @@ var (
 	// ErrUnknownErrorCode is returned when Outcome.Code names a SessionErrorCode value not
 	// present in the Part-1 error registry this package knows about (definedCodes,
 	// span.go) -- emitting error.type from an unresolvable code would be a fabricated name.
-	ErrUnknownErrorCode = errors.New("npamp/otel: error code does not resolve in the Part-1 R10 error registry")
+	ErrUnknownErrorCode = errors.New("npamp/otel: error code does not resolve in the Part-1 error registry")
 
 	// ErrEmptyServiceName is returned by the provider constructors when serviceName is
 	// empty -- a resource with no service.name attribute asserts nothing identifiable.

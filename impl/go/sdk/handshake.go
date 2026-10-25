@@ -251,7 +251,7 @@ func newConn(raw net.Conn, master []byte, peerID []byte, sendDir, recvDir npamp.
 	// generation 0. Independent copies so each direction can advance (and wipe its
 	// predecessor) without disturbing the other; the caller's `master` backing
 	// array is not retained. Generation-0 roots ARE the handshake master, so
-	// gen-0 traffic keys are byte-identical to the pre-ratchet schedule (R4).
+	// gen-0 traffic keys are byte-identical to the pre-ratchet schedule.
 	return &Conn{
 		raw:        raw,
 		profile:    sdkProfile,

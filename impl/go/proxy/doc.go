@@ -114,6 +114,6 @@
 //     the §8 full-duplex two-correlated-streams model: this build's gRPC/
 //     WebSocket producer is stateless (always NotResumable) and models each
 //     exchange as one request, one reply stream, one direction — see stream.go.
-//   - Packaging (AC3: signed, SBOM-bearing single binary) — R10 AC6 explicitly
-//     defers this to share infrastructure with E5.1/E5.2 (supply chain).
+//   - Packaging (signed, SBOM-bearing single binary) — deferred, to share
+//     infrastructure with the supply chain.
 package proxy

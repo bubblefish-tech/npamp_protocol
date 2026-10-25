@@ -104,7 +104,7 @@ func NewRecorder(tracer trace.Tracer, meter metric.Meter) (*Recorder, error) {
 	}
 	errCounter, err := meter.Int64Counter(
 		"npamp.errors",
-		metric.WithDescription("count of N-PAMP Part-1 R10 registered error codes observed by npampotel"),
+		metric.WithDescription("count of N-PAMP Part-1 registered error codes observed by npampotel"),
 		metric.WithUnit("{error}"),
 	)
 	if err != nil {
