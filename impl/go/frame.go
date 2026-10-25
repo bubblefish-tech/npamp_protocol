@@ -29,7 +29,7 @@ const ProtocolVersion uint8 = 0x2
 var Magic = [4]byte{0x4E, 0x50, 0x41, 0x4D}
 
 // Frame flags occupy the low nibble of header octet 4. Bits 0 (0x01) and 3 (0x08)
-// are reserved in this revision -- the never-specified URG/FRAG flags (T15.2); a
+// are reserved in this revision -- the never-specified URG/FRAG flags; a
 // receiver MUST reject a frame that sets either (reservedFlagMask, fail-closed),
 // and a future assignment rides a new ALPN generation. Bits 1 (ENC) and 2 (COMP)
 // remain defined.

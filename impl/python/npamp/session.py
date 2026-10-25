@@ -43,8 +43,7 @@ session against the frozen ``handshake-flow-kat.json`` vector -- deterministic
 keygen from the pinned 64-octet ``mlkem768_seed_dz`` reproduces the pinned
 encapsulation key exactly, and decapsulating the pinned (captured-once)
 ``mlkem_ciphertext`` under the derived decapsulation key recovers the pinned
-``mlkem_shared_secret`` exactly. See ``tests/test_session.py`` and
-``RED-EVIDENCE.md`` for the recorded evidence.
+``mlkem_shared_secret`` exactly. See ``tests/test_session.py``.
 """
 from __future__ import annotations
 

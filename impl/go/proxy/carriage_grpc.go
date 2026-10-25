@@ -10,7 +10,7 @@ import (
 )
 
 // gRPC carriage under NPAMP-CC-STREAM (spec/companion/23_carriage_streaming.md)
-// -- the third carriage leg of E2.4/R10 (doc.go). See carriage_stream.go's
+// -- the third carriage leg of the proxy's carriage set (doc.go). See carriage_stream.go's
 // package doc for why this build places gRPC under carriage class STREAM.
 
 // grpcProtocolID is the protocol_id this build uses for gRPC generic

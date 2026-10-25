@@ -3,9 +3,8 @@
 // Package supplychain builds signed, attestable release artifacts for the N-PAMP
 // reference SDKs: a real Software Bill of Materials (SBOM) parsed from the actual Go
 // module dependency graph, and a signed provenance/attestation statement binding an
-// artifact's content digest to its SBOM's content digest. This satisfies BubbleFish
-// Global Engineering Policy 5.5 ("published artifacts carry a signature (cosign/Sigstore)
-// + an SBOM"). It is purely additive: no N-PAMP wire format, frame layout, handshake
+// artifact's content digest to its SBOM's content digest. This follows the practice that
+// published artifacts carry a signature (cosign/Sigstore) and an SBOM. It is purely additive: no N-PAMP wire format, frame layout, handshake
 // message, or conformance vector is touched — it signs with crypto/ed25519 directly (the
 // same stdlib primitive npamp.SignCertVerify/ed25519.Sign use for the live handshake's
 // CertVerify message, npamp.SigEd25519 = 0x0807, "all profiles" per suites.go) rather than
@@ -15,7 +14,7 @@
 // # Why Ed25519, not ML-DSA
 //
 // N-PAMP's crypto-generation registry (suites.go) also names SigMLDSA87 (0x0906, "High,
-// Sovereign") as a signature code point, and keyformat.go documents — as of this session —
+// Sovereign") as a signature code point, and keyformat.go documents — as of 2026-08-31 —
 // that "no Go stdlib ML-DSA type exists yet in this toolchain" to mint or verify an ML-DSA
 // key from, which is why keyformat.go's own component-size table sources the four ML-DSA
 // sizes from a published specification (FIPS 204 Table 2, cross-checked against the Open
@@ -23,15 +22,15 @@
 // that same honest constraint: it signs with crypto/ed25519 (npamp.SigEd25519), the one
 // signature algorithm this Go reference actually exercises end-to-end today (see
 // certverify_kat_test.go — RFC 8032-anchored, live in the CertVerify handshake path), not
-// an aspirational ML-DSA path this toolchain cannot yet execute (A2 — no code describing
+// an aspirational ML-DSA path this toolchain cannot yet execute (no code describing
 // what it will do "once ML-DSA lands").
 //
-// # Grounding (primary sources fetched and read this session, 2026-08-31)
+// # Grounding (primary sources read 2026-08-31)
 //
 //   - SBOM format: CycloneDX 1.7, published 2026-12-10 (per cyclonedx.org/specification/
 //     overview/ — the version string is confirmed live at https://cyclonedx.org/docs/1.7/
-//     json/, cross-checked this session against the N-AALP ecosystem/naalp-supply-chain
-//     package, which fetched the identical schema the same session). The exact JSON Schema
+//     json/, cross-checked against the N-AALP ecosystem/naalp-supply-chain
+//     package, which fetched the identical schema). The exact JSON Schema
 //     this package validates against is vendored verbatim at schema/bom-1.7.schema.json,
 //     the same byte-identical download used by ecosystem/naalp-supply-chain
 //     (https://raw.githubusercontent.com/CycloneDX/specification/master/schema/
@@ -68,7 +67,7 @@
 //     protocol) while DSSE is exactly the transport in-toto's own spec recommends for this
 //     purpose. payloadType is the in-toto attestation spec's own recommended value,
 //     "application/vnd.in-toto+json" (https://github.com/in-toto/attestation/blob/main/
-//     spec/v1/envelope.md, fetched this session: "payloadType MUST be set to
+//     spec/v1/envelope.md, fetched: "payloadType MUST be set to
 //     `application/vnd.in-toto.<predicate>+json` or to `application/vnd.in-toto+json`" and
 //     "payload MUST be a base64-encoded JSON [Statement]").
 //   - Package URL (purl) type for a Go module: type "golang",

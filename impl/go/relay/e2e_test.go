@@ -22,7 +22,7 @@ import (
 	"github.com/bubblefish-tech/npamp_protocol/impl/go/sdk"
 )
 
-// TestE2E_HandshakeAndDataRoundTrip_ThroughRelay is the R1.2 load-bearing
+// TestE2E_HandshakeAndDataRoundTrip_ThroughRelay is the load-bearing
 // proof: agent A and agent B each run the REAL 1.5-RTT mutually-authenticated
 // N-PAMP handshake (sdk.DialRaw / sdk.AcceptRaw — the exact primitives
 // TestDialRaw_AcceptRaw_RoundTrip in impl/go/sdk/dialraw_test.go exercises
@@ -39,7 +39,7 @@ import (
 //     agentA sends a payload, agentB receives it unaltered, then echoes it
 //     back, and agentA observes the byte-identical echo.
 //
-// Mutation anchor (RED-EVIDENCE): a bug that drops, misroutes, truncates, or
+// Mutation anchor: a bug that drops, misroutes, truncates, or
 // mutates a forwarded frame breaks this test — either the handshake never
 // completes (Send/Recv time out or error) or the round-tripped payload no
 // longer matches what was sent.

@@ -21,7 +21,7 @@
 // This package takes no dependency on any specific ML-KEM or ECDH provider
 // (no crypto/mlkem, no crypto/ecdh, no liboqs binding) — it operates on raw
 // []byte component secrets only, so the same combiner logic serves any
-// language's provider binding (design.md Tier-2 PQC provider map) without
+// language's provider binding (the per-language provider map) without
 // a per-language reimplementation of the ordering rule. The sibling root
 // package (github.com/bubblefish-tech/npamp_protocol/impl/go) already performs
 // this same combining inline inside SharedSecrets.Combined() using its own

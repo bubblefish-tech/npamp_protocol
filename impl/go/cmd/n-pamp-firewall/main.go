@@ -1,8 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Command n-pamp-firewall is the reference agent firewall (task E2.2,
-// requirements R1.1/R3.2; see impl/go/firewall for the composition logic
-// and design rationale). Like n-pamp-relay (E2.1), it listens on two TCP
+// Command n-pamp-firewall is the reference agent firewall (see impl/go/firewall for the composition logic
+// and design rationale). Like n-pamp-relay, it listens on two TCP
 // addresses, accepts exactly one connection on each, and forwards
 // self-delimiting N-PAMP frames between them in both directions — but,
 // unlike n-pamp-relay's unconditional forwarding, it inspects each frame's
@@ -25,13 +24,13 @@
 //
 // -deny-channel may be repeated; each value is a channel_id (hex or
 // decimal, per registries/channels.csv) refused outright on EITHER leg,
-// regardless of frame type -- the "routing metadata" refusal R1.1 names.
+// regardless of frame type -- the "routing metadata" refusal.
 //
 // -deny-frame-type may be repeated; each value is "channel:type" (both hex
 // or decimal) refusing that EXACT (channel, frame-type) pair while leaving
 // the rest of the channel open -- e.g. "0x0000:0x0100" refuses
 // CLIENT_HELLO (frame type 0x0100) on the Control channel (0x0000), the
-// "CH/SH selections" refusal R1.1 names, without blocking every other
+// "CH/SH selections" refusal, without blocking every other
 // Control-channel frame.
 //
 // This binary carries the reference policy shape (impl/go/firewall.ChannelPolicy)
@@ -125,7 +124,7 @@ func run(addrA, addrB string, maxFrameSize uint32, registryRoot string, denyChan
 }
 
 // loadRegistries loads the wire-validator registries this firewall enforces
-// (R3.2): from root if non-empty, else from wirevalidator's own
+// from root if non-empty, else from wirevalidator's own
 // source-tree-relative default (the same resolution n-pamp-relay's sibling
 // packages and this repository's own tests use).
 func loadRegistries(root string) (*wirevalidator.Registries, error) {

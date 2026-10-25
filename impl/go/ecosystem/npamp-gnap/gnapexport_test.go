@@ -48,7 +48,7 @@ func TestEffectClassStringMatchesWaypointRsDisplay(t *testing.T) {
 	}
 }
 
-// ---- ExportWaypointEvidence: the D15 export-only, fail-closed enforcement -----------------
+// ---- ExportWaypointEvidence: the export-only, fail-closed enforcement -----------------
 
 func TestExportWaypointEvidenceWithinCeilingSucceeds(t *testing.T) {
 	grant := WaypointGrant{SignerID: "agent-b", MaxGrant: EffectNonIdempotentWrite, ConsumingAuthority: "gateway-a"}

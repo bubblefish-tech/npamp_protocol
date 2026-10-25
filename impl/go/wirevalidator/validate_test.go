@@ -20,7 +20,7 @@ func testRegistries(t *testing.T) *Registries {
 }
 
 // ---------------------------------------------------------------------------
-// F3 non-circular ACCEPT: the golden PING vector from the PINNED conformance
+// non-circular ACCEPT: the golden PING vector from the PINNED conformance
 // corpus (test-vectors/v1/conformance-corpus.json, header.decode tcId 1),
 // an independent authority this validator's own logic never produced.
 // ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ func TestValidateBytes_AcceptsControlHandshakeFrame(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// F3 non-circular REJECT: hand-constructed frames whose invalidity is
+// non-circular REJECT: hand-constructed frames whose invalidity is
 // established by reading registries/*.csv directly (an independent
 // authority), never by consulting this validator's own logic.
 // ---------------------------------------------------------------------------

@@ -96,7 +96,7 @@ var bridgeAccept = []bridgeAcceptCase{
 		foreignHex: "",
 	},
 
-	// ---- wave-1 (NPAMP-REG 30_protocol_registry.md §6, 0x06-0x0A): one request+response pair per
+	// ---- initial-set (NPAMP-REG 30_protocol_registry.md §6, 0x06-0x0A): one request+response pair per
 	// newly assigned protocol_id, transcribed from the oracle's actual output (out/bridge.json) exactly
 	// as the six cases above were. See test-vectors/gen/bridge_oracle.py for the per-case grounding. ----
 	{
@@ -302,7 +302,7 @@ func TestBridgeOracleCrossValidate(t *testing.T) {
 			"001000150001010100040a0b0c0d0a746f6f6c732f63616c6c7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c227d",
 			FrameBridgeStreamData,
 			"001000150001050100040a0b0c0d0a746f6f6c732f63616c6c6368756e6b2d30", true},
-		// wave-1: correlation is per §5 identifier equality, independent of protocol_id -- these prove
+		// initial-set: correlation is per §5 identifier equality, independent of protocol_id -- these prove
 		// that generic property holds at two of the newly assigned code points (30/6, oracle tcId 4-5).
 		{"wave1_nlip_reply_correlates", FrameBridgeRequest,
 			"0010000b0006010100044e4c3031007b22666f726d6174223a2274657874222c22737562666f726d6174223a22656e676c697368222c22636f6e74656e74223a225768617420697320746865207765617468657220696e2050617269733f227d",

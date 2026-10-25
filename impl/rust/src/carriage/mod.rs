@@ -4,7 +4,7 @@
 //! 21_carriage_http.md, 23_carriage_streaming.md) — the ecosystem-facing
 //! "shared corpus" layer graded by `tests/carriage_shared_corpus_test.rs`
 //! against the SAME independently-built oracle bytes the Go reference's
-//! `impl/go/proxy/carriage_shared_corpus_test.go` grades (E2.22/R14.5):
+//! `impl/go/proxy/carriage_shared_corpus_test.go` grades:
 //! wrap-then-unwrap octet-exact carriage round trips for MCP/A2A (JSON-RPC),
 //! public-LLM (HTTP), and SSE/streaming (STREAM).
 //!

@@ -202,7 +202,7 @@ func TestValidateRejectsMalformedJSON(t *testing.T) {
 	}
 }
 
-// TestSchemaRequiredMutationSurvives is the A4/A5 mutation-surviving test named
+// TestSchemaRequiredMutationSurvives is the mutation-surviving test named
 // explicitly for jsonschema.go's most load-bearing check: a validator whose "required"
 // handling is stubbed out (never appends an error) passes every OTHER test above by
 // accident on well-formed documents, but fails this one, which specifically exercises

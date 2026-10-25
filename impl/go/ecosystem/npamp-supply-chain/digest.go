@@ -19,7 +19,7 @@ type DigestSet map[string]string
 
 // DigestBytes computes the SHA-256 and SHA-384 digests of data and returns them as a
 // DigestSet. It is a pure function of data: replacing data with any other byte slice
-// changes both digest values (A4 — a digest function that ignores its input is not a
+// changes both digest values (a digest function that ignores its input is not a
 // digest function).
 func DigestBytes(data []byte) DigestSet {
 	sum256 := sha256.Sum256(data)

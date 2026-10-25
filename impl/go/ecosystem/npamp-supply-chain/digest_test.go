@@ -9,8 +9,8 @@ import (
 )
 
 // Independent oracle: SHA-256/SHA-384 of "" and "abc", computed via .NET's
-// System.Security.Cryptography (PowerShell, this session) — a different implementation
-// and runtime than Go's crypto/sha256, so a match here is not circular (F3). These are the
+// System.Security.Cryptography (PowerShell) — a different implementation
+// and runtime than Go's crypto/sha256, so a match here is not circular. These are the
 // well-known FIPS 180-4 test values (not N-PAMP-specific), independently recomputed this
 // session rather than merely recalled.
 const (
@@ -38,7 +38,7 @@ func TestDigestBytesMatchesIndependentOracle(t *testing.T) {
 	}
 }
 
-// TestDigestBytesChangesWithInput is the A4 mutation-surviving test: a digest function
+// TestDigestBytesChangesWithInput is the mutation-surviving test: a digest function
 // whose body ignores its parameter (e.g. always returning the empty-input digest) fails
 // this test, because "abc" and "" produce different digests above and this test asserts
 // two DISTINCT non-trivial inputs also produce distinct output.

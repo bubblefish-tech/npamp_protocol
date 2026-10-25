@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! SPIFFE identity binding (E2.6, R12 AC2): `nz-agent` binds every workload's
+//! SPIFFE identity binding: `nz-agent` binds every workload's
 //! N-PAMP session to a SPIFFE X.509 SVID issued by SPIRE via OS-level workload
 //! attestation — never an ambient/shared credential.
 //!
@@ -16,7 +16,7 @@
 //! is case-sensitive; the whole URI MUST be at most 2048 bytes and the trust
 //! domain at most 255 bytes.
 //!
-//! # The live SPIRE client (E2.6, closed this build)
+//! # The live SPIRE client (closed in this crate)
 //!
 //! [`DelegatedIdentitySource`] is the seam a real SPIRE Workload API client
 //! (the "DelegatedIdentity API" the design doc names — a gRPC surface over a
@@ -27,7 +27,7 @@
 //! kept, not replaced, for tests and local dev without a live SPIRE
 //! deployment) and [`crate::spire_client::SpireWorkloadApiSource`] (the real
 //! gRPC-over-UDS client, `src/spire_client.rs` — standing up a live SPIRE
-//! Server+Agent is still infra this build environment cannot host, but the
+//! Server+Agent is still infra a CI host without a SPIRE deployment cannot provide, but the
 //! client itself is built, wired into `bin/nz_agent.rs` via
 //! `--spire-socket`, and tested end to end against an in-process mock
 //! DelegatedIdentity server over a real Unix-domain socket). No change was
@@ -343,7 +343,7 @@ mod tests {
         assert_eq!(err, IdentityError::UnknownWorkload(999));
     }
 
-    /// R12 AC2's core testable claim: two workloads, two keys. Directly
+    /// The core testable claim: two workloads, two keys. Directly
     /// exercised at the identity layer here (see agent.rs for the
     /// session-level version composing npamp::session::Session).
     #[test]

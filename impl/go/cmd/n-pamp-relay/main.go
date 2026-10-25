@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 // Command n-pamp-relay is the reference frame-delimiting N-PAMP forwarder
-// (task E2.1, requirements R1.1/R1.2/DES-10; see impl/go/relay for the
+// (see impl/go/relay for the
 // forwarding logic and the design rationale). It listens on two TCP
 // addresses, accepts exactly one connection on each, and forwards
 // self-delimiting N-PAMP frames between them in both directions until the
@@ -20,7 +20,7 @@
 //
 // This binary carries no inspection policy of its own: relay.Relay.Hook is
 // left nil, so every well-formed frame is forwarded (this package's own
-// default). A later policy layer (E2.2, a frame-inspecting firewall) plugs
+// default). A later policy layer (a frame-inspecting firewall) plugs
 // into that same seam without changing anything here.
 package main
 

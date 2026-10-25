@@ -1,14 +1,14 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 //! `nz-agent` — the N-PAMP per-node / ambient post-quantum data-plane agent
-//! (Part-2 R12, tasks E2.5-E2.8; design: AMBIENT-DEPLOYMENT-DESIGN.md).
+//! (see the ambient deployment design).
 //!
 //! # What this crate is
 //!
 //! A per-node, ztunnel-analogue L4 data-plane agent: one `nz-agent` process per
 //! Kubernetes node terminates/originates N-PAMP hybrid-PQC sessions on behalf of
 //! every workload on that node, in place of the workload running its own N-PAMP
-//! stack (or, at the on-ramp rung R10, its own sidecar). It composes the existing
+//! stack (or, at the on-ramp rung, its own sidecar). It composes the existing
 //! `npamp` crate's [`npamp::session::Session`] — the crate's own KAT-pinned,
 //! red-evidenced handshake + AEAD record layer — for every cryptographic
 //! operation. **This crate contains no handshake code, no KEM code, and no AEAD
@@ -18,7 +18,7 @@
 //! authorization, and an optional L7 waypoint's carriage-translation /
 //! authorization dispatch.
 //!
-//! # Module map (mirrors the four E2.5-E2.8 tasks)
+//! # Module map
 //!
 //! | Module | Task | Design-doc component |
 //! |---|---|---|
@@ -37,8 +37,8 @@
 //!
 //! # The one property every other property depends on
 //!
-//! **Session keys are per-workload (per-SVID), never node-global** (R12 AC2; the
-//! design doc's blast-radius mitigation #1). This crate does not derive one
+//! **Session keys are per-workload (per-SVID), never node-global** (the
+//! blast-radius mitigation). This crate does not derive one
 //! shared master secret for the node and multiplex payload confidentiality
 //! underneath it — every workload gets its OWN [`npamp::session::Session`],
 //! established by its OWN independent N-PAMP handshake, carried over its OWN
@@ -57,9 +57,9 @@
 //! `nz-agent` PQC session boundary is produced and consumed exclusively by
 //! `npamp::session::Session::send`/`recv`.
 //!
-//! # Tracked gaps (this build; see the crate's build report)
+//! # Tracked gaps
 //!
-//! - ~~Live SPIRE Workload API / DelegatedIdentity fetch~~ — **CLOSED, E2.6**.
+//! - ~~Live SPIRE Workload API / DelegatedIdentity fetch~~ — **CLOSED**.
 //!   [`spire_client::SpireWorkloadApiSource`] is a real gRPC-over-UDS client
 //!   implementing [`identity::DelegatedIdentitySource`], wired into
 //!   `bin/nz_agent.rs` via `--spire-socket` and tested end to end against an
@@ -69,29 +69,28 @@
 //!   that is an infra/deployment gap, not an implementation one.
 //! - **eBPF capture** — [`capture`] defines `CaptureSource` and ships the
 //!   iptables/TPROXY rule-construction path (testable without root); it does
-//!   not execute rules against a live kernel (needs `CAP_BPF`/root, R13's job
-//!   per the design doc's own rung split).
+//!   not execute rules against a live kernel (needs `CAP_BPF`/root, a separate
+//!   sub-unit per the design doc's own rung split).
 //! - **Envoy proxy-wasm / agentgateway hosting** — [`waypoint`] ships the
 //!   carriage-translation dispatch table and the fail-closed `AuthzHook` seam;
 //!   it does not compile to a proxy-wasm module or host inside a live
-//!   agentgateway process (a separate toolchain/build target, R12 AC3's "and/or"
+//!   agentgateway process (a separate toolchain/build target, the requirement's "and/or"
 //!   — this crate builds the composable core both hosts would call into).
-//! - **`appProtocol: npamp` upstream wiring (E2.19/E2.20, R14)** — [`gateway_backend`]
+//! - **`appProtocol: npamp` upstream wiring** — [`gateway_backend`]
 //!   builds and mutation-tests the SYNC core of the backend connection type
 //!   (dial + fail-closed downgrade refusal, see that module's docs for the
 //!   exact upstream `agentgateway/agentgateway` seam this was grounded
 //!   against). It does not add a `Transport::Npamp` variant to agentgateway's
 //!   own `client::mod.rs` match, add an async `client/npamp_tunnel.rs`
 //!   module to that (separate, external) repository, or open the PR — see
-//!   an internal design note for that
-//!   concrete, citation-grounded writeup, and mesh-underlay validation
-//!   (E2.18, actually running agentgateway pods in-mesh with a packet trace)
-//!   is held pending a live cluster, per this build's own task table.
+//!   that concrete, citation-grounded writeup, and mesh-underlay validation
+//!   (actually running agentgateway pods in-mesh with a packet trace)
+//!   is held pending a live cluster.
 //! - **Live N-AALP effect-class/audience authorization** — `waypoint::AuthzHook`
 //!   is the seam a real N-AALP policy client would implement; this build ships
 //!   a fail-closed default and a table-based test double, not a cross-repo
 //!   client to the (Go) N-AALP policy engine.
-//! - **WFP kernel callout driver (`WFP-KERNEL-CALLOUT-GAP`, R13-C/E2.14,
+//! - **WFP kernel callout driver (WFP kernel callout gap,
 //!   Windows only)** — [`wfp`] builds the user-mode WFP filter/condition
 //!   object model (the ALE authorize-layer PERMIT filters), the
 //!   `WfpEngineInstaller` submission seam, a real (grounded, genuinely
@@ -107,10 +106,9 @@
 //!   userspace boundary in. What remains genuinely unbuildable in this
 //!   environment — a signed kernel-mode callout driver actually registered
 //!   at the redirect layers (`FwpsCalloutRegister1`, WDK-gated, no signing
-//!   in this build) — is a maintainer-gated follow-up, not an
-//!   implementation gap in the userspace floor. See
-//!   the WFP design grounding §4.
-//! - **E2.13 half 2 — the eBPF-side flow/verdict telemetry bridge** — [`telemetry`]
+//!   in this build) — is a follow-up gated on a signed driver, not an
+//!   implementation gap in the userspace floor.
+//! - **Telemetry half 2 — the eBPF-side flow/verdict telemetry bridge** — [`telemetry`]
 //!   builds the real OTel+Prometheus exporter half over the existing
 //!   userspace `datapath::DropEvent` taxonomy (the [`telemetry::TelemetrySink`]
 //!   trait consumes it, live-tested against a real
@@ -143,11 +141,10 @@ pub mod waypoint;
 /// The Windows Filtering Platform (WFP) datapath rung (R13-C) — the Windows
 /// analog of [`datapath`]'s eBPF ladder; Windows-only by construction (see
 /// `wfp`'s own module docs for why this is a sibling module rather than a
-/// new `datapath::DatapathStrategy` variant, and the WFP design grounding
-/// for the primary-source grounding).
+/// new `datapath::DatapathStrategy` variant).
 #[cfg(windows)]
 pub mod wfp;
-/// The WFP kernel-callout <-> userspace wire codec (E2.14 userspace floor).
+/// The WFP kernel-callout <-> userspace wire codec (WFP userspace floor).
 /// Deliberately NOT `#[cfg(windows)]`-gated — pure `std`, no FFI — so it
 /// compiles and its tests run on every platform this crate builds on; see
 /// `wfp_wire`'s own module docs for why it is a byte-level sibling to

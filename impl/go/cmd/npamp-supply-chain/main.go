@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 // Command npamp-supply-chain is the release-time production caller of
-// ecosystem/npamp-supply-chain's pipeline.BuildRelease (task E5.1/E5.2, R7.1/R7.2). It is
+// ecosystem/npamp-supply-chain's pipeline.BuildRelease. It is
 // the CLI entry point that closes the "nothing exists until wired" gap noted in the
 // package's own doc.go: BuildRelease, BuildSBOM, BuildStatement, and the DSSE signer were
 // built and unit-tested, but had zero production callers anywhere in the tree (a repo-wide

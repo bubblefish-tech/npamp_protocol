@@ -81,7 +81,7 @@ opened:
 
 The **server** role is the mirror image. The exact frame layout, TLV type
 numbers, HKDF labels, and AEAD nonce construction are normative in
-`spec/10_handshake.md` and `spec/` generally; `impl/go/cmd/npamp-interop/main.go`
+`spec/10_handshake_binding.md` and `spec/` generally; `impl/go/cmd/npamp-interop/main.go`
 is a complete, minimal, line-by-line reference of this exact sequence built
 entirely from the **exported** primitives of `impl/go` (no unexported internals),
 which is the same bar your implementation needs to clear.

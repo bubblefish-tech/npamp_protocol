@@ -51,7 +51,7 @@ func TestSignStatementIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestSignStatementChangesWithPayload is the A4 mutation-surviving test for SignStatement.
+// TestSignStatementChangesWithPayload is the mutation-surviving test for SignStatement.
 func TestSignStatementChangesWithPayload(t *testing.T) {
 	signer, err := NewProvenanceSigner(testSeed)
 	if err != nil {

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Package proxy_test holds n-pamp-proxy's load-bearing end-to-end proof (R10
-// AC4, the literal acceptance criterion): "An e2e test SHALL prove an
+// Package proxy_test holds n-pamp-proxy's load-bearing end-to-end proof (the literal
+// acceptance criterion): "An e2e test SHALL prove an
 // unmodified HTTP client reaches a remote service through two sidecars over
 // N-PAMP." It lives in the external proxy_test package (matching relay/
 // firewall's e2e_test.go convention) so it can import both proxy and sdk
@@ -86,7 +86,7 @@ func twoConnectedProxies(t *testing.T, backendURL *url.URL) (ingressSide, egress
 	return ingressSide, egressSide
 }
 
-// TestE2E_UnmodifiedHTTPClient_ReachesBackend_ThroughTwoSidecars is the R10 AC4
+// TestE2E_UnmodifiedHTTPClient_ReachesBackend_ThroughTwoSidecars is the
 // load-bearing proof, verbatim: "An e2e test SHALL prove an unmodified HTTP
 // client reaches a remote service through two sidecars over N-PAMP."
 //
@@ -99,7 +99,7 @@ func twoConnectedProxies(t *testing.T, backendURL *url.URL) (ingressSide, egress
 //     1.5-RTT mutually-authenticated handshake driver every other SDK e2e test
 //     in this repo uses) carrying BRIDGE_REQUEST/BRIDGE_RESPONSE frames.
 //
-// Mutation anchor (RED-EVIDENCE): a bug that drops, truncates, or mutates the
+// Mutation anchor: a bug that drops, truncates, or mutates the
 // carried method/target/header/body, or that fails to correlate the reply to
 // the right waiting request, breaks this test.
 func TestE2E_UnmodifiedHTTPClient_ReachesBackend_ThroughTwoSidecars(t *testing.T) {

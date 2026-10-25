@@ -11,7 +11,7 @@ import (
 
 // NPAMP-CC-OPAQUE (spec/companion/25_carriage_opaque.md) Proxy wiring -- the
 // n-pamp-proxy carriage leg for raw TCP / any not-otherwise-mapped payload
-// (E2.4/R10's sixth and final leg). Modeled as a simple, non-streamed
+// (the sixth and final carriage leg). Modeled as a simple, non-streamed
 // BRIDGE_REQUEST/BRIDGE_RESPONSE exchange sharing the same p.pending
 // correlation map the HTTP and JSON-RPC legs use (proxy.go) -- matching this
 // build's existing scope decision to carry only the non-streamed

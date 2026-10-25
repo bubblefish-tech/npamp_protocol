@@ -13,11 +13,11 @@ import (
 // ErrNoRegistries is returned by Hook (and Wrap) when Firewall.Registries is
 // nil: a Firewall with no loaded wire-validator registries cannot honestly
 // claim to inspect anything, so it refuses to build a Hook at all rather
-// than silently skipping R3.2's registry check.
+// than silently skipping the registry check.
 var ErrNoRegistries = errors.New("firewall: Registries is required (nil wirevalidator.Registries)")
 
 // Firewall composes impl/go/wirevalidator's structural/registry validation
-// (R3.2) with an optional per-deployment Policy (R1.1) into a single
+// with an optional per-deployment Policy into a single
 // relay.HookFunc that plugs directly into impl/go/relay.Relay.Hook -- see
 // doc.go for the full composition order and capability-boundary rationale.
 type Firewall struct {

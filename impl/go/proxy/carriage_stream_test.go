@@ -78,7 +78,7 @@ func TestStreamControl_WrongLength_Rejected(t *testing.T) {
 }
 
 // TestStreamEventTracker_StrictMonotonic_Enforced is the §5.1 event-id
-// invariant MUTATION ANCHOR (RED-EVIDENCE): a data frame whose event_id does
+// invariant MUTATION ANCHOR: a data frame whose event_id does
 // not strictly exceed the previous one MUST be rejected.
 func TestStreamEventTracker_StrictMonotonic_Enforced(t *testing.T) {
 	var tr streamEventTracker

@@ -40,8 +40,8 @@ func TestGRPCLengthPrefixedMessage_EmptyMessage(t *testing.T) {
 	}
 }
 
-// TestGRPCLengthPrefixedMessage_TooShort_Rejected is a MUTATION ANCHOR
-// (RED-EVIDENCE): fewer than 5 octets cannot hold the LPM header and MUST be
+// TestGRPCLengthPrefixedMessage_TooShort_Rejected is a MUTATION ANCHOR:
+// fewer than 5 octets cannot hold the LPM header and MUST be
 // rejected, not silently treated as a length-0 or partially-read frame.
 func TestGRPCLengthPrefixedMessage_TooShort_Rejected(t *testing.T) {
 	if _, _, err := decodeGRPCLengthPrefixedMessage([]byte{0x00, 0x00}); err == nil {

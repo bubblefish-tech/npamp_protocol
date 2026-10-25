@@ -92,8 +92,8 @@ func TestHandshakeTLVLayoutEnforced(t *testing.T) {
 		t.Fatalf("out-of-order TLVs not rejected (err=%v)", err)
 	}
 	// Unknown CRITICAL (must-understand) TLV: high bit 0x8000 set and not in the
-	// recognized set -> ErrUnknownCriticalTLV, distinct from the ordering/count error
-	// (R6). Mutation-guard for CheckMustUnderstand: if the must-understand check is
+	// recognized set -> ErrUnknownCriticalTLV, distinct from the ordering/count error.
+	// Mutation-guard for CheckMustUnderstand: if the must-understand check is
 	// removed from requireTLVs, this 4th TLV instead trips the count check
 	// (ErrHandshakeTLVOrder) and this assertion fails.
 	critical := append(append([]TLV{}, good...), TLV{Type: TLVType(0x8001), Value: make([]byte, 4)})

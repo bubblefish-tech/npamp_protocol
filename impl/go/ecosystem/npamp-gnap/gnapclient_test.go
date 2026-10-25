@@ -41,7 +41,7 @@ func TestClientFieldEmitsHttpsigProofAndValidJWK(t *testing.T) {
 	}
 }
 
-// TestClientFieldChangesWithKey is the A4 mutation-surviving test: the emitted JWK must
+// TestClientFieldChangesWithKey is the mutation-surviving test: the emitted JWK must
 // actually depend on the client's public key.
 func TestClientFieldChangesWithKey(t *testing.T) {
 	pubA, privA := clientTestKeypair(t)

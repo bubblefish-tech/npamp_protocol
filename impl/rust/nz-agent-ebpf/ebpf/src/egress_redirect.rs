@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `egress_redirect`: the kernel side of R13-B-cont's `CgroupRedirect` rung
-//! (EBPF-DATAPATH-DESIGN.md: "`cgroup/connect4|connect6` rewrites the
+//! `egress_redirect`: the kernel side of the `CgroupRedirect` rung
+//! (per the eBPF datapath design: "`cgroup/connect4|connect6` rewrites the
 //! outbound dst to `nz-agent` at `connect()` time (no per-packet cost);
 //! original dst stashed in a BPF map keyed by socket cookie; a socket mark
 //! breaks the nz-agent-re-capture loop"). Two programs sharing two maps:
@@ -18,7 +18,7 @@
 //! - `egress_redirect_connect6` (`cgroup/connect6`): a deliberate,
 //!   documented no-op — see "IPv6 scope" below.
 //!
-//! # The fail-closed property this file holds (R13.1)
+//! # The fail-closed property this file holds
 //!
 //! Exactly like `ebpf/src/main.rs`'s `samenode_splice` pair, THIS file never
 //! calls `EGRESS_WAYPOINT.insert`/`HashMap::insert` — that map is written
@@ -87,8 +87,7 @@ const SOL_SOCKET: i32 = 1;
 const SO_MARK: i32 = 36;
 /// The mark value this rung applies to a redirected socket. Any nonzero,
 /// process-distinguishable value works for the Istio SO_MARK
-/// re-capture-loop-breaking pattern this rung follows (EBPF-DATAPATH-
-/// DESIGN.md); `nz-agent`'s own outbound connect to the REAL destination
+/// re-capture-loop-breaking pattern this rung follows; `nz-agent`'s own outbound connect to the REAL destination
 /// carries this mark, and a production deployment's cgroup/connect4 hook
 /// would skip already-marked sockets (that skip condition is future work
 /// tracked at the `nz-agent` policy layer, not in this kernel program, which
@@ -120,7 +119,7 @@ static EGRESS_WAYPOINT: HashMap<EgressKey, Waypoint> = HashMap::with_max_entries
 #[map]
 static EGRESS_ORIG_DST: HashMap<u64, EgressKey> = HashMap::with_max_entries(64, 0);
 
-/// E2.13 (R13.5, kernel-side half): per-CPU verdict counters for every
+/// Kernel-side telemetry half: per-CPU verdict counters for every
 /// connect() that MATCHED a registered `EGRESS_WAYPOINT` entry (an unmatched
 /// connect — no registered waypoint — is never counted; see
 /// `tc_fallback.rs`'s sibling `TC_VERDICTS` map for why an interface/netns-
@@ -212,7 +211,7 @@ fn try_connect4(ctx: &SockAddrContext) {
     // Record the ORIGINAL destination this socket asked for, keyed by its
     // cookie, so `nz-agent` can recover it after accepting the redirected
     // connection (see the module docs' "one kernel-side map write" section).
-    // E2.13: record whether this stash succeeded — see EGRESS_VERDICTS' docs.
+    // Telemetry: record whether this stash succeeded — see EGRESS_VERDICTS' docs.
     let cookie = unsafe { bpf_get_socket_cookie(sock_addr.cast::<c_void>()) };
     match EGRESS_ORIG_DST.insert(&cookie, &key, 0) {
         Ok(()) => bump_verdict(VERDICT_STEERED),

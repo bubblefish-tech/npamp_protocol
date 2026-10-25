@@ -10,7 +10,7 @@
 //
 // `denied_pair_never_touches_the_backend` and
 // `registered_but_unauthorized_pair_never_touches_the_backend` are the two
-// halves of M-ebpf-1 (see RED-EVIDENCE.md): together they prove
+// halves of one property: together they prove
 // `AyaSpliceInstaller::install` cannot reach `SplicerBackend` for a pair
 // that is EITHER unauthorized OR only partially registered.
 
@@ -73,7 +73,7 @@ fn conn_key_of_derives_from_the_sockets_own_addresses() {
     // try_redirect` builds its `SPLICE_PEER` lookup key from those RAW fields:
     // `local_port` in HOST byte order, but `remote_port` in NETWORK byte order
     // (the ctx-access rewrite places it in the high 16 bits on little-endian).
-    // Asserting the network-order form here GUARDS the R13-D fix — a revert to
+    // Asserting the network-order form here GUARDS the `remote_port` fix — a revert to
     // a host-order `remote_port` (which silently breaks the sockhash lookup, so
     // the data-plane splice never fires) flips this test red.
     assert_eq!(key.local_port, u32::from(local.port()));
@@ -172,7 +172,7 @@ fn allowed_and_fully_registered_pair_installs_both_directions() {
 
 #[test]
 fn allowed_pair_missing_one_registration_fails_without_touching_the_backend() {
-    // The property M-ebpf-1 mutates away: install() requires BOTH endpoints
+    // The property under test: install() requires BOTH endpoints
     // registered before it ever calls SplicerBackend.
     let a = id("half-a");
     let b = id("half-b"); // never registered

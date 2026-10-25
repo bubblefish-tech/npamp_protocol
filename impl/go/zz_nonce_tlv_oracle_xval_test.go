@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestNonceDeriveOracleCrossValidate proves NON-CIRCULARITY for the per-frame nonce (TRACK C5): the
+// TestNonceDeriveOracleCrossValidate proves NON-CIRCULARITY for the per-frame nonce: the
 // nonce bytes below are the ACTUAL output of the independent Python oracle
 // (test-vectors/gen/nonce_tlv_oracle.py), computed from scratch as iv XOR (0^4 || seq_BE64) per
 // spec/06 §"Key Schedule and Nonces" (the Channel ID is NOT mixed in) — NOT dumped from
@@ -40,7 +40,7 @@ func TestNonceDeriveOracleCrossValidate(t *testing.T) {
 }
 
 // TestTLVEncodeOracleCrossValidate proves NON-CIRCULARITY for the extension-TLV wire encoding
-// (TRACK C5): the TLV bytes below are the ACTUAL output of the independent Python oracle
+// the TLV bytes below are the ACTUAL output of the independent Python oracle
 // (test-vectors/gen/nonce_tlv_oracle.py), assembled from scratch as Type(BE16)||Length(BE16)||Value
 // per spec/02 §"Extension TLV encoding" — NOT dumped from impl/go/tlv.go TLV.Encode. It asserts
 // TLV.Encode reproduces those bytes, including a zero-length value and a forward-incompatible

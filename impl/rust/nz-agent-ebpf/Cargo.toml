@@ -1,8 +1,8 @@
 # Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 #
-# R13-B: the eBPF program source (aya) + userspace loader for N-PAMP's
-# same-node sockmap splice fast path (EBPF-DATAPATH-DESIGN.md's
-# `sockops + sk_msg + sockmap` rung). Sibling to `../nz-agent` (R13-A, the
+# The eBPF program source (aya) + userspace loader for N-PAMP's
+# same-node sockmap splice fast path (the eBPF datapath design's
+# `sockops + sk_msg + sockmap` rung). Sibling to `../nz-agent` (the
 # capability-probed selector + fail-closed authz gate this crate plugs into),
 # NOT part of that crate's build: `aya`/`aya-ebpf` are Linux-only, so keeping
 # them in this INDEPENDENT workspace preserves `nz-agent`'s Windows build

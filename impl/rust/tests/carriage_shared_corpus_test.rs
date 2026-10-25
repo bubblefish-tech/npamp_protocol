@@ -1,9 +1,9 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! R14.5/E2.22 — Rust port of the Go reference's shared carriage-object corpus
+//! Rust port of the Go reference's shared carriage-object corpus
 //! (`impl/go/proxy/carriage_shared_corpus_test.go`): the SAME independently
 //! hand-built oracle bytes are reproduced HERE, independent of the encode/decode
-//! functions under test (F3 — no oracle value is derived by calling the function
+//! functions under test (no oracle value is derived by calling the function
 //! under test). Grades `npamp::carriage::{jsonrpc, http, stream}` for
 //! wrap-then-unwrap octet-exact carriage round trips: MCP/A2A (JSON-RPC),
 //! public-LLM (HTTP), SSE/streaming (STREAM). Every oracle constant/function

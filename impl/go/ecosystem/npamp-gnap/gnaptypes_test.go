@@ -37,7 +37,7 @@ func TestEncodeGrantRequestRejectsEmptyAccess(t *testing.T) {
 	}
 }
 
-// TestEncodeGrantRequestRejectsNonHttpsigProof is the A4 mutation-surviving check for the
+// TestEncodeGrantRequestRejectsNonHttpsigProof is the mutation-surviving check for the
 // proof-method gate: this bridge implements exactly one proofing method and must refuse to
 // emit a request claiming any other.
 func TestEncodeGrantRequestRejectsNonHttpsigProof(t *testing.T) {

@@ -1,11 +1,11 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 //! `AyaSpliceInstaller`: the live implementation of
-//! `nz_agent::datapath::SpliceInstaller` (R13-A's seam) that R13-B adds —
+//! `nz_agent::datapath::SpliceInstaller` (the datapath seam) that this crate adds —
 //! the real aya `SockHash`/`HashMap` map-updates a live `nz-agent` deployment
 //! performs to install a same-node sockmap splice.
 //!
-//! # The fail-closed property this file holds (R13.1, one layer under `nz-agent`)
+//! # The fail-closed property this file holds (one layer under `nz-agent`)
 //!
 //! `nz-agent`'s own `datapath.rs` already makes it structurally impossible
 //! to call [`SpliceInstaller::install`] for an unauthorized pair — a
@@ -20,8 +20,7 @@
 //! an in-memory table — so **the only code path in this crate that calls
 //! [`SplicerBackend::insert_sock`]/[`SplicerBackend::link_peer`] (the two
 //! real `bpf()` map-update operations) is `install`, reached only for a
-//! token that is BOTH authorized AND fully registered.** Mutated away by
-//! `M-ebpf-1` in `RED-EVIDENCE.md`.
+//! token that is BOTH authorized AND fully registered.**
 //!
 //! [`SplicerBackend`] exists so that invariant is testable without CAP_BPF
 //! or a live kernel: `loader/tests/installer_gate.rs` exercises
@@ -55,7 +54,7 @@ pub fn conn_key_of(local: SocketAddr, remote: SocketAddr) -> Option<ConnKey> {
             // little-endian hosts. `ebpf/src/main.rs::try_redirect` reads those
             // fields RAW to build the `SPLICE_PEER` lookup key, so this stored
             // key MUST reproduce that exact layout or the lookup misses and the
-            // redirect never fires (R13-D: verified end-to-end by the
+            // redirect never fires (verified end-to-end by the
             // `load_demo` data-plane splice + `bpftool map dump`).
             local_port: u32::from(l.port()),
             remote_port: (r.port() as u32).to_be(),
@@ -81,8 +80,8 @@ pub trait SplicerBackend {
 
 /// The real aya-backed [`SplicerBackend`]: owns the loaded `SPLICE_SOCKS`
 /// (`SockHash`) and `SPLICE_PEER` (`HashMap`) maps taken from a live
-/// `aya::Ebpf`, and performs the actual kernel map-updates R13-B's A9
-/// demonstration exercises. Requires `CAP_BPF` and a loaded
+/// `aya::Ebpf`, and performs the actual kernel map-updates the same-node
+/// splice demonstration exercises. Requires `CAP_BPF` and a loaded
 /// `samenode_splice` object to construct (see `src/bin/load_demo.rs`) — this
 /// is the ONLY part of this crate that needs a live, privileged kernel.
 pub struct RealAyaBackend {
@@ -195,7 +194,7 @@ impl<B: SplicerBackend> SpliceInstaller for AyaSpliceInstaller<B> {
 }
 
 // =====================================================================
-// R13-B-cont — egress_redirect (`CgroupRedirect` rung, `cgroup/connect4`)
+// egress_redirect (`CgroupRedirect` rung, `cgroup/connect4`)
 // =====================================================================
 
 /// Derives the [`EgressKey`] a given (original) destination corresponds to.
@@ -207,11 +206,11 @@ impl<B: SplicerBackend> SpliceInstaller for AyaSpliceInstaller<B> {
 /// the 32-bit field, i.e. the network-order port lives in the LOW 16 bits,
 /// zero-extended upward — the OPPOSITE placement from `sk_msg_md::remote_port`
 /// (see [`conn_key_of`] above, `.to_be()` on the already-widened `u32`,
-/// fixed by R13-D to land in the HIGH 16 bits). This is exactly the "each
+/// fixed to land in the HIGH 16 bits). This is exactly the "each
 /// context has its own documented byte order" property this sub-unit's
 /// grounding pass was told to expect, and it is UNVERIFIED against a live
-/// kernel by this sub-unit (see the R13-B-cont report's "what was not
-/// verified" section) — R13-D's `remote_port` fix was confirmed by an actual
+/// kernel by this sub-unit (see the redirect-rung report's "what was not
+/// verified" section) — the `remote_port` fix was confirmed by an actual
 /// data-plane redirect; this one is confirmed only against the kernel
 /// selftest SOURCE, not by observing a real rewritten `connect()` land at
 /// the right port on this host.
@@ -271,8 +270,8 @@ struct RegisteredEgress {
 /// whichever process happens to call `connect()` inside the attached
 /// cgroup), so only the DESTINATION side is registered here. `install` still
 /// requires that registration to exist before it ever calls
-/// [`EgressBackend::insert_waypoint`] — the fail-closed shape M-ebpf-1
-/// exercises for the splice installer, applied to this rung's one-sided
+/// [`EgressBackend::insert_waypoint`] — the fail-closed shape the splice installer
+/// uses, applied to this rung's one-sided
 /// registration model.
 pub struct EgressRedirectInstaller<B: EgressBackend> {
     backend: B,
@@ -318,7 +317,7 @@ impl<B: EgressBackend> WaypointInstaller for EgressRedirectInstaller<B> {
 }
 
 // =====================================================================
-// R13-B-cont — inbound_lookup (inbound-steering rung, `sk_lookup`)
+// inbound_lookup (inbound-steering rung, `sk_lookup`)
 // =====================================================================
 
 /// Derives the [`InboundKey`] a given local (bound) destination corresponds
@@ -415,7 +414,7 @@ impl<B: InboundBackend> WaypointInstaller for InboundLookupInstaller<B> {
 }
 
 // =====================================================================
-// R13-B-cont — tc_fallback (TC-clsact fallback rung, `classifier`)
+// tc_fallback (TC-clsact fallback rung, `classifier`)
 // =====================================================================
 
 /// Derives the [`TcFlowKey`] a given (source, destination) flow corresponds
@@ -506,7 +505,7 @@ impl<B: TcBackend> WaypointInstaller for TcFallbackInstaller<B> {
 }
 
 // =====================================================================
-// E2.13 (R13.5, kernel-side half) — the eBPF-side flow/verdict telemetry
+// Kernel-side telemetry half — the eBPF-side flow/verdict telemetry
 // bridge `nz_agent::telemetry`'s own module docs name as a tracked gap:
 // "a future kernel-side bridge would call the SAME TelemetrySink::export
 // seam this module defines, not a new one." This is that bridge.
@@ -656,7 +655,7 @@ mod verdict_bridge_tests {
         SpiffeId::parse(&format!("spiffe://cluster.local/ns/prod/sa/{path}")).expect("valid id")
     }
 
-    /// Mutated away by M-verdict-1 in RED-EVIDENCE.md: a bridge that exports
+    /// Guards against this: a bridge that exports
     /// on the STEERED delta instead of (or in addition to) the STEER_FAILED
     /// delta would make this test fail (a spurious export with zero
     /// steer-failed events).
@@ -688,7 +687,7 @@ mod verdict_bridge_tests {
         assert_eq!(events[0].session, "sess-42");
     }
 
-    /// Mutated away by M-verdict-2 in RED-EVIDENCE.md: a bridge that exports
+    /// Guards against this: a bridge that exports
     /// only once per POLL (rather than once per UNIT of delta) would report
     /// 1 event here instead of 3, silently under-reporting real kernel
     /// failures that happened between two polls.

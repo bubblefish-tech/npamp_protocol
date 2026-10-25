@@ -1,9 +1,9 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! The pure, target-agnostic core of the N-PAMP R12/E2.7 optional L7
-//! waypoint: carriage translation (the R10 transport set) + N-AALP
+//! The pure, target-agnostic core of the N-PAMP optional L7
+//! waypoint: carriage translation (the sidecar transport set) + N-AALP
 //! effect-class/audience authorization. Extracted 2026-09-05 from
-//! `nz-agent/src/waypoint.rs` so that BOTH hosting shapes R12 AC3 names —
+//! `nz-agent/src/waypoint.rs` so that BOTH hosting shapes the requirement names —
 //! an **Envoy proxy-wasm N-PAMP filter** (`nz-waypoint-wasm`, this crate
 //! compiled to `wasm32-unknown-unknown`) and the native `nz-agent` L7
 //! waypoint (`nz-agent::waypoint`, which now `pub use`s this crate rather
@@ -25,7 +25,7 @@
 //! `nz-agent/src/waypoint.rs` module docs)
 //!
 //! [`EffectClass`] mirrors the four-value lattice `draft-bubblefish-naalp-01`
-//! defines (`ietf/draft-bubblefish-naalp-01.md`):
+//! defines:
 //! `read_only(0) < idempotent_write(1) < non_idempotent_write(2) <
 //! destructive(3)`, with **"An unrecognized effect value MUST be treated as
 //! destructive and MUST NOT fail open"** — [`EffectClass::from_wire`]
@@ -111,9 +111,9 @@ pub enum WaypointDenied {
     /// authority (N-AALP `WrongAudience`, field 13).
     WrongAudience { object_audience: String, expected: String },
     /// The object's effect class exceeds the signer id's max-effect grant
-    /// (R14 AC3's "a carriage object's declared effect SHALL NOT exceed the
+    /// (the requirement "a carriage object's declared effect SHALL NOT exceed the
     /// gateway signer id's max-effect grant"; this crate applies the same
-    /// rule at the R12 waypoint).
+    /// rule at the waypoint).
     EffectExceedsGrant { object_effect: EffectClass, max_grant: EffectClass },
 }
 
@@ -260,7 +260,7 @@ impl AuthzHook for TableAuthzHook {
 }
 
 // ---------------------------------------------------------------------------
-// Carriage-class translation dispatch (R10's transport set, R12 AC3).
+// Carriage-class translation dispatch (the sidecar transport set).
 // ---------------------------------------------------------------------------
 
 /// The five N-PAMP carriage classes the waypoint dispatches into (companion
@@ -298,8 +298,7 @@ impl fmt::Display for CarriageClass {
 }
 
 /// What a workload's traffic identifies itself as, before carriage
-/// classification — the R10/R12 "full agent-transport set" (requirements.md
-/// R10 AC1): HTTP/1.1+2, Streamable-HTTP+JSON-RPC (MCP/A2A), gRPC,
+/// classification — the full agent-transport set: HTTP/1.1+2, Streamable-HTTP+JSON-RPC (MCP/A2A), gRPC,
 /// WebSocket, stdio (local MCP), raw TCP.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportHint {
@@ -340,7 +339,6 @@ mod tests {
 
     /// The exact N-AALP rule this crate must not drift from: an unrecognized
     /// effect value fails CLOSED to Destructive, never open to ReadOnly.
-    /// Mutated away by M-waypoint-core-1 in RED-EVIDENCE.md.
     #[test]
     fn unrecognized_effect_value_is_destructive_not_default() {
         for v in [4u8, 5, 200, 255] {
@@ -363,7 +361,7 @@ mod tests {
         authorize(&hook, "signer-1", "gateway-a", EffectClass::IdempotentWrite).expect("within grant must be allowed");
     }
 
-    /// R14 AC3 applied at the R12 waypoint: a declared effect above the
+    /// The effect-grant rule applied at the waypoint: a declared effect above the
     /// signer's max grant is denied, never silently capped/allowed.
     #[test]
     fn effect_above_grant_is_denied() {

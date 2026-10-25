@@ -11,7 +11,7 @@ package sdk_test
 // TestLoopbackHandshakeAndRoundTrip in sdk_test.go exercises) stands in for
 // the always-available fallback path.
 //
-// F3 non-circularity: the pass/fail decision the test makes (did the
+// non-circularity: the pass/fail decision the test makes (did the
 // association complete? is the negotiated profile/identity/ALPN identical
 // to a direct Dial baseline?) does not depend on sdk.DialWithFallback's own
 // internal bookkeeping — it re-derives the expected outcome from a
@@ -47,7 +47,7 @@ const quicProbeECNMarkerForTest = 0x01
 // newSimulatedNetworkPath starts a real UDP listener that answers every
 // datagram NOT matched by drop with an identical echo, and silently
 // discards every datagram drop matches — reproducing, at the UDP layer, the
-// three documented QUIC-over-UDP failure modes R11 names. It returns the
+// three documented QUIC-over-UDP failure modes. It returns the
 // listener's address and stops the listener via t.Cleanup.
 func newSimulatedNetworkPath(t *testing.T, drop func(pkt []byte) bool) string {
 	t.Helper()
@@ -302,7 +302,7 @@ func TestDialWithFallback_QUICPathHealthy_ProbeSucceeds(t *testing.T) {
 // QUIC leg is byte-for-byte identical, on every field this test can observe
 // (negotiated ALPN, negotiated Profile, mutually-authenticated peer
 // identity), to a Conn obtained from a direct sdk.Dial using the exact same
-// Config. This is the test the RED-EVIDENCE mutation targets (see the file
+// Config. This is the test that guards against a crypto downgrade (see the file
 // header comment).
 func TestDialWithFallback_NoCryptoDowngrade(t *testing.T) {
 	fx := newFallbackFixture(t)

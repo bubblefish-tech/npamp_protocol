@@ -20,7 +20,7 @@ pub mod bodies;
 pub mod bridge;
 
 /// NPAMP-CC carriage-object codecs (companion specs 20/21/23: JSON-RPC, HTTP,
-/// STREAM) — E2.22/R14.5's octet-exact carriage round-trip layer. See the module
+/// STREAM) — the octet-exact carriage round-trip layer. See the module
 /// docs for the exact scope (carriage-object layer only, no Bridge frame/envelope).
 pub mod carriage;
 

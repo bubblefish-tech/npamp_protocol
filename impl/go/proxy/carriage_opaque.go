@@ -12,7 +12,7 @@ import (
 )
 
 // NPAMP-CC-OPAQUE (spec/companion/25_carriage_opaque.md) -- the sixth and
-// final carriage leg of E2.4/R10 (doc.go): raw TCP, or any payload whose
+// final carriage leg of the proxy's carriage set (doc.go): raw TCP, or any payload whose
 // media type is not one of the three BridgeEnvelope `content_type`-enumerated
 // values (application/json, application/cbor, application/grpc+proto).
 //
@@ -34,7 +34,7 @@ import (
 // specification's four companion-reserved TLV Types (0x0010 BridgeEnvelope,
 // 0x0012 OpaqueContentType, 0x0013 SafetyLabel; 0x0014 remains reserved but is
 // fixed-32-octet/handshake-only and cannot carry a variable-length string).
-// 0x0012 became available when T15.2/DECISIONS.md D11 retired the unspecified
+// 0x0012 became available when a recorded decision retired the unspecified
 // "AnomalyCharge" TLV back to "(reserved) for a companion specification"
 // (registries/tlv_tags.csv); this leg is the first companion to consume it.
 const opaqueContentTypeTLV npamp.TLVType = 0x0012

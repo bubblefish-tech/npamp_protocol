@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestPAEMatchesDSSESpecWorkedExample is the F3 non-circular oracle for PAE: the exact
-// worked example from DSSE's own protocol.md (fetched this session, verbatim):
+// TestPAEMatchesDSSESpecWorkedExample is the non-circular oracle for PAE: the exact
+// worked example from DSSE's own protocol.md:
 //
 //	SERIALIZED_BODY: "hello world"
 //	PAYLOAD_TYPE: "http://example.com/HelloWorld"
@@ -40,7 +40,7 @@ func TestPAEEmptyBody(t *testing.T) {
 	}
 }
 
-// TestPAEChangesWithInput is the A4 mutation-surviving test: a PAE implementation that
+// TestPAEChangesWithInput is the mutation-surviving test: a PAE implementation that
 // ignores either argument (e.g. hardcoding the length or the body) fails this test.
 func TestPAEChangesWithInput(t *testing.T) {
 	a := PAE("type-a", []byte("body-a"))

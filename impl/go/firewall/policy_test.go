@@ -10,7 +10,7 @@ import (
 	"github.com/bubblefish-tech/npamp_protocol/impl/go/relay"
 )
 
-// TestChannelPolicy_ZeroValueDeniesNothing proves the A3/A4 non-stub bar
+// TestChannelPolicy_ZeroValueDeniesNothing proves the zero-value policy is not a stub
 // directly: an empty ChannelPolicy{} allows any header, because it has no
 // deny rule configured -- not because Decide ignores its input.
 func TestChannelPolicy_ZeroValueDeniesNothing(t *testing.T) {
@@ -24,7 +24,7 @@ func TestChannelPolicy_ZeroValueDeniesNothing(t *testing.T) {
 // TestChannelPolicy_DeniedChannel_RejectsEveryFrameOnThatChannel proves the
 // same policy VALUE, given headers that differ only in Channel, returns
 // different verdicts depending on which channel is denied -- the verdict is
-// a function of the input, not a constant (A4).
+// a function of the input, not a constant.
 func TestChannelPolicy_DeniedChannel_RejectsEveryFrameOnThatChannel(t *testing.T) {
 	p := &ChannelPolicy{DeniedChannels: map[npamp.ChannelID]string{npamp.ChanGovernance: "governance quarantined"}}
 

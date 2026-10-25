@@ -3,7 +3,7 @@
 package sdk
 
 // Acknowledged-teardown (CLOSE / CLOSE_ACK) tests, the CLOSER side of the state machine's
-// ESTABLISHED -> CLOSING -> CLOSED path (D7). The deviant-trace suite (statetrace_test.go)
+// ESTABLISHED -> CLOSING -> CLOSED path. The deviant-trace suite (statetrace_test.go)
 // covers the RECEIVER reaction (a peer CLOSE yields a sealed CLOSE_ACK and ErrPeerClosed);
 // these cover CloseGraceful itself: the full round-trip against an active peer, and the
 // close_incomplete timer fallback when the peer never acknowledges.
@@ -41,7 +41,7 @@ func TestCloseGraceful_RoundTrip(t *testing.T) {
 
 	// Assert CloseGraceful returns PROMPTLY on the CLOSE_ACK, not after the 5 s
 	// CLOSE_ACK-wait timer: both select arms return nil, so a dead signalCloseAck wake path
-	// would still pass (just slowly). The promptness IS D7's acknowledged-teardown property.
+	// would still pass (just slowly). The promptness IS the acknowledged-teardown property.
 	start := time.Now()
 	if err := client.CloseGraceful(ctx); err != nil {
 		t.Fatalf("CloseGraceful returned %v, want nil (clean acknowledged teardown)", err)

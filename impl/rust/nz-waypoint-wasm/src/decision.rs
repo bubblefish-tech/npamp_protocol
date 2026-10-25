@@ -41,7 +41,7 @@ impl std::fmt::Display for FilterDenied {
 
 impl std::error::Error for FilterDenied {}
 
-/// Maps a request's `content-type` header to the R10 [`TransportHint`] this
+/// Maps a request's `content-type` header to the [`TransportHint`] this
 /// carriage-negotiation heuristic assumes: a JSON-RPC-shaped body
 /// (`application/json-rpc`, or the `application/vnd.npamp.jsonrpc+json`
 /// media type) is [`TransportHint::StreamableHttpJsonRpc`] (MCP/A2A over
@@ -95,7 +95,6 @@ mod tests {
     /// An absent or unrecognized content-type defaults to plain HTTP/1.1 —
     /// total, never panics, never an "unrecognized" variant to construct
     /// (matches `classify`'s own closed-match philosophy one layer up).
-    /// Mutated away by M-decision-1 in RED-EVIDENCE.md.
     #[test]
     fn missing_or_unrecognized_content_type_defaults_to_http11() {
         assert_eq!(transport_hint_from_content_type(None), TransportHint::Http11);

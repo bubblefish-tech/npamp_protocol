@@ -10,7 +10,7 @@ import (
 
 // testdata/golist.jsonl is the REAL, unmodified `go list -m -json all` capture from this
 // repository's own impl/go module (`cd impl/go && GOWORK=off go list -m -json all`, run
-// this session; the Dir/GoMod fields were stripped because they carried this machine's
+// 2026-08-31; the Dir/GoMod fields were stripped because they carried this machine's
 // absolute build path — see impl/go/go.mod for the live equivalent). N-PAMP's Go reference
 // carries ZERO third-party dependencies (go.sum is empty), so this real capture is
 // honestly a single line (the main module, Main: true) — see
@@ -19,7 +19,7 @@ import (
 // testdata/golist_synthetic.jsonl exercises the per-module parsing/hash/scope logic a
 // real multi-dependency capture would: since N-PAMP itself has no dependencies to source
 // such a fixture from, its three dependency entries use REAL h1 dirhash values captured
-// this session from actual public Go modules' go.sum files (github.com/cloudflare/circl,
+// 2026-08-31 from actual public Go modules' go.sum files (github.com/cloudflare/circl,
 // golang.org/x/sys) — genuine published module data, not fabricated hashes — labeled
 // honestly as a synthetic fixture, not as N-PAMP's own dependency graph.
 func TestDecodeGoListModulesParsesRealCapture(t *testing.T) {
@@ -143,7 +143,7 @@ func TestParseGoModRequiresRealFixture(t *testing.T) {
 	}
 }
 
-// TestParseGoModRequiresChangesWithInput is the A4 mutation-surviving test: a parser that
+// TestParseGoModRequiresChangesWithInput is the mutation-surviving test: a parser that
 // ignores its input (returns a fixed module list regardless of the go.mod bytes given)
 // fails this test, because two go.mod fixtures with disjoint require sets must produce
 // disjoint parsed results.

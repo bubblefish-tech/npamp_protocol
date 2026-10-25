@@ -18,7 +18,7 @@ import (
 //
 // Decide returns nil to ALLOW the frame, or a non-nil error explaining why
 // to DENY it. A denial rejects the frame at the relay.HookFunc seam, which
-// tears down BOTH legs of the flow (fail-closed, matching R12's posture and
+// tears down BOTH legs of the flow (fail-closed, matching the relay's posture and
 // wirevalidator's own rejection contract) -- Decide never gets a chance to
 // silently drop just one frame while letting the flow continue.
 type Policy interface {
@@ -46,9 +46,9 @@ type ChannelFrameType struct {
 }
 
 // ChannelPolicy is a reference allow/deny-list Policy over channel and
-// (channel, frame-type) pairs -- the concrete mechanism R1.1 calls for: an
+// (channel, frame-type) pairs -- the concrete mechanism the requirement calls for: an
 // operator can refuse specific channels outright, or refuse specific frame
-// types (including CLIENT_HELLO/SERVER_HELLO -- the "CH/SH" of R1.1) on a
+// types (including CLIENT_HELLO/SERVER_HELLO -- the "CH/SH" handshake pair) on a
 // channel that otherwise remains open, WITHOUT needing wirevalidator-level
 // registry changes (a registry change would forbid a frame type/channel
 // pair for every deployment; a ChannelPolicy denial is this one firewall
@@ -63,14 +63,14 @@ type ChannelFrameType struct {
 type ChannelPolicy struct {
 	// DeniedChannels denies EVERY frame on a listed channel, in either
 	// direction, regardless of frame type -- the "routing metadata" half of
-	// R1.1 (refuse an entire channel/route).
+	// Refuse an entire channel/route.
 	DeniedChannels map[npamp.ChannelID]string
 
 	// DeniedFrameTypes denies a specific (channel, frame-type) pair even
 	// when the channel itself is not in DeniedChannels -- e.g. refusing
 	// CLIENT_HELLO on the Control channel while leaving every other Control
 	// frame type (and every other channel) untouched. This is the "CH/SH
-	// selections" half of R1.1: a deployment can refuse the handshake
+	// selections" half: a deployment can refuse the handshake
 	// itself, at its very first frame, before any session is ever
 	// established.
 	DeniedFrameTypes map[ChannelFrameType]string

@@ -7,7 +7,7 @@ description = "Pure, target-agnostic core of the N-PAMP R12/E2.7 L7 waypoint: N-
 
 # INDEPENDENT crate, path-dependency only. Builds and tests standalone:
 # `cd impl/rust/nz-waypoint-core && cargo build && cargo test`. Extracted
-# 2026-09-05 from nz-agent/src/waypoint.rs's pure logic (E2.7 R12 AC3: "an
+# 2026-09-05 from nz-agent/src/waypoint.rs's pure logic ("an
 # optional per-namespace L7 waypoint ... implementable as an Envoy
 # proxy-wasm N-PAMP filter and/or an agentgateway backend") so BOTH hosting
 # shapes compose the SAME authorization code instead of maintaining two

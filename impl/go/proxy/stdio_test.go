@@ -102,7 +102,7 @@ func spawnStdioTestChild(t *testing.T) *StdioBackend {
 // this leg's graded bar with an actual os/exec subprocess rather than an
 // in-process stand-in.
 //
-// Mutation anchor (RED-EVIDENCE): a bug in the newline-delimited framing, the
+// Mutation anchor: a bug in the newline-delimited framing, the
 // local id correlation, or the params passthrough breaks this test.
 func TestStdioBackend_CallRoundTrip(t *testing.T) {
 	os.Setenv(stdioChildEnv, "1")

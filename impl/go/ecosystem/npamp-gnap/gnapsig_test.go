@@ -65,7 +65,7 @@ func TestBuildSignatureBaseDeterministic(t *testing.T) {
 	if string(a) != string(b) {
 		t.Fatalf("BuildSignatureBase produced non-deterministic output:\n%s\nvs\n%s", a, b)
 	}
-	// TestBuildSignatureBaseChangesWithComponents (A4): the base must actually depend on the
+	// TestBuildSignatureBaseChangesWithComponents: the base must actually depend on the
 	// covered-component values, not just their names.
 	values2 := map[string]string{"@method": "GET", "@target-uri": "https://as.example/grant"}
 	c, err := BuildSignatureBase([]string{"@method", "@target-uri"}, values2, params)

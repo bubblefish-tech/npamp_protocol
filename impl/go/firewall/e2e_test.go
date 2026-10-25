@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 // Package firewall_test holds the firewall's load-bearing end-to-end proof
-// (R1.2's E2.1 pattern, reused here for E2.2): a REAL N-PAMP session (the
+// (the relay's end-to-end pattern, reused here for the firewall): a REAL N-PAMP session (the
 // same sdk.DialRaw / sdk.AcceptRaw handshake driver impl/go/relay's own e2e
 // test and impl/go/sdk's own tests use) between two agents routed entirely
 // THROUGH a relay.Relay wrapped by a firewall.Firewall, with no direct
@@ -36,7 +36,7 @@ func loadRegistries(t *testing.T) *wirevalidator.Registries {
 	return reg
 }
 
-// TestE2E_Firewall_PolicyAllowed_HandshakeAndDataRoundTrip is the R1.2-style
+// TestE2E_Firewall_PolicyAllowed_HandshakeAndDataRoundTrip is the relay-style
 // ALLOW half: agent A and agent B each run the REAL 1.5-RTT
 // mutually-authenticated N-PAMP handshake (sdk.DialRaw / sdk.AcceptRaw) with
 // a firewall.Firewall-wrapped relay sitting in between as the ONLY path
@@ -53,7 +53,7 @@ func loadRegistries(t *testing.T) *wirevalidator.Registries {
 //  2. An application-data frame on the Memory channel round-trips
 //     BYTE-EXACT end to end.
 //
-// Mutation anchor (RED-EVIDENCE, ALLOW-side sanity): a Firewall.Hook that
+// Mutation anchor (ALLOW-side sanity): a Firewall.Hook that
 // rejected registry-valid, policy-allowed frames would fail this test (the
 // handshake would never complete).
 func TestE2E_Firewall_PolicyAllowed_HandshakeAndDataRoundTrip(t *testing.T) {
@@ -161,9 +161,9 @@ func TestE2E_Firewall_PolicyAllowed_HandshakeAndDataRoundTrip(t *testing.T) {
 }
 
 // TestE2E_Firewall_PolicyDenied_ClientHelloRefusedPrePayload is the
-// POLICY-DENIED half, and the load-bearing R1.1 proof: a Policy that denies
+// POLICY-DENIED half, and the load-bearing refusal proof: a Policy that denies
 // npamp.FrameClientHello on the Control channel -- exactly the "CH/SH
-// selections" case R1.1 names -- refuses the session at its VERY FIRST
+// selections" case -- refuses the session at its VERY FIRST
 // frame. Neither side's handshake completes: agentB's AcceptRaw never sees
 // CLIENT_HELLO (the relay tears down before forwarding it), and agentA's
 // DialRaw, having sent CLIENT_HELLO, then fails waiting for SERVER_HELLO
@@ -171,9 +171,9 @@ func TestE2E_Firewall_PolicyAllowed_HandshakeAndDataRoundTrip(t *testing.T) {
 // SESSION at all -- ever reaches agent B: this is "refuse a session
 // pre-payload" at the earliest point a session can be refused.
 //
-// Mutation anchor (RED-EVIDENCE): weakening the policy's deny path (making
+// Mutation anchor: weakening the policy's deny path (making
 // it always-allow) makes this test fail, because the handshake would then
-// complete instead of being refused -- see firewall's RED-EVIDENCE record.
+// complete instead of being refused.
 func TestE2E_Firewall_PolicyDenied_ClientHelloRefusedPrePayload(t *testing.T) {
 	agentAConn, relayAConn := net.Pipe()
 	relayBConn, agentBConn := net.Pipe()

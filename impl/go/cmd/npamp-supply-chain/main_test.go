@@ -272,7 +272,7 @@ func TestDefaultBuilderIDFallsBackOutsideCI(t *testing.T) {
 }
 
 // TestParseFlagsNoModuleGraphAndPURL confirms -no-module-graph and -purl are actually
-// threaded from argv into config (E5.4: the per-language publish-pipeline attach path
+// threaded from argv into config (the per-language publish-pipeline attach path
 // passes both for a non-Go package artifact).
 func TestParseFlagsNoModuleGraphAndPURL(t *testing.T) {
 	cfg, err := parseFlags([]string{
@@ -306,7 +306,7 @@ func TestParseFlagsNoModuleGraphAndPURL(t *testing.T) {
 	}
 }
 
-// TestRunNoModuleGraphSkipsModuleDiscoveryAndCarriesPURL is the E5.4 mutation-witness: it
+// TestRunNoModuleGraphSkipsModuleDiscoveryAndCarriesPURL is the mutation-witness: it
 // proves -no-module-graph actually SKIPS the `go list -m -json all` invocation (discoverModules)
 // rather than merely accepting the flag and ignoring it. cfg.moduleDir is set to a directory
 // that does not exist and has no go.mod, so if run() still called discoverModules(cfg.moduleDir)

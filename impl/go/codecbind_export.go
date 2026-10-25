@@ -3,7 +3,7 @@
 package npamp
 
 // Exported generic deterministic-CBOR codec surface for the codecbind ecosystem binding
-// (requirement R3.1; impl/go/codecbind). This is a NEW, ADDITIVE file — it does not modify
+// (impl/go/codecbind). This is a NEW, ADDITIVE file — it does not modify
 // memory_cbor.go or any other Part-1 file, and it changes no wire behavior.
 //
 // Every domain body file already in this package (memory_api.go, capability_api.go,

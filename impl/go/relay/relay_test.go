@@ -49,7 +49,7 @@ func TestReadRawFrame_RoundTrip(t *testing.T) {
 }
 
 // TestReadRawFrame_RejectsOversizedLength proves an oversized DECLARED
-// payload length is rejected before any payload is read (R12: reject the
+// payload length is rejected before any payload is read (reject the
 // hostile length up front rather than buffering toward it).
 func TestReadRawFrame_RejectsOversizedLength(t *testing.T) {
 	const smallMax = 64
@@ -182,7 +182,7 @@ func TestRun_ForwardsBToA_ByteIdentical(t *testing.T) {
 	<-runErr
 }
 
-// TestRun_HookSeesParsedHeader proves the Hook seam (E2.2's plug point) is
+// TestRun_HookSeesParsedHeader proves the Hook seam (the firewall's plug point) is
 // called with the CORRECT parsed header fields, and NEVER sees the
 // payload bytes it wasn't given.
 func TestRun_HookSeesParsedHeader(t *testing.T) {
@@ -242,7 +242,7 @@ func TestRun_HookSeesParsedHeader(t *testing.T) {
 
 // TestRun_HookRejectionTearsDownFlow proves a Hook that rejects a frame ends
 // the WHOLE flow (both legs close) rather than silently dropping just that
-// frame — the fail-closed posture R12 requires.
+// frame — the required fail-closed posture.
 func TestRun_HookRejectionTearsDownFlow(t *testing.T) {
 	p := newPipePair()
 	defer p.closeAll()
@@ -279,8 +279,8 @@ func TestRun_HookRejectionTearsDownFlow(t *testing.T) {
 
 // TestRun_MalformedFrameTearsDownFlow proves a frame that fails
 // npamp.Frame.UnmarshalBinary validation (here: a corrupted CRC32C) is NEVER
-// forwarded, and ends the flow — mutation anchor for the RED-EVIDENCE
-// record: this is the "malformed frame -> tear down" half of R12.
+// forwarded, and ends the flow — a mutation anchor:
+// this is the "malformed frame -> tear down" half of the fail-closed requirement.
 func TestRun_MalformedFrameTearsDownFlow(t *testing.T) {
 	p := newPipePair()
 	defer p.closeAll()

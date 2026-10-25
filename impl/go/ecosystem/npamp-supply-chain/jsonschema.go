@@ -16,7 +16,7 @@ import (
 // Schema is a parsed JSON Schema document (draft-07, the draft
 // schema/bom-1.7.schema.json itself declares via its own "$schema" field). This is a
 // GENERIC, real JSON Schema validator over the following subset of draft-07 keywords —
-// not a hand-fit assertion of "this looks like a CycloneDX document" (A7/F3: an
+// not a hand-fit assertion of "this looks like a CycloneDX document" (an
 // independent authority, not this package's own opinion of validity):
 //
 //	type, required, properties, additionalProperties (boolean form only), items (single-

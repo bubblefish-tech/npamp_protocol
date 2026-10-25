@@ -3,7 +3,7 @@
 //! Extracts the N-PAMP authorization triple `(signer_id, audience,
 //! object_effect)` from an inbound request's HTTP-shaped header map.
 //! Relocated 2026-09-05 from `nz-agent-extauthz/src/extract.rs` (its
-//! original R14-Unit-A ext_authz-gRPC home) so this SAME fail-closed
+//! original ext_authz-gRPC home) so this SAME fail-closed
 //! extraction rule is shared by every hosting shape that reads this header
 //! triple off a request — the ext_authz gRPC service
 //! (`nz-agent-extauthz`, which now re-exports this module) AND the Envoy
@@ -11,7 +11,7 @@
 //! own, independently-driftable parsing convention for the same three
 //! headers.
 //!
-//! # The documented mapping (R14-Unit-A design decision, carried over
+//! # The documented mapping (design decision, carried over
 //! unchanged)
 //!
 //! | Header | Meaning | Wire form |
@@ -123,7 +123,6 @@ mod tests {
         assert_eq!(effect, EffectClass::IdempotentWrite);
     }
 
-    /// Mutated away by M-waypoint-core-2 in RED-EVIDENCE.md.
     #[test]
     fn missing_signer_header_is_denied_not_defaulted() {
         let h = headers(&[(AUDIENCE_HEADER, "gateway-a"), (EFFECT_HEADER, "0")]);

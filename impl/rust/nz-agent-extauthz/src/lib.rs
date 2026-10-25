@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `nz-agent-extauthz` — N-PAMP R14-Unit-A: an external-authorization
+//! `nz-agent-extauthz` — N-PAMP: an external-authorization
 //! (ext_authz) gRPC service that lets an agent gateway (agentgateway / any
 //! Envoy-`ext_authz`-v3-compatible proxy) delegate per-request
 //! authorization to `nz-agent`'s already-built, mutation-tested,
@@ -16,8 +16,7 @@
 //! wires the two together). **It does not reimplement the authorization
 //! decision.** Every allow/deny this service returns is the direct result
 //! of calling `nz_agent::waypoint::authorize` — a decision already built
-//! and mutation-tested in `../nz-agent/src/waypoint.rs` (`RED-EVIDENCE.md`
-//! in that crate). A bug fix to the authorization RULE (e.g. what counts as
+//! and mutation-tested in `../nz-agent/src/waypoint.rs`. A bug fix to the authorization RULE (e.g. what counts as
 //! "exceeds grant") is made exactly once, in `waypoint.rs`; this crate
 //! cannot drift from it because it has no authorization logic of its own to
 //! drift.

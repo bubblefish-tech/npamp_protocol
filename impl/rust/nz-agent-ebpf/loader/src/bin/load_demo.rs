@@ -6,7 +6,7 @@
 // `nz-agent` would use — to (1) install an authz-APPROVED same-node pair
 // and (2) attempt a DENIED pair. Prints enough for `bpftool prog show` +
 // `bpftool map show`/`map dump` (run from the SAME `wsl` invocation, per
-// this build environment's own reap-on-exit constraint) to independently
+// the WSL reap-on-exit constraint) to independently
 // confirm kernel-side residency, then attempts (best-effort; a stretch goal
 // beyond the map-level demonstration) an actual data-plane splice: write on
 // one leg, read the redirected bytes back on the OTHER leg, with no explicit

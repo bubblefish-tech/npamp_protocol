@@ -6,7 +6,7 @@ edition.workspace = true
 license = "Apache-2.0"
 description = "Userspace loader for the R13-B samenode_splice eBPF program: AyaSpliceInstaller implements nz_agent::datapath::SpliceInstaller with a real aya SockHash/HashMap map-update."
 
-# Path dependency on `nz-agent` (R13-A: the capability selector + fail-closed
+# Path dependency on `nz-agent` (the capability selector + fail-closed
 # authz gate this crate's AyaSpliceInstaller plugs into). `nz-agent` itself
 # never depends on `aya`/this crate — the dependency arrow points ONE way
 # (loader -> nz-agent), so nz-agent's own Windows build is untouched (`aya`

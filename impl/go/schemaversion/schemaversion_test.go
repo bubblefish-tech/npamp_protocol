@@ -107,10 +107,8 @@ func TestLoadManifest_RejectsMalformedSHA256(t *testing.T) {
 // sha256 currently agrees with the ACTUAL on-disk bytes of
 // schema/npamp-wire.cddl -- the versioning artifact's real teeth. This is
 // the mutation-surviving test: if schema/npamp-wire.cddl's bytes changed
-// without a manifest re-pin, this test would fail (see RED-EVIDENCE in the
-// task report, which mutates a sibling validation rule in wirevalidator;
-// this test's own mutation-sensitivity is exercised the same way -- flip
-// one manifest hex digit below and confirm the mismatch is caught).
+// without a manifest re-pin, this test would fail (flip one manifest hex digit
+// below and confirm the mismatch is caught).
 func TestVerifyManifest_RealArtifactMatches(t *testing.T) {
 	root, err := DefaultRepoRoot()
 	if err != nil {

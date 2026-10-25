@@ -22,7 +22,7 @@ import (
 // field cannot wrap negative and slip past the cap (mirrors
 // impl/go/sdk/conn.go's readFrame and npamp.ReadFrame — the three
 // implementations of this same boundary rule share one behavior: reject an
-// oversized declared length before buffering it, R12).
+// oversized declared length before buffering it).
 //
 // The header and the payload are each read with io.ReadFull, which gives
 // readRawFrame the distinction the caller (Relay.forward) depends on: an
@@ -30,7 +30,7 @@ import (
 // stream ended exactly at a frame boundary — a clean peer close, not a
 // defect — while an error with SOME-but-not-all bytes consumed
 // (io.ErrUnexpectedEOF) means the stream ended mid-frame — a truncation,
-// which the caller tears the flow down for (R12). A peer that advertises a
+// which the caller tears the flow down for. A peer that advertises a
 // large payload length it never fully delivers cannot force a large
 // up-front allocation beyond the already-enforced maxFrameSize bound: the
 // short read simply resolves to io.ErrUnexpectedEOF once the stream ends.

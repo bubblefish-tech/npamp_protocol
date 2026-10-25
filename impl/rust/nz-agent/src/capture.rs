@@ -1,9 +1,9 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! Workload traffic capture (E2.5, R12 AC1): `nz-agent` captures workload
+//! Workload traffic capture: `nz-agent` captures workload
 //! traffic via eBPF redirect, with an **iptables/TPROXY fallback** — the
-//! fallback this build ships (per the grounding pass: "R12 ships correctly on
-//! the iptables/TPROXY fallback alone", which R13's eBPF datapath later
+//! fallback this build ships (per the grounding pass: "the first release ships correctly on
+//! the iptables/TPROXY fallback alone", which the eBPF datapath later
 //! accelerates without changing this seam).
 //!
 //! # What this module builds vs. what it depends on
@@ -15,9 +15,9 @@
 //! netfilter stack — see the tests below, which assert on the produced
 //! command text). It does NOT execute those rules against a live kernel: that
 //! needs `CAP_NET_ADMIN` (iptables) or `CAP_BPF`+root (a future eBPF path),
-//! which this build environment does not grant. [`RuleExecutor`] is the seam
+//! which a host without those capabilities does not grant. [`RuleExecutor`] is the seam
 //! a live deployment supplies (a real `std::process::Command` runner, or an
-//! eBPF loader for R13); this build ships [`RecordingExecutor`], a
+//! eBPF loader); this build ships [`RecordingExecutor`], a
 //! deterministic in-memory test double that records what it would have run.
 //!
 //! # Fail-closed capture posture
@@ -46,7 +46,7 @@ pub struct RedirectTarget {
 
 /// One workload's outbound-capture scope: which local process/cgroup or
 /// address range gets redirected. Mirrors the granularity a real per-node
-/// agent needs (cgroup-scoped in the eBPF path per EBPF-DATAPATH-DESIGN.md;
+/// agent needs (cgroup-scoped in the eBPF path per the eBPF datapath design;
 /// address/interface-scoped on the iptables fallback, since raw iptables has
 /// no first-class cgroup match without the `cgroup` xt module).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,7 +213,7 @@ impl RuleExecutor for RecordingExecutor {
 /// Composes rule construction ([`IptablesCapture::rules_for`]) with
 /// application ([`apply`]) behind one call, mirroring what a live
 /// `nz-agent` startup path does. Generic over the executor so the eBPF path
-/// (R13) can supply a different `RuleExecutor` without this crate's capture
+/// can supply a different `RuleExecutor` without this crate's capture
 /// module changing.
 pub trait CaptureSource {
     fn install<E: RuleExecutor>(&self, executor: &mut E) -> Result<Vec<Rule>, RuleApplyError>;
@@ -272,7 +272,7 @@ mod tests {
 
     /// Fail-closed: a rule failure at index 2 must stop application (never
     /// silently install rules 3.. after a failure) and report which rule
-    /// failed. Mutated away by M-capture-2 in RED-EVIDENCE.md.
+    /// failed.
     #[test]
     fn apply_stops_at_first_failure_fail_closed() {
         let rules = IptablesCapture::rules_for(&cfg());

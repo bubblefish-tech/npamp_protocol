@@ -101,7 +101,7 @@ func TestReservedMustBeZero(t *testing.T) {
 
 func TestReservedFlagRejected(t *testing.T) {
 	// Bit 0 (formerly URG) and bit 3 (formerly FRAG) are reserved; a receiver MUST
-	// reject a frame that sets either (T15.2, fail-closed). Removing the
+	// reject a frame that sets either (fail-closed). Removing the
 	// reservedFlagMask check makes both cases decode cleanly and this test fail.
 	for _, bit := range []uint8{0x01, 0x08} {
 		buf, _ := ping().MarshalBinary()
@@ -205,7 +205,7 @@ func TestRegistries(t *testing.T) {
 	}
 }
 
-// TestReadFrameRejectsOversizeFrame pins R12.2: a frame whose declared Payload Length
+// TestReadFrameRejectsOversizeFrame pins the oversize-frame bound: a frame whose declared Payload Length
 // pushes the total over MaxFrameSize is rejected with ErrFrameTooLarge BEFORE the
 // reader waits to buffer it. Mutation-guard: removing the MaxFrameSize check makes
 // ReadFrame instead return ErrIncompleteFrame (waiting to buffer 16 MiB) and this fails.
@@ -217,7 +217,7 @@ func TestReadFrameRejectsOversizeFrame(t *testing.T) {
 	}
 }
 
-// TestDecodeTLVsRejectsTooManyTLVs pins the MaxTLVsPerFrame bound (R12.1). Mutation-
+// TestDecodeTLVsRejectsTooManyTLVs pins the MaxTLVsPerFrame bound. Mutation-
 // guard: removing the count check lets DecodeTLVs return MaxTLVsPerFrame+1 TLVs with no
 // error and this fails.
 func TestDecodeTLVsRejectsTooManyTLVs(t *testing.T) {

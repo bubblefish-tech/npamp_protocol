@@ -1,7 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! Real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS client (E2.6,
-//! R12 AC2): implements [`crate::identity::DelegatedIdentitySource`] against
+//! Real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS client: implements [`crate::identity::DelegatedIdentitySource`] against
 //! a live SPIRE Agent's DelegatedIdentity API, as the sibling to
 //! [`crate::identity::StaticIdentitySource`] — the in-memory test double
 //! `identity.rs` ships for tests and local dev. This closes the one gap
@@ -31,7 +30,7 @@
 //! `examples/src/uds/client.rs`).
 //!
 //! `tokio::net::UnixStream`/`UnixListener` are compiled out entirely on a
-//! non-Unix target (this build environment is Windows) — not merely
+//! non-Unix target (e.g. a Windows host) — not merely
 //! unavailable at runtime, unavailable at COMPILE time. Per this task's own
 //! scope ("UDS transport abstracted; runtime connection is
 //! Linux/SPIRE-agent... build+test on Windows against an in-process
@@ -61,12 +60,12 @@
 //! Ed25519 key does this workload's N-PAMP session authenticate with",
 //! because `nz-agent` — not the workload — runs the N-PAMP handshake on the
 //! workload's behalf (this crate's whole `lib.rs` premise: workloads never
-//! run their own N-PAMP stack under R12). So this client mints a fresh
+//! run their own N-PAMP stack). So this client mints a fresh
 //! Ed25519 identity key per fetched SVID via
 //! `npamp::session::generate_identity()` — exactly what
 //! [`crate::identity::StaticIdentitySource`] already does for its test
 //! table — which is what makes per-workload (per-SVID) session-key
-//! isolation (R12 AC2) hold for the REAL SPIRE source too, not merely the
+//! isolation hold for the REAL SPIRE source too, not merely the
 //! static test double. Attempting to reinterpret SPIRE's SVID private key
 //! bytes as an `ed25519_dalek::SigningKey` would be silently wrong in the
 //! common case (a non-Ed25519 SPIRE key type) — this client never does
@@ -282,9 +281,9 @@ mod tests {
 
     /// A minimal DelegatedIdentity server test double: a fixed
     /// `pid -> (trust_domain, path, expires_at)` table, served over a REAL
-    /// socket by a real tonic `Server`. This is the F3 non-circular witness
+    /// socket by a real tonic `Server`. This is the non-circular witness
     /// for [`SpireWorkloadApiSource`]'s wire behavior — standing up a live
-    /// SPIRE Server+Agent is infra this build environment cannot host (see
+    /// SPIRE Server+Agent is infra a CI host without a SPIRE deployment cannot provide (see
     /// `identity.rs`'s module docs), but the gRPC transport, the vendored
     /// proto encoding, and the client's response handling are all
     /// exercised for real here: nothing below the wire is mocked.
@@ -385,7 +384,7 @@ mod tests {
         SpireWorkloadApiSource::new_tcp_loopback(addr).expect("client runtime starts")
     }
 
-    /// R12 AC2's core testable claim, for the REAL client this time (see
+    /// The core testable claim, for the REAL client this time (see
     /// `identity.rs`'s `two_workloads_get_distinct_identity_keys` for the
     /// same property on the static test double): two workloads, fetched
     /// over a real gRPC round-trip from two DISTINCT SVIDs, get two

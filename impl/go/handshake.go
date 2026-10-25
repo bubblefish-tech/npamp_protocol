@@ -126,7 +126,7 @@ func parseU16List[T ~uint16](v []byte, name string) ([]T, error) {
 func requireTLVs(tlvs []TLV, want []TLVType) error {
 	// Must-understand check first: an unknown high-bit (0x8000) TLV is a
 	// forward-incompatible extension the receiver cannot process, and is rejected
-	// with ErrUnknownCriticalTLV distinctly from an ordering/count error (R6). This
+	// with ErrUnknownCriticalTLV distinctly from an ordering/count error. This
 	// gives ForwardIncompatible its production call site.
 	wanted := func(t TLVType) bool {
 		for _, w := range want {

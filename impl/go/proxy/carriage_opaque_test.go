@@ -123,7 +123,7 @@ func TestOpaquePayload_SyntacticallyInvalidMediaType_Rejected(t *testing.T) {
 }
 
 // TestOpaquePayload_AmbiguousBothDeclared_Rejected is a §4.2 point 3 MUTATION
-// ANCHOR (RED-EVIDENCE): a receiver MUST reject a frame that carries both an
+// ANCHOR: a receiver MUST reject a frame that carries both an
 // enumerated content_type value other than the discriminator AND an
 // OpaqueContentType TLV. This test constructs exactly that malformed wire
 // shape by hand (case-1 encoding with content_type left enumerated, then an
@@ -186,8 +186,8 @@ func TestOpaquePayload_TruncatedOpaqueContentTypeTLV_Rejected(t *testing.T) {
 	}
 }
 
-// TestOpaqueContentTypeTLV_IsTheAssignedCodePoint pins the D11 registration
-// this leg depends on: 0x0012, not any other value (RED-EVIDENCE mutation
+// TestOpaqueContentTypeTLV_IsTheAssignedCodePoint pins the registration
+// this leg depends on: 0x0012, not any other value (a mutation
 // anchor -- changing this constant flips this test and every round-trip test
 // above that decodes via the real npamp.DecodeTLVs/DecodeBridgeFrame path).
 func TestOpaqueContentTypeTLV_IsTheAssignedCodePoint(t *testing.T) {
@@ -196,7 +196,7 @@ func TestOpaqueContentTypeTLV_IsTheAssignedCodePoint(t *testing.T) {
 	}
 }
 
-// TestOpaqueContentTypeDiscriminator_IsTheAssignedValue pins the D11
+// TestOpaqueContentTypeDiscriminator_IsTheAssignedValue pins the
 // discriminator value this leg depends on: 0x04, distinct from the three
 // assigned content_type values 0x01-0x03.
 func TestOpaqueContentTypeDiscriminator_IsTheAssignedValue(t *testing.T) {

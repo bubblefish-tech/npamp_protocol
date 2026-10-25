@@ -6,7 +6,7 @@ import (
 )
 
 // TestBridgeProtocolIDU8ToU16MigrationRoundTrip proves the NPAMP-REG 30_protocol_registry.md §8.4
-// migration invariant (design.md P-U16-MIGRATE, ecosystem-viral-wire task C.7 AC-8.2.2): for every
+// migration invariant (the u8-to-u16 widening of the protocol_id field): for every
 // protocol_id value that was standards-assigned under the one-octet field (0x01-0x0A, §6), the
 // two-octet wire encoding is the EXACT zero-extension of the one-octet value (0xNN -> 0x00NN), and
 // decoding that two-octet wire form yields the identical named protocol the one-octet value named

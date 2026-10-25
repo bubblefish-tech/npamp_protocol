@@ -49,7 +49,7 @@ func TestBuildOKPJWKRejectsWrongKeySize(t *testing.T) {
 	}
 }
 
-// TestBuildOKPJWKChangesWithKey is the A4 mutation-surviving test: the encoded x field
+// TestBuildOKPJWKChangesWithKey is the mutation-surviving test: the encoded x field
 // must actually depend on the input key.
 func TestBuildOKPJWKChangesWithKey(t *testing.T) {
 	pubA, _ := testKeypair(t)

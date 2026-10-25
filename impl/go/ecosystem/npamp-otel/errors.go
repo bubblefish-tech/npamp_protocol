@@ -13,7 +13,7 @@ var (
 	ErrNilOutcome = errors.New("npamp/otel: Outcome must not be nil")
 
 	// ErrUnknownErrorCode is returned when Outcome.Code names a SessionErrorCode value not
-	// present in the Part-1 R10 error registry this package knows about (definedCodes,
+	// present in the Part-1 error registry this package knows about (definedCodes,
 	// span.go) -- emitting error.type from an unresolvable code would be a fabricated name.
 	ErrUnknownErrorCode = errors.New("npamp/otel: error code does not resolve in the Part-1 R10 error registry")
 

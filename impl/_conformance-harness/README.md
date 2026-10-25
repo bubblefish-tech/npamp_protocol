@@ -15,7 +15,7 @@ authorities that never saw this code, so a shared bug cannot pass. Each gate is 
   language, binding the AES-256-GCM AEAD code point `0x0001` (per `registries/aead.csv`). Covers the
   nine handshake impls (`typescript, python, rust, java, kotlin, ruby, php, csharp, swift`);
   `swift` (native toolchain, or WSL Ubuntu on a Windows host via `swift/run.sh`) additionally
-  executes the KEM-wire KAT (`test-vectors/v1/kem-wire-kat.json`, §4): the RFC 7748
+  executes the KEM-wire KAT (`test-vectors/v1/kem-wire-kat.json`): the RFC 7748
   X25519 anchor, the ML-KEM-first KEMShare/KEMCiphertext wire order, and the HKDF-Extract IKM order —
   its two ML-KEM-768 legs (NIST `d‖z → ek` keygen; expanded-dk decaps) are explicit, printed SKIPs
   because swift-crypto's `Crypto` product exposes no ML-KEM API (the decaps deferral matches the Go

@@ -6,7 +6,7 @@
 // package's whole purpose is to produce.
 //
 // Unlike sbom_validate.go, there is no downloadable JSON Schema for the SLSA provenance
-// predicate to validate against — confirmed this session: SLSA publishes a CUE schema
+// predicate to validate against — confirmed: SLSA publishes a CUE schema
 // (spec/schema/provenance.cue) and a proto schema (spec/schema/provenance.proto), not a
 // JSON Schema. ValidateStatement therefore checks the exact REQUIRED field set quoted
 // verbatim from SLSA's own build-provenance.md
@@ -21,7 +21,7 @@
 // `subject`) and the fixed predicateType URI. This is the honest, named difference from
 // the SBOM side: a real requirement set read directly from the standard's own prose,
 // not a generic schema engine, because the standard itself provides no machine schema to
-// validate against (F4 — the status this package claims, "structurally validated against
+// validate against (the status this package claims, "structurally validated against
 // SLSA's documented L1 requirements", is exactly what is verified, no more).
 package supplychain
 
@@ -64,7 +64,7 @@ func ValidateStatement(s *Statement) error {
 // DigestBytes — the same function BuildRelease uses to build the statement, but called
 // again here on the actual bytes, not re-read from the Statement struct) and confirms they
 // match what s.Subject[0] and s.Predicate.BuildDefinition.ExternalParameters["sbomDigest"]
-// record. This is the real, non-circular digest-BINDING check (F3): a Statement whose
+// record. This is the real, non-circular digest-BINDING check: a Statement whose
 // recorded digests do not match the artifact/SBOM bytes actually supplied is rejected
 // (ErrBindingMismatch) — a caller cannot forge a Statement that merely CLAIMS to bind a
 // digest it does not actually match.

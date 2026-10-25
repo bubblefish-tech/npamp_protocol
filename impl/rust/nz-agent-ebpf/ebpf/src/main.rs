@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `samenode_splice`: the kernel side of R13-B's same-node sockmap fast path
-//! (EBPF-DATAPATH-DESIGN.md's `sockops + sk_msg + sockmap` rung). Two
+//! `samenode_splice`: the kernel side of the same-node sockmap fast path
+//! (the eBPF datapath design's `sockops + sk_msg + sockmap` rung). Two
 //! programs sharing two maps:
 //!
 //! - `samenode_splice_sockops` (`sock_ops`, cgroup-attached): a PASSIVE
@@ -16,7 +16,7 @@
 //!   directly into the partner's receive queue (`bpf_msg_redirect_hash`,
 //!   `BPF_F_INGRESS`), bypassing the TCP/IP stack for that hop.
 //!
-//! # The fail-closed property this file holds (R13.1)
+//! # The fail-closed property this file holds
 //!
 //! Neither program in this file ever calls `SPLICE_SOCKS.update`/
 //! `HashMap::insert` (the kernel-side write helpers `aya_ebpf` exposes for
@@ -54,7 +54,7 @@ const BPF_F_INGRESS: u64 = 1;
 /// Holds every socket currently eligible for the fast path, keyed by the
 /// socket's OWN (local, remote) 4-tuple (`ConnKey`) — inserted ONLY from
 /// `AyaSpliceInstaller::install` (userspace), never from this file. Sized
-/// for the bounded same-node-splice demo this sub-unit ships (R13-B); a
+/// for the bounded same-node-splice demo this sub-unit ships; a
 /// production deployment's real entry count is future sizing work.
 #[map]
 static SPLICE_SOCKS: SockHash<ConnKey> = SockHash::with_max_entries(64, 0);

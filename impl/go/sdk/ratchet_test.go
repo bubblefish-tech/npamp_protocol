@@ -30,7 +30,7 @@ func drain(r net.Conn) {
 	}
 }
 
-// TestRatchetGenZeroByteIdentical proves R4: at generation 0 both per-direction
+// TestRatchetGenZeroByteIdentical proves that at generation 0 both per-direction
 // roots ARE the handshake master byte-for-byte, and the derived gen-0 traffic key
 // is byte-identical to the pre-ratchet schedule (DeriveTrafficSecret off the
 // master). This is the parity guarantee that keeps the five delivered handshake
@@ -249,7 +249,7 @@ func snapshotRecv(c *Conn) (uint64, []byte) {
 	return c.genRecv.Load(), append([]byte(nil), c.masterRecv...)
 }
 
-// TestReKEMTier2HealsBothRootsLoopback is the behavioral D1/D3 proof that the
+// TestReKEMTier2HealsBothRootsLoopback is the behavioral proof that the
 // Tier-2 re-KEM actually FIRES over a real loopback session and MIXES FRESH KEM
 // entropy into the healed root — it is not an inert local bump. It drives a full
 // REKEM/REKEM_ACK exchange with the real X25519MLKEM768 KEM and asserts:
@@ -263,7 +263,7 @@ func snapshotRecv(c *Conn) (uint64, []byte) {
 //
 // Because the heal is driven by a fresh ephemeral KEM the attacker/self cannot
 // predict, a root that changed AND matches the peer is positive evidence the
-// fresh entropy was mixed (D3: designed machinery engaged, not silently skipped).
+// fresh entropy was mixed (designed machinery engaged, not silently skipped).
 func TestReKEMTier2HealsBothRootsLoopback(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()

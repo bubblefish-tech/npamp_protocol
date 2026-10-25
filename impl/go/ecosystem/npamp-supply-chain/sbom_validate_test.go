@@ -11,8 +11,8 @@ import (
 )
 
 // TestVendoredSchemaIsTheRealDownload asserts the embedded schema file matches, byte for
-// byte, the file this package's doc.go says was vendored this session — a guard against
-// the schema file having been hand-trimmed or otherwise edited after the fact (F3: the
+// byte, the file this package's doc.go says was vendored — a guard against
+// the schema file having been hand-trimmed or otherwise edited after the fact (the
 // authority must stay the real, unmodified document).
 func TestVendoredSchemaIsTheRealDownload(t *testing.T) {
 	data, err := os.ReadFile("schema/bom-1.7.schema.json")

@@ -42,15 +42,15 @@ var (
 	// the caller MUST NOT treat the grant as issued.
 	ErrGrantDenied = errors.New("npamp/gnap: authorization server returned a grant error")
 
-	// ErrAuthorityExport is returned by ExportWaypointEvidence (gnapexport.go, Option B)
+	// ErrAuthorityExport is returned by ExportWaypointEvidence (gnapexport.go)
 	// when the caller asked to export more authority (audience or effect) than the
-	// supplied WaypointGrant actually confers. This is the same D15 fail-closed,
+	// supplied WaypointGrant actually confers. This is the same fail-closed,
 	// export-only posture naalp-gnap's ErrAuthorityExport implements: this bridge never
 	// lets an external GNAP AS mint new N-PAMP authority.
 	ErrAuthorityExport = errors.New("npamp/gnap: requested export exceeds the waypoint grant's ceiling")
 
-	// ErrMalformedWaypointGrant is returned by DecodeWaypointGrant (gnapexport_decode.go,
-	// Option B1) when a Rust-emitted waypoint-grant JSON payload is not valid JSON, is
+	// ErrMalformedWaypointGrant is returned by DecodeWaypointGrant (gnapexport_decode.go)
+	// when a Rust-emitted waypoint-grant JSON payload is not valid JSON, is
 	// missing signer_id or consuming_authority, or carries a max_grant token this package
 	// does not recognize. Fail-closed: an undecodable grant confers NO authority — it is
 	// never treated as a wide-open ceiling (unlike EffectClassFromWire's unrecognized-octet

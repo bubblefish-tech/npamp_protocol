@@ -34,7 +34,7 @@ type Envelope struct {
 
 // dssePrefix is the literal ASCII string DSSE v1's PAE algorithm prepends to every
 // encoding (https://github.com/secure-systems-lab/dsse/blob/master/protocol.md, fetched
-// this session, verbatim: `"DSSEv1"` = the literal ASCII string [0x44, 0x53, 0x53, 0x45,
+// verbatim: `"DSSEv1"` = the literal ASCII string [0x44, 0x53, 0x53, 0x45,
 // 0x76, 0x31]).
 const dssePrefix = "DSSEv1"
 

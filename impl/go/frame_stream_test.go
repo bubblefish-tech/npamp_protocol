@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestReadFrameSelfDelimiting is the R4.3 self-delimiting round-trip vector: several
+// TestReadFrameSelfDelimiting is the self-delimiting round-trip vector: several
 // frames with different payload lengths are marshalled and concatenated into one
 // byte stream (as a TCP/TLS transport delivers them, with no message boundaries),
 // then split back into frames using only the fixed 36-octet header and the Payload

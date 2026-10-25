@@ -45,7 +45,7 @@ fn egress_key_of_is_network_order_both_fields() {
     // 10.0.0.5:8080 -> dest_ip must be the raw network-order octets (not
     // host-order-widened), dest_port must be a be16 value ZERO-EXTENDED IN
     // THE LOW 16 BITS (the opposite placement from ConnKey::remote_port,
-    // which is deliberately high-16-bit per R13-D — see the doc comment on
+    // which is deliberately high-16-bit; see the doc comment on
     // `egress_key_of` for the grounding citation).
     let key = egress_key_of(addr("10.0.0.5:8080"));
     assert_eq!(key.dest_ip, u32::from_ne_bytes([10, 0, 0, 5]));
@@ -115,7 +115,7 @@ fn allowed_and_registered_destination_installs_exactly_once() {
 
 #[test]
 fn allowed_but_unregistered_destination_fails_without_touching_the_backend() {
-    // The property M-egress-1 (see RED-EVIDENCE.md) mutates away: install()
+    // The property under test: install()
     // requires the destination registered before it ever calls
     // EgressBackend.
     let source = id("workload-d");

@@ -11,7 +11,7 @@ import (
 
 // WellKnownSuffix is the well-known URI suffix this package serves an
 // AgentDiscoveryDocument at, per RFC 8615 §3's "/.well-known/<suffix>" convention. It is
-// NOT IANA-registered as of this session — see doc.go's "Grounding" section.
+// NOT IANA-registered as of 2026-08-31 — see doc.go's "Grounding" section.
 const WellKnownSuffix = "npamp-agent.json"
 
 // maxDiscoveryDocumentBytes caps a fetched well-known document's size before it is even

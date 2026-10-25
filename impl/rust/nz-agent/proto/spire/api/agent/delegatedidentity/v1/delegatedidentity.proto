@@ -2,7 +2,7 @@
 //
 // Vendored (minimal — the DelegatedIdentity service's SubscribeToX509SVIDs
 // rpc only; FetchJWTSVIDs / SubscribeToX509Bundles / SubscribeToJWTBundles
-// are dropped because E2.6/R12 AC2's scope is binding a workload's N-PAMP
+// are dropped because the scope here is binding a workload's N-PAMP
 // session to an attested X.509 SPIFFE-SVID identity, not JWT-SVIDs or trust
 // bundle distribution) from `spiffe/spire-api-sdk`,
 // `proto/spire/api/agent/delegatedidentity/v1/delegatedidentity.proto`,

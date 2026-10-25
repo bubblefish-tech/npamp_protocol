@@ -1,16 +1,16 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! R14 (E2.19/E2.20): the `appProtocol: npamp` BACKEND connection type this
+//! The `appProtocol: npamp` BACKEND connection type this
 //! crate offers a host proxy (agentgateway, or any Envoy-shaped
 //! backend-dialer host). This is the same composable core [`crate::waypoint`]'s
 //! module docs already point at ("this is where N-PAMP becomes the PQC
-//! transport under agentgateway ... R14 shares this same composable core, it
+//! transport under agentgateway ... the backend connector shares this same composable core, it
 //! does not reimplement it").
 //!
-//! # The upstream seam this prototypes (grounded this build, 2026-09-04)
+//! # The upstream seam this prototypes (grounded 2026-09-04)
 //!
 //! agentgateway (`github.com/agentgateway/agentgateway`, Rust, Apache-2.0)
-//! dials every backend through one function, read this session via the
+//! dials every backend through one function, read via the
 //! GitHub API/raw source:
 //!
 //! - `crates/agentgateway/src/types/agent.rs` declares the closed
@@ -72,7 +72,7 @@
 //! already carries raw byte payloads under). This module defines no new
 //! carriage class and no new wire bytes.
 //!
-//! # The fail-closed downgrade property (E2.20)
+//! # The fail-closed downgrade property
 //!
 //! This property has two complementary faces:
 //!
@@ -85,15 +85,15 @@
 //!    no public constructor other than a completed handshake — so there is
 //!    no code path, mutated or otherwise, that can produce a "connected"
 //!    [`NpampBackendSocket`] without a live PQC session. This is a stronger
-//!    guarantee than a runtime check (nothing to remove), so RED-EVIDENCE.md
-//!    tests the two RUNTIME decisions this module still makes (below)
+//!    guarantee than a runtime check (nothing to remove), so the tests below
+//!    cover the two RUNTIME decisions this module still makes (below)
 //!    instead of re-deriving this structural fact as a mutation.
-//! 2. **Connect-time, identity pinning (mutation-tested, M-gw-1):** a
+//! 2. **Connect-time, identity pinning (mutation-tested):** a
 //!    backend whose PROVEN identity does not match a caller-supplied
 //!    `expected_peer` pin is refused exactly like an outright handshake
 //!    failure — `connect_npamp_backend` never silently drops the pin and
 //!    proceeds trust-on-first-use when the caller asked for pinning.
-//! 3. **Data-time (mutation-tested, M-gw-2):** every byte
+//! 3. **Data-time (mutation-tested):** every byte
 //!    [`NpampBackendSocket::write`] sends is sealed through
 //!    `Session::send` — there is no path that forwards application bytes to
 //!    the raw transport unsealed once a session exists.
@@ -188,9 +188,9 @@ impl<S: Read + Write> Read for NpampBackendSocket<S> {
 
 impl<S: Read + Write> Write for NpampBackendSocket<S> {
     /// Seals `buf` as one `N-PAMP-CC-OPAQUE` frame through the live
-    /// session — see module docs, face 3 (M-gw-2). This is the ONE line a
+    /// session — see module docs, face 3. This is the ONE line a
     /// downgrade defect would bypass (write straight to `self.raw`
-    /// instead); RED-EVIDENCE.md mutates exactly this call.
+    /// instead); the mutation test targets exactly this call.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.session.send(&mut self.raw, OPAQUE_BACKEND_CHANNEL, OPAQUE_BACKEND_FTYPE, self.send_seq, buf)?;
         self.send_seq += 1;
@@ -202,18 +202,18 @@ impl<S: Read + Write> Write for NpampBackendSocket<S> {
     }
 }
 
-/// The prototype `appProtocol: npamp` backend connection type (E2.19):
+/// The prototype `appProtocol: npamp` backend connection type:
 /// dials the N-PAMP handshake over `raw` and, ONLY on success, returns a
 /// usable [`NpampBackendSocket`]. `expected_peer`, when `Some`, pins the
 /// backend's proven identity exactly like agentgateway's own HBONE dial
 /// pins `identities: Vec<Identity>` (module docs); `None` (trust-on-first-
 /// use) is the caller's own explicit choice, matching `nz_agent::agent`'s
 /// documented convention for the same parameter — this function never
-/// silently substitutes one for the other (M-gw-1).
+/// silently substitutes one for the other.
 ///
 /// There is exactly one success path and it requires a completed
 /// `Session::dial`; there is no branch that returns `Ok` on a failed or
-/// identity-mismatched handshake (E2.20 — see module docs for the full
+/// identity-mismatched handshake (see module docs for the full
 /// fail-closed-downgrade property this implements).
 pub fn connect_npamp_backend<S: Read + Write>(mut raw: S, local_signing_key: &SigningKey, expected_peer: Option<[u8; 32]>) -> Result<NpampBackendSocket<S>, ConnectorError> {
     let session = Session::dial(&mut raw, local_signing_key, expected_peer).map_err(ConnectorError::PqcHandshakeRefused)?;
@@ -221,8 +221,8 @@ pub fn connect_npamp_backend<S: Read + Write>(mut raw: S, local_signing_key: &Si
 }
 
 // ---------------------------------------------------------------------------
-// E2.7 reconciliation (R14 AC3): the waypoint AuthzHook composed with this
-// connection type. E2.7 (R12 AC3) names TWO L7-waypoint hosting shapes: "an
+// Waypoint reconciliation: the waypoint AuthzHook composed with this
+// connection type. The waypoint requirement names TWO L7-waypoint hosting shapes: "an
 // Envoy proxy-wasm N-PAMP filter and/or an agentgateway backend" — this is
 // the SECOND, applied to the ONE backend connection type this crate ships.
 // Before this addition, [`connect_npamp_backend`]/[`NpampBackendSocket`]
@@ -233,11 +233,11 @@ pub fn connect_npamp_backend<S: Read + Write>(mut raw: S, local_signing_key: &Si
 // proxy-wasm filter both already enforce) BEFORE any byte reaches
 // [`NpampBackendSocket::write`]'s sealed session.
 //
-// This is a FOCUSED composition, not a claim of R14 AC3/E2.21's full
+// This is a FOCUSED composition, not a claim of the full
 // authorization-composition conformance (agentgateway's own per-tool CEL
 // RBAC layer, the agent-JWT-`sub`-as-foreign-identity-linkage distinction,
-// and the fully-fledged conformance test suite are `tasks.md`'s
-// SEPARATE E2.21 task, R14.3/14.4 — this crate's own
+// and the fully-fledged conformance test suite are a
+// SEPARATE authorization-composition conformance concern — this crate's own
 // `nz-agent-extauthz`/`service.rs` already builds and mutation-tests that
 // composition for the ext_authz hosting shape). What this addition DOES
 // guarantee, mutation-tested below: a carriage object whose declared
@@ -303,7 +303,7 @@ impl<S: Read + Write, H: AuthzHook> AuthorizedNpampBackendSocket<S, H> {
     /// `hook`'s grant table for `signer_id`, and ONLY on `Ok(())` writes
     /// `payload` through the wrapped [`NpampBackendSocket`]'s sealed
     /// session ([`NpampBackendSocket::write`], which itself still enforces
-    /// M-gw-2's "every byte is sealed" property — this function composes
+    /// the "every byte is sealed" property — this function composes
     /// that gate, it does not bypass or replace it). A denial returns
     /// before `inner.write` is ever called: no byte, sealed or otherwise,
     /// reaches the raw transport for a denied object.
@@ -354,7 +354,7 @@ mod tests {
         assert_eq!(&reply, b"HTTP/1.1 200 OK\r\n\r\n");
     }
 
-    /// E2.20, face 2: a backend that never runs the N-PAMP handshake at all
+    /// Downgrade refusal, face 2: a backend that never runs the N-PAMP handshake at all
     /// (peer dropped before any handshake byte round-trips) is refused, not
     /// silently accepted as a plaintext-capable connection.
     #[test]
@@ -366,7 +366,7 @@ mod tests {
         assert!(result.is_err(), "a backend that never completes the N-PAMP handshake must be refused, never returned as a connected socket");
     }
 
-    /// E2.20, face 3 (mutation-tested, M-gw-2): every byte `write` sends
+    /// Downgrade refusal, face 3 (mutation-tested): every byte `write` sends
     /// must be sealed through the live session. Bounded via a channel +
     /// `recv_timeout` (matching `crate::tunnel`'s own EOF regression test)
     /// so that a mutation which desyncs the peer's frame parser and hangs
@@ -411,7 +411,7 @@ mod tests {
         let _ = server.join();
     }
 
-    /// E2.20, face 2 (mutation-tested, M-gw-1): a backend that DOES speak
+    /// Downgrade refusal, face 2 (mutation-tested): a backend that DOES speak
     /// N-PAMP, but whose proven identity does not match a pinned
     /// `expected_peer`, is refused exactly like an outright handshake
     /// failure — never silently downgraded to trust-on-first-use.
@@ -433,8 +433,8 @@ mod tests {
         let _ = server.join();
     }
 
-    // -- E2.7 reconciliation: the waypoint AuthzHook wired into this backend
-    // connector (R14 AC3's "N-AALP effect/audience (gateway->upstream)"
+    // -- Waypoint reconciliation: the waypoint AuthzHook wired into this backend
+    // connector (the "N-AALP effect/audience (gateway->upstream)"
     // applied at the ONE connection type this crate ships) -------------
 
     #[test]
@@ -496,9 +496,9 @@ mod tests {
         let _ = server.join();
     }
 
-    /// E2.7 reconciliation, mutation-tested (M-gw-3): an authorized write
+    /// Waypoint reconciliation, mutation-tested: an authorized write
     /// composes BOTH gates in order — `authorize` first, THEN the existing
-    /// sealed-session write (M-gw-2's own property) — and the peer receives
+    /// sealed-session write (the sealed-write property above) — and the peer receives
     /// the exact byte-identical payload, proving authorization does not
     /// silently swallow or corrupt the sealed carriage.
     #[test]

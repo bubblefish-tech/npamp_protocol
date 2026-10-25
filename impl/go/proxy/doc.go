@@ -1,14 +1,13 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Package proxy implements n-pamp-proxy (task E2.4, requirement R10,
-// "[A+ item 1]"): a drop-in sidecar that lets an UNMODIFIED client and an
+// Package proxy implements n-pamp-proxy: a drop-in sidecar that lets an UNMODIFIED client and an
 // UNMODIFIED service exchange traffic over a real, mutually authenticated,
 // post-quantum N-PAMP session, with neither side's application code aware
 // N-PAMP exists.
 //
 // # Honest scope of this build
 //
-// R10 AC1 names SIX transports (HTTP/1.1+2, Streamable-HTTP+JSON-RPC for MCP/A2A,
+// The sidecar requirement names SIX transports (HTTP/1.1+2, Streamable-HTTP+JSON-RPC for MCP/A2A,
 // gRPC, WebSocket, stdio-local-MCP, raw TCP). This package carries all SIX:
 //
 //   - HTTP/1.1+2 — NPAMP-CC-HTTP (spec/companion/21_carriage_http.md; carriage_http.go/
@@ -20,7 +19,7 @@
 //     binding to a child MCP server process (stdio.go).
 //   - gRPC — carriage class STREAM (spec/companion/23_carriage_streaming.md;
 //     carriage_grpc.go/grpc.go), under protocol_id 0x05 (NPAMP-REG's standards-assigned
-//     range, registries/bridge_protocol_ids.csv — this build previously used an EXPERIMENTAL 0x10
+//     range) — this build previously used an EXPERIMENTAL 0x10
 //     pending that registration, see carriage_grpc.go).
 //   - WebSocket generic carriage — ALSO carriage class STREAM, per NPAMP-REG's own
 //     assignment (spec/companion/30_protocol_registry.md §6: "0x04 | WebSocket generic
@@ -77,7 +76,7 @@
 // receive loop dispatches an inbound BRIDGE_REQUEST to the egress handler and an
 // inbound reply to the ingress correlator by correlation_id, never by guessing.
 //
-// # Fail-closed by construction, not by a check (R10 AC2 / AC4 grading criterion 4)
+// # Fail-closed by construction, not by a check (grading criterion 4)
 //
 // There is no code path in this package that ever forwards an HTTP request onto a
 // plaintext or ALPN-downgraded transport: ServeHTTP has exactly one way to reach
@@ -89,10 +88,10 @@
 // structural guarantee (there is no fallback branch to remove), verified by
 // TestServeHTTP_ConnUnavailable_FailsClosed_NoBackendFallback.
 //
-// # Non-goal boundary honored (R10 AC5)
+// # Non-goal boundary honored
 //
 // Matching NPAMP-CC-HTTP's own "carriage substrate, not an HTTP cache or proxy"
-// language (spec/companion/21_carriage_http.md, cited at requirements.md:79): this
+// language (spec/companion/21_carriage_http.md, cited in the companion spec): this
 // package holds NO per-request state across calls, caches nothing, and does not
 // interpret HTTP semantics beyond what §4's typed object keys require to carry a
 // request/response losslessly. TestServeHTTP_NoCaching_EachRequestReachesBackend

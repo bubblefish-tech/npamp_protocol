@@ -114,8 +114,8 @@ type Proxy struct {
 	WebSocketHandler WebSocketHandlerFunc
 
 	// OpaqueProtocolID is the protocol_id this Proxy instance uses for
-	// NPAMP-CC-OPAQUE carriage (carriage_opaque.go/opaque.go, E2.4/R10's sixth
-	// leg: raw TCP or any not-otherwise-mapped payload). REQUIRED for the
+	// NPAMP-CC-OPAQUE carriage (carriage_opaque.go/opaque.go, the sixth
+	// carriage leg: raw TCP or any not-otherwise-mapped payload). REQUIRED for the
 	// OPAQUE leg: the zero value (0x00, the reserved null identifier) never
 	// carries OPAQUE traffic, structurally disabling the leg rather than
 	// silently squatting on an unassigned/experimental value this package

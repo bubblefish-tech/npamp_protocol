@@ -11,14 +11,14 @@ import (
 )
 
 // Module is one entry of a Go module dependency graph. Its field set and JSON tags match
-// the real, observed output of `go list -m -json all` (captured this session, from
+// the real, observed output of `go list -m -json all` (captured, from
 // impl/go: `cd impl/go && GOWORK=off go list -m -json all`) — Path, Version, Main,
 // Indirect, GoVersion, Sum are the fields that stream actually emits (Time/Dir/GoMod/
 // GoModSum also appear but are not needed by this package and are simply ignored by
 // encoding/json's default unmarshal-into-struct behavior, which drops unrecognized JSON
-// object keys rather than erroring). This is not an assumed/invented struct shape (E8):
-// every field name below was read off a real `go list -m -json` invocation this session,
-// not recalled from training data.
+// object keys rather than erroring). This is not an assumed/invented struct shape:
+// every field name below was read off a real `go list -m -json` invocation,
+// not recalled from memory.
 type Module struct {
 	Path      string `json:"Path"`
 	Version   string `json:"Version"`

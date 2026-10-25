@@ -81,7 +81,7 @@ func TestHTTPCarriageObject_HeaderNamesLowercased(t *testing.T) {
 }
 
 // TestHTTPCarriageObject_KindMismatch_Rejected is a §4.7 agreement-check
-// MUTATION ANCHOR (RED-EVIDENCE): a decoder that fails to compare the decoded
+// MUTATION ANCHOR: a decoder that fails to compare the decoded
 // `kind` against the frame-implied kind would accept a response object
 // presented as a request (or vice versa). Mutating the kind check away in
 // decodeHTTPCarriageObject flips this test from PASS to FAIL.

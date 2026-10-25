@@ -197,7 +197,7 @@ mod tests {
     /// An effect value outside 0..=3 but still a valid u8 decodes to
     /// Destructive (EffectClass::from_wire's fail-closed rule) and is
     /// denied unless the signer holds a Destructive grant.
-    // ---- R14 authorization-composition conformance (E2.21), 3 named cases ----
+    // ---- authorization-composition conformance, 3 named cases ----
 
     /// Case (a): a request reaching this service necessarily means the
     /// GATEWAY's own upstream RBAC filter already permitted it to arrive
@@ -209,7 +209,7 @@ mod tests {
     /// when a header explicitly (and, in a real deployment, untrustworthily)
     /// claims the gateway already decided "allow" — this service's decision
     /// depends on exactly the three documented `npamp-*` headers and nothing
-    /// else forwarded alongside them. Mutated as M-svc-3 in RED-EVIDENCE.md.
+    /// else forwarded alongside them.
     #[tokio::test]
     async fn conformance_gateway_rbac_permit_does_not_override_effect_exceeds_grant_denial() {
         let hook = TableAuthzHook::new("gateway-a", &[("signer-1", EffectClass::ReadOnly)]);
@@ -230,14 +230,12 @@ mod tests {
 
     /// Case (b): an unrecognized effect-class value is treated as
     /// `Destructive`, never a lower/default class — already proven at the
-    /// core (`nz_agent::waypoint`'s `M-waypoint-1` in that crate's own
-    /// RED-EVIDENCE.md). `unrecognized_effect_value_is_denied_unless_signer_holds_destructive`
+    /// core (`nz_agent::waypoint`). `unrecognized_effect_value_is_denied_unless_signer_holds_destructive`
     /// below is this composition's named conformance test for case (b): it
     /// proves the WIRE ADAPTER correctly surfaces that core decision
     /// end-to-end (a gRPC deny), not merely that the core function computes
-    /// it. Mutated at the adapter layer as M-svc-4 in RED-EVIDENCE.md (a
-    /// fresh mutation in `extract.rs`, distinct from `M-waypoint-1`'s
-    /// core-layer mutation in `waypoint.rs`).
+    /// it. Mutation-tested at the adapter layer in `extract.rs`, distinct from
+    /// the core-layer mutation in `waypoint.rs`.
     #[tokio::test]
     async fn unrecognized_effect_value_is_denied_unless_signer_holds_destructive() {
         let hook = TableAuthzHook::new("gateway-a", &[("signer-1", EffectClass::NonIdempotentWrite)]);
@@ -253,7 +251,7 @@ mod tests {
     /// substitute for, or elevate, the N-AALP authorization identity
     /// `npamp-signer-id` carries. A request naming a low-privilege
     /// `npamp-signer-id` but a high-privilege `sub` claim is decided on the
-    /// low-privilege signer alone. Mutated as M-svc-5 in RED-EVIDENCE.md.
+    /// low-privilege signer alone.
     #[tokio::test]
     async fn conformance_jwt_sub_is_foreign_identity_linkage_not_an_authz_identity() {
         let hook = TableAuthzHook::new("gateway-a", &[("low-priv-signer", EffectClass::ReadOnly), ("admin", EffectClass::Destructive)]);

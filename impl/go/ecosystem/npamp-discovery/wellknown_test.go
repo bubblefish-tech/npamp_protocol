@@ -40,7 +40,7 @@ func TestBuildAgentDiscoveryDocumentRejectsEmptyDID(t *testing.T) {
 	}
 }
 
-// TestBuildAgentDiscoveryDocumentChangesWithURL is the A4 mutation-surviving test.
+// TestBuildAgentDiscoveryDocumentChangesWithURL is the mutation-surviving test.
 func TestBuildAgentDiscoveryDocumentChangesWithURL(t *testing.T) {
 	a, err := BuildAgentDiscoveryDocument("n", "d", "npamp://a.invalid", "1", "did:web:x.invalid", "did:web:x.invalid#key-1")
 	if err != nil {

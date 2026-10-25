@@ -134,7 +134,7 @@ func BuildSignatureBase(components []string, values map[string]string, params Si
 // (Ed25519, npamp.SigEd25519 = 0x0807 in impl/go/suites.go — the one signature algorithm
 // N-PAMP's Go reference exercises end-to-end today, matching npamp-discovery's identical
 // Ed25519-only posture and its doc.go's honest note on why not ML-DSA). This tag is NOT (as
-// of this session) confirmed as a registered value in IETF's "HTTP Signature Algorithms"
+// of 2026-09-02) confirmed as a registered value in IETF's "HTTP Signature Algorithms"
 // registry — see doc.go's honest-gaps note. Verify never consults this string.
 const AlgTag = "ed25519"
 

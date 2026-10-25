@@ -11,7 +11,7 @@
 #   B) Rust server   <-> Go client
 #   C) Go server     <-> Python client
 #   D) Python server <-> Go client
-# (Rust<->Python is not required: R4.3 needs only >=2 independent legs, already
+# (Rust<->Python is not required: the interop requirement needs only >=2 independent legs, already
 # satisfied by A/B; legs C/D close the Python leg's own deferred cross-process
 # clause -- a deferred cross-process interop item -- against the same Go anchor A/B already use.)
 # Exit 0 iff every direction completes the handshake and the echoed frame matches.

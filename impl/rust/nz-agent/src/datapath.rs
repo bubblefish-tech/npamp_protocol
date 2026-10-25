@@ -1,23 +1,23 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! eBPF datapath selection + fast-path authorization gate (R13-A, the
-//! userspace-selector rung of Requirement 13; design: EBPF-DATAPATH-DESIGN.md).
+//! eBPF datapath selection + fast-path authorization gate (the
+//! userspace-selector rung of the eBPF datapath design).
 //!
-//! # Scope of THIS module (R13-A only)
+//! # Scope of THIS module (selector rung only)
 //!
 //! This module builds the capability-probed strategy selector
 //! ([`DatapathSelector`]), the fast-path authorization gate ([`SpliceGate`]),
 //! and named-code drop telemetry ([`DropEvent`]/[`NpampDropCode`]) — all pure
 //! userspace logic requiring no kernel privilege. It does NOT build: the
 //! eBPF program sources (C/aya), a kernel loader, the Windows WFP callout
-//! driver, or the acceleration benchmark harness — those are later R13
-//! sub-units (R13.3/R13.4/R13.6) per the design doc's own rung split. This
+//! driver, or the acceleration benchmark harness — those are later
+//! sub-units per the design doc's own rung split. This
 //! module contains no N-PAMP handshake, KEM, or AEAD code — it composes
 //! [`crate::authz::AuthzTable`], the SAME L4 decision `agent::NodeAgent`
-//! already enforces (R13.2: "userspace PQC by default; eBPF does L3/L4
+//! already enforces (design rule: "userspace PQC by default; eBPF does L3/L4
 //! steering only").
 //!
-//! # The one property every other property depends on (R13.1)
+//! # The one property every other property depends on
 //!
 //! **A same-node sockmap splice entry is inserted ONLY for a socket pair
 //! N-PAMP L4 authorization has already approved.** [`SpliceToken`] has no
@@ -40,9 +40,9 @@
 //! work behind this same trait, mirroring [`crate::identity::DelegatedIdentitySource`]'s
 //! and [`crate::capture::RuleExecutor`]'s "real seam, honest tracked gap"
 //! pattern; standing up a privileged Linux runner with `CAP_BPF` is infra
-//! this build environment cannot host.
+//! a host without `CAP_BPF` cannot provide.
 //!
-//! # `DatapathCapabilities::probe()` on THIS build environment
+//! # `DatapathCapabilities::probe()` on a non-Linux host
 //!
 //! This crate is developed on Windows. [`DatapathCapabilities::probe`]
 //! genuinely reads `cfg!(target_os = "linux")` at compile time and, being
@@ -53,9 +53,9 @@
 //! the `#[cfg(target_os = "linux")]` implementation reads
 //! `/proc/sys/kernel/osrelease`, `/proc/self/status`'s `CapEff` bitmask, and
 //! `/proc/mounts` to answer the same four questions from the actual kernel.
-//! [`DatapathSelector::select`] run against a real `probe()` on this build
+//! [`DatapathSelector::select`] run against a real `probe()` on a non-Linux host
 //! therefore deterministically (and correctly) selects
-//! [`DatapathStrategy::IptablesTproxy`] — R13.2/R13.4's documented Windows
+//! [`DatapathStrategy::IptablesTproxy`] — the design doc's documented Windows
 //! floor.
 
 use std::fmt;
@@ -71,12 +71,12 @@ use crate::identity::SpiffeId;
 /// fastest -> fallback per EBPF-DATAPATH-DESIGN.md's capability-probed
 /// ladder. Every variant steers traffic only — the hybrid-PQC handshake and
 /// AES-256-GCM/ChaCha20-Poly1305 record layer run in userspace under EVERY
-/// strategy (R13.2); this enum never selects a record-layer offload (R13.3
+/// strategy; this enum never selects a record-layer offload (the design doc
 /// rules out kTLS entirely, for the reasons recorded in the design doc).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatapathStrategy {
     /// `sockops`+`sk_msg`+`sockmap` same-node socket-to-socket splice — the
-    /// fast path. Gated by [`SpliceGate`] (R13.1).
+    /// fast path. Gated by [`SpliceGate`].
     SockmapSplice,
     /// `cgroup/connect4`/`connect6` egress capture at `connect()` time —
     /// zero per-packet cost, original destination stashed by socket cookie.
@@ -89,7 +89,7 @@ pub enum DatapathStrategy {
     /// `iptables REDIRECT`+`TPROXY` — last resort and the benchmark
     /// baseline (`capture::IptablesCapture` builds this rule set). The only
     /// strategy available with no eBPF capability at all, and the strategy
-    /// this crate's `probe()` genuinely selects on Windows today (R13.4).
+    /// this crate's `probe()` genuinely selects on Windows today.
     IptablesTproxy,
 }
 
@@ -118,7 +118,7 @@ pub struct DatapathCapabilities {
 
 impl DatapathCapabilities {
     /// Builds a capability set from explicit parts — for tests, and for any
-    /// caller (e.g. a future control-plane binding, R12 AC4's tracked gap)
+    /// caller (e.g. a future control-plane binding, a tracked gap)
     /// that already knows the host's capabilities from another source.
     pub fn from_parts(is_linux: bool, kernel_version: Option<(u32, u32, u32)>, has_cap_bpf: bool, bpffs_mounted: bool) -> DatapathCapabilities {
         DatapathCapabilities { is_linux, kernel_version, has_cap_bpf, bpffs_mounted }
@@ -220,7 +220,7 @@ fn meets_kernel_floor(version: Option<(u32, u32, u32)>, floor: (u32, u32, u32)) 
     }
 }
 
-/// The capability-probed strategy selector (R13's redirect-strategy ladder).
+/// The capability-probed strategy selector (the redirect-strategy ladder).
 pub struct DatapathSelector;
 
 impl DatapathSelector {
@@ -252,11 +252,10 @@ impl DatapathSelector {
 }
 
 // ---------------------------------------------------------------------
-// E2.9 — runtime hot-reconfig: re-probe + re-select
+// Runtime hot-reconfig: re-probe + re-select
 // ---------------------------------------------------------------------
 
-/// A live, re-probeable datapath selection (R13's hot-reconfig requirement,
-/// E2.9). [`DatapathSelector::select`] itself is a stateless, one-shot pure
+/// A live, re-probeable datapath selection (the hot-reconfig requirement). [`DatapathSelector::select`] itself is a stateless, one-shot pure
 /// function of a [`DatapathCapabilities`] snapshot — it has no memory of
 /// what was previously selected and nothing calls it more than once on a
 /// running host. `DatapathHandle` is the thin stateful wrapper a live
@@ -270,7 +269,7 @@ impl DatapathSelector {
 /// runtime signal it wants to treat as "re-check my eBPF capabilities now"
 /// — an explicit admin/control-plane call (e.g. a future gRPC
 /// `Reconfigure()` RPC) and/or a `SIGHUP`-style OS signal handler are both
-/// legitimate triggers per R13's design; this module owns the re-probe +
+/// legitimate triggers per the design; this module owns the re-probe +
 /// re-select DECISION, not the OS-level plumbing that invokes it (mirrors
 /// every other "real seam, honest tracked gap" boundary in this crate —
 /// see the module docs' [`SpliceInstaller`] note).
@@ -311,7 +310,7 @@ impl DatapathHandle {
 }
 
 // ---------------------------------------------------------------------
-// R13.1 — the fast-path authorization gate
+// The fast-path authorization gate
 // ---------------------------------------------------------------------
 
 /// A named, fail-closed datapath error — never an opaque `String`-only
@@ -343,7 +342,7 @@ impl std::error::Error for DatapathError {}
 /// the only way any code in this crate can obtain a `SpliceToken` is a
 /// successful `authorize_splice` call, which itself only succeeds past the
 /// `AuthzTable::check` gate — so a [`SpliceInstaller`] can never be handed a
-/// token for a pair that was never authorized (R13.1).
+/// token for a pair that was never authorized.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpliceToken {
     source: SpiffeId,
@@ -360,7 +359,7 @@ impl SpliceToken {
     }
 }
 
-/// The fast-path authorization gate (R13.1). Consults the SAME
+/// The fast-path authorization gate. Consults the SAME
 /// [`crate::authz::AuthzTable`] L4 decision [`crate::agent::NodeAgent::originate`]
 /// already enforces before any handshake runs — this module does not
 /// reimplement authorization, it composes the existing gate before ever
@@ -431,7 +430,7 @@ pub fn install_splice<I: SpliceInstaller>(installer: &mut I, source: &SpiffeId, 
 }
 
 // ---------------------------------------------------------------------
-// R13-B-cont — the generalized seam for the CgroupRedirect / TcClsact /
+// The generalized seam for the CgroupRedirect / TcClsact /
 // inbound-`sk_lookup` rungs (mirrors SpliceInstaller/SpliceToken/SpliceGate
 // above, one layer more general)
 // ---------------------------------------------------------------------
@@ -503,8 +502,8 @@ impl RedirectGate {
 /// installer implements this trait (`nz-agent-ebpf`'s `loader` crate;
 /// NOT implemented by this crate — see [`SpliceInstaller`]'s identical
 /// tracked-gap note, which applies here for the same reason: standing up a
-/// privileged Linux runner with `CAP_BPF` is infra this build environment
-/// cannot host).
+/// privileged Linux runner with `CAP_BPF` is infra a host without
+/// `CAP_BPF` cannot provide).
 pub trait WaypointInstaller {
     fn install(&mut self, token: &RedirectToken) -> Result<(), DatapathError>;
 }
@@ -548,17 +547,17 @@ pub fn install_redirect<I: WaypointInstaller>(installer: &mut I, source: &Spiffe
 }
 
 // ---------------------------------------------------------------------
-// R13.5 — named-code drop telemetry
+// Named-code drop telemetry
 // ---------------------------------------------------------------------
 
-/// A named datapath-layer drop reason (R13.5: "every DROP carries its named
+/// A named datapath-layer drop reason (design rule: "every DROP carries its named
 /// error code — no opaque drops"). Not the full Part-1 telemetry/error
 /// registry (that registry is Part-1 scope); this is this module's own
 /// datapath-layer drop taxonomy, reported via [`DropEvent`] keyed exactly as
 /// the design doc's Observability section specifies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NpampDropCode {
-    /// [`SpliceGate::authorize_splice`] denied this pair (R13.1).
+    /// [`SpliceGate::authorize_splice`] denied this pair.
     SpliceAuthzDenied,
     /// No datapath strategy could carry the packet (the selected strategy's
     /// install failed and there was no further fallback to try).
@@ -619,8 +618,7 @@ mod tests {
     #[test]
     fn no_bpf_selects_iptables_fallback() {
         // Full Linux + bpffs + a very modern kernel, but no CAP_BPF: must
-        // still degrade all the way to the fallback. Mutated away by
-        // M-datapath-2 in RED-EVIDENCE.md.
+        // still degrade all the way to the fallback.
         let caps = DatapathCapabilities::from_parts(true, Some((6, 8, 0)), false, true);
         assert_eq!(DatapathSelector::select(&caps), DatapathStrategy::IptablesTproxy);
     }
@@ -675,14 +673,13 @@ mod tests {
         }
     }
 
-    // -- E2.9 hot-reconfig: runtime re-probe + re-select ----------------
+    // -- hot-reconfig: runtime re-probe + re-select ----------------
 
     #[test]
     fn reselect_switches_strategy_when_capabilities_change() {
         // Starts with no CAP_BPF (iptables fallback), then a capability gain
         // (CAP_BPF granted, modern kernel, bpffs mounted) must re-select up
-        // to SockmapSplice and report that the strategy CHANGED. Mutated
-        // away by M-datapath-3 in RED-EVIDENCE.md.
+        // to SockmapSplice and report that the strategy CHANGED.
         let no_bpf = DatapathCapabilities::from_parts(true, Some((6, 8, 0)), false, true);
         let mut handle = DatapathHandle::new(&no_bpf);
         assert_eq!(handle.current(), DatapathStrategy::IptablesTproxy);
@@ -721,11 +718,10 @@ mod tests {
         assert_eq!(handle.current(), DatapathStrategy::IptablesTproxy);
     }
 
-    // -- R13.1 fast-path authorization gate ----------------------------
+    // -- fast-path authorization gate ----------------------------
 
     #[test]
     fn denied_pair_yields_no_token_and_is_splice_denied() {
-        // Mutated away by M-datapath-1 in RED-EVIDENCE.md.
         let a = id("a");
         let b = id("b");
         let empty = AuthzTable::new();
@@ -777,7 +773,7 @@ mod tests {
         assert_eq!(installer.installed, vec![token]);
     }
 
-    // -- R13-B-cont generalized redirect gate ---------------------------
+    // -- generalized redirect gate ---------------------------
 
     #[test]
     fn redirect_denied_pair_yields_no_token() {
@@ -831,7 +827,7 @@ mod tests {
         assert_eq!(installer.installed, vec![token]);
     }
 
-    // -- R13.5 named-code drop telemetry --------------------------------
+    // -- named-code drop telemetry --------------------------------
 
     #[test]
     fn every_drop_carries_a_named_code() {

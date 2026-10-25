@@ -118,7 +118,7 @@ func TestMasterRatchetTier1KAT(t *testing.T) {
 		if !bytes.Equal(got, want) {
 			t.Fatalf("Tier-1 root at gen %d\n got  %x\n want %x", targetGen, got, want)
 		}
-		// A5 mutation guard: the forward step must actually consume its inputs.
+		// mutation guard: the forward step must actually consume its inputs.
 		if bytes.Equal(got, masterG) {
 			t.Fatalf("Tier-1 root at gen %d equals master_G (no forward step taken)", targetGen)
 		}
@@ -175,7 +175,7 @@ func TestMasterRatchetTier2KAT(t *testing.T) {
 		t.Fatalf("Tier-2 root\n got  %x\n want %x", got, want)
 	}
 
-	// Self-heal property (D3): without the correct new_ss the attacker cannot
+	// Self-heal property: without the correct new_ss the attacker cannot
 	// reproduce master_{G+1}. A single flipped bit in new_ss MUST diverge the root.
 	badSS := append([]byte(nil), newSS...)
 	badSS[0] ^= 0x01

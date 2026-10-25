@@ -35,7 +35,7 @@ description = "N-PAMP ext_authz gRPC service (R14-Unit-A): lets an agent gateway
 #     then hands that descriptor set to `tonic-prost-build::compile_fds`.
 [dependencies]
 nz-agent = { path = "../nz-agent" }
-# E2.7 reconciliation (2026-09-05): `src/extract.rs`'s header-extraction
+# Waypoint reconciliation (2026-09-05): `src/extract.rs`'s header-extraction
 # logic (`extract_triple`/`TripleExtractError`) relocated to
 # `nz-waypoint-core` so it is shared with `../nz-waypoint-wasm`'s Envoy
 # proxy-wasm filter — `src/extract.rs` is now a thin re-export of it.

@@ -5,13 +5,13 @@
 // `protoc-bin-vendored` (a bundled `protoc` binary shipped as a crate
 // dependency) so this crate's build does not require a system-installed
 // `protoc` on any developer machine or CI runner — no new manual toolchain
-// step (E2.6, R12 AC2).
+// step.
 //
 // `build_server(true)` is intentional even though this crate never runs a
 // production DelegatedIdentity SERVER: `spire_client.rs`'s tests stand up an
 // in-process mock DelegatedIdentity server over a real Unix-domain-socket
-// listener as the non-circular F3 witness for the client's wire behavior
-// (no live SPIRE deployment is available in this build environment — see
+// listener as the non-circular witness for the client's wire behavior
+// (no live SPIRE deployment is available to a CI or developer host — see
 // `identity.rs`'s module docs).
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

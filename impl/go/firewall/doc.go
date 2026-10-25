@@ -1,7 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Package firewall implements a reference N-PAMP agent firewall (task E2.2,
-// requirements R1.1/R3.2): a policy layer that composes with a
+// Package firewall implements a reference N-PAMP agent firewall: a policy layer that composes with a
 // non-decrypting impl/go/relay.Relay to inspect the cleartext handshake
 // (CLIENT_HELLO/SERVER_HELLO frame types on the Control channel) and
 // channel/routing metadata of every relayed frame, and to refuse a session
@@ -17,11 +16,11 @@
 //     validation -- a reserved frame type, an unregistered channel, an
 //     unregistered (channel, frame-type) pair, or an oversized frame is
 //     rejected here, before this package's policy is even consulted.
-//  2. This package's Policy (R1.1): a caller-configured allow/deny decision
+//  2. This package's Policy: a caller-configured allow/deny decision
 //     over the SAME cleartext relay.FrameHeader fields (frame type,
 //     channel, sequence number, flags) -- which frame types (including
 //     CLIENT_HELLO/SERVER_HELLO -- npamp.FrameClientHello /
-//     npamp.FrameServerHello, the "CH/SH" of R1.1) and which channels a
+//     npamp.FrameServerHello, the "CH/SH" handshake pair) and which channels a
 //     given deployment permits.
 //
 // Either layer's rejection rejects the frame. Per relay.HookFunc's
@@ -31,7 +30,7 @@
 // session before the handshake ever completes, and a denied post-handshake
 // channel refuses the flow before any application payload on that channel
 // is forwarded to the peer. Both are "refuse a session pre-payload" in the
-// sense R1.1 names, at two different points in a session's lifetime.
+// sense the firewall requirement names, at two different points in a session's lifetime.
 //
 // # Capability boundary (same one wirevalidator.RelayHook already documents)
 //

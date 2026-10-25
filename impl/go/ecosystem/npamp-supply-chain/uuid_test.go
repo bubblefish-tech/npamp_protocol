@@ -25,7 +25,7 @@ func TestNewUUIDv4MatchesRFC4122Shape(t *testing.T) {
 	}
 }
 
-// TestNewUUIDv4IsNotConstant is the A4/A3 mutation-surviving test: a stub that always
+// TestNewUUIDv4IsNotConstant is the mutation-surviving test: a stub that always
 // returns the same fixed UUID string passes the shape check above but fails here.
 func TestNewUUIDv4IsNotConstant(t *testing.T) {
 	seen := map[string]bool{}

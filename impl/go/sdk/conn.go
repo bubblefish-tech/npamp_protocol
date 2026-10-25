@@ -27,7 +27,7 @@ const ALPN = "n-pamp/3"
 // maxFrameSize caps a single frame (header + payload) accepted off the wire, so
 // a peer cannot force an unbounded allocation with a hostile length field. It is
 // npamp.MaxFrameSize so the SDK and the base parser (frame.go) enforce the SAME cap
-// (R12; no uncoordinated divergence).
+// (no uncoordinated divergence).
 const maxFrameSize = npamp.MaxFrameSize // 16 MiB
 
 // errClosed is returned by the key-derivation gateways (sendState/recvState) once

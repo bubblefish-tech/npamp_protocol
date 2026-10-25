@@ -2,7 +2,7 @@
 
 // Package codecbind is a blessed, ecosystem-facing binding onto the N-PAMP deterministic
 // (core-deterministic, RFC 8949 section 4.2.1) CBOR codec — N-PAMP draft-bubblefish-npamp-02
-// requirement R3.1.
+// deterministic-CBOR requirement.
 //
 // This package is ADDITIVE. It does not touch, replace, or reimplement the Part-1 codec that
 // the wire format already depends on (impl/go/memory_cbor.go); it delegates every encode and

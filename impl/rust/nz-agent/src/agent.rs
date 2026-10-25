@@ -6,7 +6,7 @@
 //! handshake, KEM, or AEAD code: every cryptographic operation is a direct
 //! call into `npamp::session::Session::dial`/`accept`/`send`/`recv`.
 //!
-//! # The load-bearing property (R12 AC2)
+//! # The load-bearing property
 //!
 //! [`NodeAgent::originate`] and [`NodeAgent::accept`] each run ONE independent
 //! `npamp::session::Session::dial`/`accept` call per invocation, over that
@@ -221,10 +221,6 @@ impl<'a> NodeAgent<'a> {
     }
 }
 
-// A tiny module-local smoke test for the parts that don't need a live
-// tunnel (identity + authz composition); the full dial/accept isolation
-// demo (A9) lives in tests/agent_isolation_test.rs, exercised over a real
-// (in-memory) two-thread tunnel.
 #[cfg(test)]
 mod tests {
     use super::*;

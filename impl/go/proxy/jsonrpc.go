@@ -11,7 +11,7 @@ import (
 )
 
 // NPAMP-CC-JSONRPC (spec/companion/20_carriage_jsonrpc.md) Proxy wiring — the
-// n-pamp-proxy carriage leg for Streamable-HTTP+JSON-RPC (MCP/A2A, R10 AC1) and,
+// n-pamp-proxy carriage leg for Streamable-HTTP+JSON-RPC (MCP/A2A) and,
 // via stdio.go's StdioBackend, the stdio-local-MCP leg. Composes the same
 // already-established impl/go/sdk.Conn as the HTTP leg (proxy.go); adds no new
 // wire behavior beyond what carriage_jsonrpc.go's codec already defines.

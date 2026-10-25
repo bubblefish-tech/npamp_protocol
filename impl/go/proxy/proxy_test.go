@@ -72,7 +72,7 @@ func connectedProxyPairForTest(t *testing.T, backendURL *url.URL) (ingressSide, 
 }
 
 // TestServeHTTP_NilConn_FailsClosed_NoBackendFallback is the doc.go
-// "Fail-closed by construction" MUTATION ANCHOR (RED-EVIDENCE): a Proxy with
+// "Fail-closed by construction" MUTATION ANCHOR: a Proxy with
 // no established Conn MUST report a carriage failure (502) and MUST NOT reach
 // out to Backend (or anywhere else) directly. Because ServeHTTP has no
 // fallback branch at all, the only way this test could fail is if one were

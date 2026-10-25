@@ -62,14 +62,14 @@ type FrameHeader struct {
 	PayloadLen uint32
 }
 
-// HookFunc is the per-frame inspection seam a policy layer (E2.2, a
+// HookFunc is the per-frame inspection seam a policy layer (a
 // frame-inspecting firewall) plugs into. It runs once per relayed frame,
 // after the frame's header has been fully validated (CRC32C, wire version,
 // reserved octets/flags all checked) but before the frame is written to the
 // destination leg. Returning a non-nil error REJECTS the frame: Relay.Run
 // tears the whole flow down (closes both legs) rather than forwarding it or
 // silently dropping just that one frame, matching the fail-closed posture
-// R12 requires for a malformed frame. A nil Hook on a Relay means "forward
+// required for a malformed frame. A nil Hook on a Relay means "forward
 // every well-formed frame" — this package's default, and this package's
 // only policy.
 type HookFunc func(dir Direction, header FrameHeader) error
@@ -114,8 +114,8 @@ func (r *Relay) maxFrameSize() uint32 {
 // direction's copy loop ends — a clean peer close (io.EOF at a frame
 // boundary), a transport error, a malformed frame, an oversized declared
 // length, a truncated stream, or the Hook rejecting a frame — and then
-// closes BOTH legs so the flow tears down as a single unit (fail-closed,
-// R12): whichever leg is still blocked in a read or write unblocks with a
+// closes BOTH legs so the flow tears down as a single unit (fail-closed):
+// whichever leg is still blocked in a read or write unblocks with a
 // closed-connection error rather than hanging forever, and Run does not
 // return until both forwarding goroutines have exited (no leaked
 // goroutine).

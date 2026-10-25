@@ -56,7 +56,7 @@ func TestBuildStatementRejectsEmptyInputs(t *testing.T) {
 	}
 }
 
-// TestBuildStatementChangesWithSBOMDigest is the A4 mutation-surviving test targeting the
+// TestBuildStatementChangesWithSBOMDigest is the mutation-surviving test targeting the
 // digest-BINDING property directly: two calls differing only in sbomDigest must produce
 // statements whose externalParameters disagree.
 func TestBuildStatementChangesWithSBOMDigest(t *testing.T) {
@@ -156,8 +156,7 @@ func TestVerifyBindingAcceptsMatchingDigests(t *testing.T) {
 }
 
 // TestVerifyBindingRejectsTamperedArtifact / SBOM is the load-bearing binding-mismatch
-// mutation target (see sign.go/provenance_validate.go's doc comments and RED-EVIDENCE.md
-// for the recorded WITNESS mutation on this exact check).
+// mutation target (see sign.go/provenance_validate.go's doc comments).
 func TestVerifyBindingRejectsTamperedArtifact(t *testing.T) {
 	artifact := []byte("release artifact bytes")
 	sbomJSON := []byte(`{"bomFormat":"CycloneDX","specVersion":"1.7"}`)

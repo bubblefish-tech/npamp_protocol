@@ -1,8 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Command n-pamp-proxy is the reference HTTP<->N-PAMP sidecar (task E2.4,
-// requirement R10, "[A+ item 1]"; see impl/go/proxy for the carriage logic and
-// the honest scope note on what is and is not yet built). One n-pamp-proxy
+// Command n-pamp-proxy is the reference HTTP<->N-PAMP sidecar (see impl/go/proxy for the carriage logic and
+// the built status of each leg). One n-pamp-proxy
 // process runs in exactly ONE of two roles per invocation — the two roles are
 // deployed as a pair, one per side of the boundary the sidecar carries traffic
 // across:
@@ -22,16 +21,16 @@
 //	n-pamp-proxy -http-listen 127.0.0.1:8090 -npamp-remote 127.0.0.1:47730
 //
 // A client pointed at :8090 now reaches the real service at :8080, carried
-// over N-PAMP, with neither the client nor the service aware N-PAMP exists
-// (R10 AC1/AC4). This reference binary generates a FRESH, ephemeral Ed25519
+// over N-PAMP, with neither the client nor the service aware N-PAMP exists.
+// This reference binary generates a FRESH, ephemeral Ed25519
 // identity and self-signed TLS certificate on every run (documented as the
 // safe loopback-development posture in impl/go/sdk/conn.go's Config doc: N-PAMP's
 // own handshake authenticates the peer's Ed25519 identity independently of the
 // TLS certificate). A production deployment SHOULD load a persistent identity
 // key and pin -expected-peer-key; this binary supports -expected-peer-key but
-// leaves persistent key loading out of scope (not part of R10's acceptance
-// criteria; packaging/key-management is AC3/AC6, deferred with the rest of the
-// supply-chain work per R10 AC6 and impl/go/proxy/doc.go).
+// leaves persistent key loading out of scope (not part of the sidecar's
+// acceptance criteria; packaging and key management are deferred with the rest of the
+// supply-chain work, see impl/go/proxy/doc.go).
 package main
 
 import (

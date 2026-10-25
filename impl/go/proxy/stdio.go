@@ -16,7 +16,7 @@ import (
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 )
 
-// stdio-local-MCP carriage -- the fifth carriage leg named in R10 AC1,
+// stdio-local-MCP carriage -- the fifth carriage leg named by the sidecar requirement,
 // sharing NPAMP-CC-JSONRPC's wire mapping (carriage_jsonrpc.go/jsonrpc.go)
 // with a LOCAL transport binding instead of Streamable HTTP: the egress side
 // of an n-pamp-proxy speaks to a LOCAL MCP server process over its

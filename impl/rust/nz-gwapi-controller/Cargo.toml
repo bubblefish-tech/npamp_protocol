@@ -10,14 +10,14 @@ description = "N-PAMP Gateway-API/GAMMA control-plane wiring (E2.7c, R12 AC4): r
 # and tests standalone: `cd impl/rust/nz-gwapi-controller && cargo build &&
 # cargo test`.
 [dependencies]
-# The seams this controller wires into (nz-agent/src/lib.rs's own R12 AC4 gap
+# The seams this controller wires into (nz-agent/src/lib.rs's own control-plane gap
 # note: "the AuthzTable/PeerDirectory population seams this build DOES ship
 # (allow/register, and the CLI's --allow/--register-peer) are exactly what
 # such a controller would call"). Reused directly, never re-derived: this
 # crate does not reimplement SpiffeId parsing, AuthzTable's fail-closed
 # allow-set, or PeerDirectory's pubkey table.
 nz-agent = { path = "../nz-agent" }
-# The L7 AuthzHook seam (E2.7, R12 AC3) named in this task's scope. Only
+# The L7 AuthzHook seam named in this crate's scope. Only
 # EffectClass is used directly here (never re-derived from memory: this
 # crate's own annotation parser rejects anything that is not one of the four
 # exact tokens EffectClass::Display already emits, then hands the

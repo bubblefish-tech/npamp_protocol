@@ -62,7 +62,7 @@ var corpusStructuralError = map[string]error{
 // header.decode vector through ValidateBytes: tc1 (result=valid) must be
 // accepted, and tc2-tc5 (result=invalid) must each be rejected with the
 // SPECIFIC npamp structural sentinel its flags name -- proving both halves
-// of the F3 accept/reject claim against every full-frame vector this
+// of the accept/reject claim against every full-frame vector this
 // corpus file contains, not a hand-picked subset.
 func TestValidateBytes_AllConformanceCorpusHeaderDecodeVectors(t *testing.T) {
 	root, err := DefaultRegistryRoot()

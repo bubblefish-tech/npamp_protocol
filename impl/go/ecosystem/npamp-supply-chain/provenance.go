@@ -83,7 +83,7 @@ type Statement struct {
 // BuildStatement builds a signed-ready in-toto Statement / SLSA Provenance v1 predicate
 // binding artifactName+artifactDigest (the subject) to sbomDigest (recorded in
 // buildDefinition.externalParameters["sbomDigest"] — the digest binding this package
-// exists to produce; A4: this is a real field of the actual sbomDigest argument, not a
+// exists to produce; this is a real field of the actual sbomDigest argument, not a
 // constant, so BuildStatement's output changes whenever sbomDigest does — see
 // provenance_test.go's mutation-surviving test). builderID identifies the build platform
 // (SLSA runDetails.builder.id, REQUIRED). started/finished are the build's wall-clock

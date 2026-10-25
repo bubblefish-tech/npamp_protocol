@@ -11,7 +11,7 @@ import (
 	npamp "github.com/bubblefish-tech/npamp_protocol/impl/go"
 )
 
-// R14 E2.22: a shared corpus proving each carriage class's wrap-then-unwrap
+// A shared corpus proving each carriage class's wrap-then-unwrap
 // is octet-exact, graded NON-CIRCULARLY — every "oracle" byte sequence below
 // is constructed by hand in THIS file, independent of the encode function it
 // grades (matching the existing independent-construction style
@@ -31,7 +31,7 @@ import (
 // merely wiring an existing Rust codec into a shared test). That is
 // deliberately NOT attempted here — a rushed from-scratch cross-language
 // wire-format port risks exactly the fabricated-parity class of defect the
-// project's own rules forbid (F3: expected values must never come from the
+// project's own rules forbid (expected values must never come from the
 // implementation under test; a hastily-ported "parity" claim that turns out
 // wrong is worse than an honestly-scoped Go-only corpus). See this build's
 // report for the recommended follow-up.

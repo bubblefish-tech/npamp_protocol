@@ -25,7 +25,7 @@ func testRegistries(t *testing.T) *wirevalidator.Registries {
 
 // TestHook_NilRegistries_ReturnsErrNoRegistries proves Firewall fails closed
 // on its own missing configuration rather than building a Hook that
-// silently skips R3.2's registry check.
+// silently skips the registry check.
 func TestHook_NilRegistries_ReturnsErrNoRegistries(t *testing.T) {
 	fw := &Firewall{}
 	if _, err := fw.Hook(); !errors.Is(err, ErrNoRegistries) {

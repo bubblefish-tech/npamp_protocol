@@ -50,7 +50,7 @@ func (e *SchemaValidationError) Unwrap() error { return ErrSchemaInvalid }
 
 // ValidateSBOM schema-validates bomJSON (the marshaled bytes of a BOM, or any other
 // CycloneDX 1.7 document) against the real, vendored CycloneDX 1.7 JSON Schema (an
-// independent authority — F3/A7: this is not the code that produced bomJSON asserting its
+// independent authority: this is not the code that produced bomJSON asserting its
 // own correctness). A schema disagreement is returned as *SchemaValidationError (which
 // wraps ErrSchemaInvalid, so errors.Is(err, ErrSchemaInvalid) works); malformed JSON or an
 // internal schema-processing failure is returned as a plain error.

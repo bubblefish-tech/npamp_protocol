@@ -64,8 +64,8 @@ func TestJSONRPCNotification_RoundTrip(t *testing.T) {
 	}
 }
 
-// TestJSONRPCNotification_WithID_Rejected is a §7 MUTATION ANCHOR
-// (RED-EVIDENCE): a Notification object that carries an id member MUST be
+// TestJSONRPCNotification_WithID_Rejected is a §7 MUTATION ANCHOR:
+// a Notification object that carries an id member MUST be
 // rejected under BRIDGE_NOTIFY -- a receiver that failed to check this could
 // silently treat a live Request as a fire-and-forget Notification, dropping
 // the caller's expected reply forever.
@@ -154,8 +154,8 @@ func TestJSONRPCErrorResponse_NoErrorMember_Rejected(t *testing.T) {
 	}
 }
 
-// TestJSONRPCMethodAgrees is the §4 agreement-check MUTATION ANCHOR
-// (RED-EVIDENCE): the BridgeEnvelope method field MUST equal the carried
+// TestJSONRPCMethodAgrees is the §4 agreement-check MUTATION ANCHOR:
+// the BridgeEnvelope method field MUST equal the carried
 // object's method member byte-for-byte.
 func TestJSONRPCMethodAgrees(t *testing.T) {
 	wire, _, err := encodeJSONRPCRequest("tools/call", nil, "1")

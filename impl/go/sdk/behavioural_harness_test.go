@@ -2,7 +2,7 @@
 
 package sdk_test
 
-// Go<->Go behavioural live-exchange harness (TRACK C2, START).
+// Go<->Go behavioural live-exchange harness.
 //
 // WHY THIS EXISTS. The companion specs for the graded channels are graded on their
 // *payload-decode* surface only: `stream.body.decode` / `interaction.body.decode` in the
@@ -33,7 +33,7 @@ package sdk_test
 //         result, policy_denied error, approval_held error carrying approval_id), asserting
 //         approval_held is never collapsed into granted / denied / policy_denied and that
 //         approval_id is present on, and only on, the held outcome.
-//   - NOT graded here (larger corpus, later C2 increments): sub-stream id parity by
+//   - NOT graded here (larger corpus, later increments): sub-stream id parity by
 //     handshake role across BOTH parities with concurrent opens; every §8 stream error
 //     code; the full prompt-kind matrix (§6.2) and INTERACT_CANCEL race (§6.4); two-level
 //     composition with the connection-level FLOW_UPDATE (§6.3); the §8.2 leak-prevention

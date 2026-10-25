@@ -2,7 +2,7 @@
 
 package codecbind_test
 
-// codecbind_test.go grades the codecbind binding two ways (F3, non-circular):
+// codecbind_test.go grades the codecbind binding two ways (non-circular):
 //
 //  1. Byte-identity round-trip: real "capability.body.decode" object vectors are taken from
 //     the PINNED conformance corpus (test-vectors/v1/conformance-corpus.json, listed in

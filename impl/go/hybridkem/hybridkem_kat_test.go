@@ -2,7 +2,7 @@
 
 package hybridkem_test
 
-// hybridkem_kat_test.go grades the standalone adapter (F3, non-circular):
+// hybridkem_kat_test.go grades the standalone adapter (non-circular):
 // the X25519MLKEM768 combiner's output is checked against standards-anchored
 // expected values (NIST ACVP FIPS 203, RFC 7748 section 6.1 — the same anchors
 // kemwire_kat_test.go uses, reused here rather than re-derived) and is

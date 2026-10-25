@@ -7,8 +7,7 @@ import (
 	"fmt"
 )
 
-// P2.5 Option B1 (the SHARED JSON WIRE FORMAT — recommended in gnapexport.go's file header
-// and maintainer-approved 2026-09-02; NOT Option B2/FFI, no cgo): the Go-side TRANSPORT half
+// The SHARED JSON WIRE FORMAT (see gnapexport.go's file header; no cgo): the Go-side TRANSPORT half
 // that decodes the JSON impl/rust/nz-agent/src/waypoint.rs's ResolvedWaypointGrant emits
 // (via its to_json method / the print-waypoint-grant-fixture bin) into this package's own
 // WaypointGrant, so ExportWaypointEvidence can independently re-check it — never trusting a
@@ -60,7 +59,7 @@ func effectClassFromToken(s string) (EffectClass, bool) {
 	}
 }
 
-// DecodeWaypointGrant parses a P2.5 Option B1 JSON payload (produced by nz-agent's
+// DecodeWaypointGrant parses a shared-format JSON payload (produced by nz-agent's
 // waypoint::ResolvedWaypointGrant::to_json) into a WaypointGrant. Fail-closed on any of:
 // malformed JSON, a missing/empty signer_id, a missing/empty consuming_authority, or a
 // max_grant string that is not one of the four recognized tokens — every failure returns
@@ -93,7 +92,7 @@ func DecodeWaypointGrant(jsonBytes []byte) (WaypointGrant, error) {
 	}, nil
 }
 
-// ExportWaypointEvidenceFromJSON is the documented end-to-end P2.5 Option B1 entry point: it
+// ExportWaypointEvidenceFromJSON is the documented end-to-end entry point: it
 // decodes a Rust-emitted waypoint-grant JSON payload (DecodeWaypointGrant) and, only if that
 // decode succeeds, re-checks and exports it exactly as ExportWaypointEvidence does for a
 // caller-constructed WaypointGrant. A caller with an already-decoded WaypointGrant (e.g. one

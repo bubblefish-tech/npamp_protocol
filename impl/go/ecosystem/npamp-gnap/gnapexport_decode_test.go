@@ -132,7 +132,7 @@ func TestExportWaypointEvidenceFromJSONAcceptsAtCeilingExactly(t *testing.T) {
 }
 
 // TestExportWaypointEvidenceFromJSONRejectsWrongAudience proves the real-fixture round trip
-// still enforces the D15 WrongAudience refusal — decoding a valid grant does not, by itself,
+// still enforces the WrongAudience refusal — decoding a valid grant does not, by itself,
 // grant an export for any audience.
 func TestExportWaypointEvidenceFromJSONRejectsWrongAudience(t *testing.T) {
 	_, err := ExportWaypointEvidenceFromJSON(readWaypointGrantFixture(t), "gateway-b", EffectReadOnly)
@@ -142,7 +142,7 @@ func TestExportWaypointEvidenceFromJSONRejectsWrongAudience(t *testing.T) {
 }
 
 // TestExportWaypointEvidenceFromJSONRejectsEffectExceedingCeiling proves the real-fixture
-// round trip still enforces the D15 EffectExceedsGrant refusal — the fixture's ceiling is
+// round trip still enforces the EffectExceedsGrant refusal — the fixture's ceiling is
 // non_idempotent_write, so a requested destructive effect must be denied even though the
 // JSON decoded cleanly.
 func TestExportWaypointEvidenceFromJSONRejectsEffectExceedingCeiling(t *testing.T) {

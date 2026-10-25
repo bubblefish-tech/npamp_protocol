@@ -56,8 +56,8 @@ type SubjectIdentifier map[string]string
 // array: Format names a registered "GNAP Assertion Formats" value (§10.6 — "id_token",
 // "saml2", or a caller-supplied N-PAMP-specific value — see doc.go's Scope section); Value
 // is "the JSON string serialization of the assertion" (§2.4). This package does not define
-// or propose a registry value or payload shape of its own (Option A: no delegation-evidence
-// export) — an Assertion, if supplied at all, is built entirely by the caller.
+// or propose a registry value or payload shape of its own (no delegation-evidence
+// export here) — an Assertion, if supplied at all, is built entirely by the caller.
 type Assertion struct {
 	Format string `json:"format"`
 	Value  string `json:"value"`

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! Node-local L4 authorization (E2.6, design doc Component 1: "L4
+//! Node-local L4 authorization (design doc Component 1: "L4
 //! authorization (which workload may reach which) enforced here, at the
 //! node"). Independent of, and enforced BEFORE, any waypoint's L7 authz
 //! ([`crate::waypoint`]) — the 80/20 split the design doc describes: most
@@ -104,8 +104,7 @@ mod tests {
     }
 
     /// Fail-closed: allowing A->B does NOT allow B->A (directionality) and
-    /// does NOT allow A->C (destination-specificity). Mutated away by
-    /// M-authz-1 in RED-EVIDENCE.md.
+    /// does NOT allow A->C (destination-specificity).
     #[test]
     fn allow_is_directional_and_destination_specific() {
         let mut t = AuthzTable::new();

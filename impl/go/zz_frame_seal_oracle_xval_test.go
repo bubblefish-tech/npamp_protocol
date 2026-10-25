@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestFrameSealOracleCrossValidate proves NON-CIRCULARITY for the whole-frame AEAD ops (TRACK C4):
+// TestFrameSealOracleCrossValidate proves NON-CIRCULARITY for the whole-frame AEAD ops:
 // the sealed bytes below are the ACTUAL output of the independent Python oracle
 // (test-vectors/gen/frame_seal_oracle.py), which builds the 21-octet header-prefix AAD from scratch
 // (spec/02 §4.2), the per-frame nonce from scratch (iv XOR (0^4||seq), spec/06), and the

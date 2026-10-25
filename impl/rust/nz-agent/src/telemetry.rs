@@ -1,11 +1,11 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! R13.5 (E2.13, telemetry-bridge — the exporter half) — OpenTelemetry +
+//! Telemetry bridge — the exporter half — OpenTelemetry +
 //! Prometheus export of [`crate::datapath::DropEvent`].
 //!
 //! # Scope of THIS module
 //!
-//! [`crate::datapath`] already builds the named-error taxonomy R13.5
+//! [`crate::datapath`] already builds the named-error taxonomy the design
 //! requires ("every DROP carries its named error code — no opaque drops"):
 //! [`crate::datapath::NpampDropCode`], [`crate::datapath::DropEvent`] (keyed
 //! by peer SPIFFE id + carriage class + session id), and `record_drop`. This
@@ -15,7 +15,7 @@
 //! (`nz_agent_drops_total{reason, carriage_class}`), via one
 //! [`TelemetrySink`] trait every drop-reporting call site can call.
 //!
-//! # What this module does NOT do (tracked gap — E2.13 half 2)
+//! # What this module does NOT do (tracked gap — telemetry half 2)
 //!
 //! The eBPF-side flow/verdict bridge (reading the kernel `nz-agent-ebpf`
 //! maps and turning kernel-observed drops into [`DropEvent`]s) is Linux/aya-

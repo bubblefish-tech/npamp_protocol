@@ -30,7 +30,7 @@ import (
 // Returning a non-nil error from the hook rejects the frame; per
 // relay.HookFunc's documented contract, Relay.Run then tears down BOTH legs
 // of the flow rather than forwarding it or silently dropping only that
-// frame (fail-closed, R12).
+// frame (fail-closed).
 func (reg *Registries) RelayHook() relay.HookFunc {
 	return func(dir relay.Direction, header relay.FrameHeader) error {
 		if err := reg.checkFrameType(header.Channel, header.Type); err != nil {

@@ -115,7 +115,7 @@ func TestBuildReleaseRejectsEmptyBuilderID(t *testing.T) {
 	}
 }
 
-// TestBuildReleaseChangesWithArtifact is the A4 mutation-surviving test on the whole
+// TestBuildReleaseChangesWithArtifact is the mutation-surviving test on the whole
 // pipeline: two different artifacts must produce two different ArtifactDigest values and
 // two different SignedProvenance byte strings.
 func TestBuildReleaseChangesWithArtifact(t *testing.T) {

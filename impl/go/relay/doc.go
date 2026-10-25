@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 // Package relay implements a frame-delimiting, non-decrypting N-PAMP
-// forwarder (task E2.1, requirements R1.1/R1.2/DES-10): a bidirectional
+// forwarder: a bidirectional
 // intermediary that routes an N-PAMP session between two agents without
 // terminating the cryptographic session between them.
 //
@@ -30,9 +30,9 @@
 // handshake provides; this one deliberately does not, so the two agents
 // authenticate EACH OTHER, not the relay.
 //
-// # The firewall seam (E2.2)
+// # The firewall seam
 //
-// Relay.Hook is the seam a later policy layer (E2.2, a frame-inspecting
+// Relay.Hook is the seam a later policy layer (a frame-inspecting
 // firewall) plugs into: it runs once per relayed frame, after the header is
 // parsed and validated but before the frame is forwarded, and sees only the
 // cleartext FrameHeader — never the payload bytes, encrypted or otherwise.
@@ -41,7 +41,7 @@
 // pass-through (a nil Hook forwards every well-formed frame); it carries no
 // policy of its own.
 //
-// # Per-flow state ownership (DES-10)
+// # Per-flow state ownership
 //
 // The N-PAMP protocol itself does not require an intermediary to hold any
 // per-session state — a conformant relay could in principle be a dumb byte
@@ -53,7 +53,7 @@
 // nothing here accumulates cross-flow state or requires the protocol's
 // cooperation to exist.
 //
-// # Fail-closed and bounded (R12)
+// # Fail-closed and bounded
 //
 // A malformed frame (bad magic, a header CRC32C mismatch, an unsupported
 // wire version, a nonzero reserved octet or reserved flag bit — see

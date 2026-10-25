@@ -12,7 +12,7 @@ import (
 )
 
 // TestHandleInboundStreamRequest_ResumeRequest_AlwaysRefused is a §6.3
-// MUTATION ANCHOR (RED-EVIDENCE): this build's producer retains no
+// MUTATION ANCHOR: this build's producer retains no
 // per-stream state (stream.go doc comment), so a stream-opening BRIDGE_REQUEST
 // carrying a StreamControl TLV with control=resume MUST be refused with
 // BRIDGE_ERROR NotResumable, and MUST NOT reach GRPCHandler/WebSocketHandler

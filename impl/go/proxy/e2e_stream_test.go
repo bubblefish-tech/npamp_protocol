@@ -16,7 +16,7 @@ import (
 // NPAMP-CC-STREAM defines, with the gRPC Length-Prefixed-Message wire framing
 // surviving the round trip byte-exact.
 //
-// Mutation anchor (RED-EVIDENCE): a bug that drops the event, mis-orders
+// Mutation anchor: a bug that drops the event, mis-orders
 // event_id, or corrupts the LPM framing breaks this test.
 func TestE2E_GRPC_UnaryCall(t *testing.T) {
 	ingress, egress := twoConnectedProxies(t, nil)

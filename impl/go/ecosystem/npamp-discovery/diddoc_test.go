@@ -46,7 +46,7 @@ func TestBuildDIDWebDocumentRejectsBadKey(t *testing.T) {
 	}
 }
 
-// TestBuildDIDWebDocumentChangesWithDomain is the A4 mutation-surviving test: the
+// TestBuildDIDWebDocumentChangesWithDomain is the mutation-surviving test: the
 // document's id must actually depend on the domain argument.
 func TestBuildDIDWebDocumentChangesWithDomain(t *testing.T) {
 	pub, _ := testKeypair(t)
@@ -133,7 +133,7 @@ func TestDIDWebURLRejectsEmptyDomain(t *testing.T) {
 	}
 }
 
-// TestDIDWebURLChangesWithPathSegments is the A4 mutation-surviving test: the resolved
+// TestDIDWebURLChangesWithPathSegments is the mutation-surviving test: the resolved
 // URL must actually depend on the path segments, not just the domain.
 func TestDIDWebURLChangesWithPathSegments(t *testing.T) {
 	a, err := DIDWebURL("did:web:agent.npamp.invalid:alice")

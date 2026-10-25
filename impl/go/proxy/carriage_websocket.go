@@ -4,7 +4,7 @@ package proxy
 
 // WebSocket generic carriage under NPAMP-CC-STREAM
 // (spec/companion/23_carriage_streaming.md) -- the fourth carriage leg of
-// E2.4/R10 (doc.go). NPAMP-REG (spec/companion/30_protocol_registry.md §6)
+// the proxy's carriage set (doc.go). NPAMP-REG (spec/companion/30_protocol_registry.md §6)
 // assigns `protocol_id 0x04` "WebSocket generic carriage" to carriage class
 // STREAM (not MESSAGING, which NPAMP-CC-MSG/22_carriage_messaging.md defines
 // for performative/speech-act protocols -- a different foreign-protocol

@@ -2,7 +2,7 @@
 
 package sdk
 
-// Deviant-trace conformance suite (T18.1). The N-PAMP handshake + keyed-session state
+// Deviant-trace conformance suite. The N-PAMP handshake + keyed-session state
 // machine has a NORMATIVE total default (draft §State Machine): in any non-terminal
 // state, a frame with no listed transition — a skip, a hop to a later/earlier flight, a
 // repeat, or an unknown type — is a fatal `unexpected_message`, and the endpoint MUST NOT
@@ -11,7 +11,7 @@ package sdk
 // attacker could forge); POST-KEY it seals and sends an ERROR frame carrying the code
 // before teardown (draft {#error-handling}).
 //
-// F3 NON-CIRCULARITY. Every expected output in this file is looked up from
+// NON-CIRCULARITY. Every expected output in this file is looked up from
 // harness/statemodel/npamp-state-table.json — the Mealy model derived from the draft
 // TEXT, never from this Go implementation. The suite drives the REAL runClientHandshake /
 // runServerHandshake and the REAL Conn.Recv against hand-built deviant peers, and asserts
@@ -39,7 +39,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// F3 authority: load and query the draft-derived state table
+// authority: load and query the draft-derived state table
 // ---------------------------------------------------------------------------
 
 type stTransition struct {
@@ -105,7 +105,7 @@ func (tbl *stTable) keyEstablished(state string) bool {
 
 // expect is the table's prediction for the reaction to input in (role, state): a listed
 // transition's output, else the total default selected by whether a key is established.
-// THIS is the F3 oracle — the assertions below compare the impl's observed reaction to it.
+// THIS is the oracle — the assertions below compare the impl's observed reaction to it.
 func (tbl *stTable) expect(role, state, input string) string {
 	if out, ok := tbl.legalOutput(role, state, input); ok {
 		return out
@@ -765,7 +765,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 
 	// (both, ESTABLISHED, KEY_UPDATE_ACK): an UNSOLICITED KEY_UPDATE_ACK — this endpoint sent
 	// no matching KEY_UPDATE — has NO listed transition, so it is the total default
-	// (unexpected_message), exactly like an unsolicited CLOSE_ACK. Before the T18.2 hardening
+	// (unexpected_message), exactly like an unsolicited CLOSE_ACK. Before the state-machine hardening
 	// the impl silently swallowed it (`continue`), a table violation; this asserts the
 	// strengthened reject. On Control (the helper's channel); a well-formed marker so it reaches
 	// the not-pending branch (a malformed marker is a plain error, tested at the unit level).
@@ -825,7 +825,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 	})
 
 	// (both, ESTABLISHED, MASTER_RATCHET_ACK): the ratchet ACKs are a modeled_exclusion of the
-	// F3 table (the multi-generation ratchet sub-protocol would explode a flat Mealy machine),
+	// table (the multi-generation ratchet sub-protocol would explode a flat Mealy machine),
 	// so this is a CODE-LEVEL CONSISTENCY assertion (like the CLOSE-with-payload refinement),
 	// NOT learned coverage: an unsolicited MASTER_RATCHET_ACK must be rejected as
 	// unexpected_message exactly like KEY_UPDATE_ACK / CLOSE_ACK. Covered here + by the ratchet
@@ -855,7 +855,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 		}
 	})
 
-	// (A1) A KEY_UPDATE whose KeyUpdateMarker announces an epoch != current+1 is fatal
+	// A KEY_UPDATE whose KeyUpdateMarker announces an epoch != current+1 is fatal
 	// key_update_out_of_order (draft error registry row 9 / §1306-1311 "MUST be rejected with
 	// key_update_out_of_order ... MUST be torn down"), NOT a silent drop. The server's Control
 	// recv epoch is 0, so a marker announcing epoch 5 is out of order.
@@ -865,7 +865,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 		assertSealedErrorCode(t, f, have, master, p, npamp.ErrCodeKeyUpdateOutOfOrder, recvErr, "wrong-epoch KEY_UPDATE")
 	})
 
-	// (A2) A KEY_UPDATE whose marker is malformed (here: absent — an empty payload, which the
+	// A KEY_UPDATE whose marker is malformed (here: absent — an empty payload, which the
 	// draft names as malformed) is the same fatal key_update_out_of_order (row 9).
 	t.Run("key_update_malformed_marker_out_of_order", func(t *testing.T) {
 		a, server, master := establishedServer(t)
@@ -873,16 +873,16 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 		assertSealedErrorCode(t, f, have, master, p, npamp.ErrCodeKeyUpdateOutOfOrder, recvErr, "malformed KEY_UPDATE marker")
 	})
 
-	// (A3) A malformed KeyUpdateMarker on a KEY_UPDATE_ACK is the SAME fatal
+	// A malformed KeyUpdateMarker on a KEY_UPDATE_ACK is the SAME fatal
 	// key_update_out_of_order — the marker is the same TLV on either frame — replacing part 1's
-	// plain-drop, whose "handleKeyUpdate precedent" was itself the A1/A2 defect.
+	// plain-drop, whose "handleKeyUpdate precedent" was itself the defect.
 	t.Run("key_update_ack_malformed_marker_out_of_order", func(t *testing.T) {
 		a, server, master := establishedServer(t)
 		f, have, recvErr := injectAndReadReaction(t, a, server, master, npamp.FrameKeyUpdateAck, nil)
 		assertSealedErrorCode(t, f, have, master, p, npamp.ErrCodeKeyUpdateOutOfOrder, recvErr, "malformed KEY_UPDATE_ACK marker")
 	})
 
-	// (A4) An unsolicited (no outstanding re-KEM) REKEM_ACK is unexpected_message, uniform with
+	// An unsolicited (no outstanding re-KEM) REKEM_ACK is unexpected_message, uniform with
 	// unsolicited KEY_UPDATE_ACK / MASTER_RATCHET_ACK / CLOSE_ACK — replacing the plain-drop
 	// that made the draft's uniform unsolicited-ack rule false about the impl. Well-formed body
 	// (passes parseReKEMAck) so it reaches the no-pending branch.
@@ -895,7 +895,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// F3 consumption is explicit: prove the deviant inputs are NOT legal transitions
+// consumption is explicit: prove the deviant inputs are NOT legal transitions
 // ---------------------------------------------------------------------------
 
 func TestStateTable_GeneratorConsumesTable(t *testing.T) {
@@ -911,7 +911,7 @@ func TestStateTable_GeneratorConsumesTable(t *testing.T) {
 		{"both", "ESTABLISHED", "SERVER_AUTH"},
 		{"both", "ESTABLISHED", "UNKNOWN"},
 		// KEY_UPDATE_ACK is in the alphabet but has NO ESTABLISHED transition: an unsolicited
-		// one falls to the total default (the T18.2 hardening asserts the impl matches this).
+		// one falls to the total default (the state-machine hardening asserts the impl matches this).
 		{"both", "ESTABLISHED", "KEY_UPDATE_ACK"},
 	}
 	for _, c := range totalDefaultCases {

@@ -149,7 +149,7 @@ fn err<T>(msg: impl Into<String>) -> Result<T, Malformed> {
 
 // ------------------------------------------------------------------------------------
 // Deterministic-CBOR encoder (encode-side counterpart to decode_top / the value model
-// above, added for E2.22/R14.5's carriage-object codecs). Mirrors the Go reference's
+// above, added for the carriage-object codecs). Mirrors the Go reference's
 // canonical encoder (impl/go/memory_cbor.go cborEncode/encodeHead) byte for byte:
 // shortest-form integer/length headers (RFC 8949 §4.2.1) and, for a map, entries
 // emitted in ascending canonical (bytewise-of-encoded-key) order.

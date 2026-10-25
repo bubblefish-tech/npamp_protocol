@@ -25,9 +25,9 @@ func NewClientInstance(priv ed25519.PrivateKey, pubKey ed25519.PublicKey) *Clien
 }
 
 // keyJWK returns the client instance's public key as a JSON Web Key by reusing
-// npampdiscovery.BuildOKPJWK's already-graded RFC 8037 OKP-JWK encoder (E4.1) — the SAME
+// npampdiscovery.BuildOKPJWK's already-graded RFC 8037 OKP-JWK encoder — the SAME
 // JWK bytes that package already produces, so this package reimplements no JWK-construction
-// logic of its own (D5/A10: no parallel encoder for a thing that already exists and is
+// logic of its own (no parallel encoder for a thing that already exists and is
 // graded).
 func keyJWK(pubKey ed25519.PublicKey) (json.RawMessage, error) {
 	jwk, err := npampdiscovery.BuildOKPJWK(pubKey)
@@ -57,7 +57,7 @@ func (c *Client) ClientField() (ClientField, error) {
 // "user.assertions" (RFC 9635 §2.4), NOT "subject.assertion_formats": §2.2's
 // assertion_formats field REQUESTS formats FROM the AS, it is not a channel for a client to
 // PRESENT an assertion it already holds (see doc.go's directionality note). This package
-// does not construct the assertion itself (Option A, no delegation-evidence export object —
+// does not construct the assertion itself (no delegation-evidence export object here —
 // see doc.go's Scope section); a nil assertion omits the User field entirely.
 func (c *Client) BuildGrantRequest(access []AccessDescriptor, assertion *Assertion) (GrantRequest, error) {
 	cf, err := c.ClientField()

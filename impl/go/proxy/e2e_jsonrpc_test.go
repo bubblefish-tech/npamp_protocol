@@ -17,7 +17,7 @@ import (
 // (sdk.DialRaw/AcceptRaw over net.Pipe, twoConnectedProxies) carries a
 // CallJSONRPC/JSONRPCHandler round trip end to end.
 //
-// Mutation anchor (RED-EVIDENCE): a bug that drops, mis-correlates, or
+// Mutation anchor: a bug that drops, mis-correlates, or
 // mutates the carried method/params/result, or a change to §4/§5's
 // message_kind or method-agreement rules, breaks this test.
 func TestE2E_JSONRPC_CallAndSuccessResponse(t *testing.T) {

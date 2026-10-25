@@ -1,9 +1,8 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Package npampotel implements ecosystem task E5.6 (structured telemetry emission mapped to
-// the Part-1 R10 error registry, feeding the Part-5/N-AALP OTel work) per requirements.md
-// Requirement 8 item 2 (R8.2): "The core SHALL emit structured telemetry mapped to the
-// Part-1 R10 error registry."
+// Package npampotel implements ecosystem telemetry (structured telemetry emission mapped to
+// the error registry, feeding the N-AALP OTel work): the core emits
+// structured telemetry mapped to the error registry.
 //
 // This is an ECOSYSTEM/adoption-layer package: additive only, no wire/CDDL/frame change. It
 // performs no cryptography and computes no wire-level fact of its own -- every byte-level
@@ -12,12 +11,12 @@
 // .Reaction()), never reinvented, matching the "buy-before-make" pattern the sibling
 // N-AALP ecosystem/naalp-otel module already follows.
 //
-// # Shape reference (verify-relay: re-derived, not merely copied)
+// # Shape reference (re-derived, not merely copied)
 //
 // This package structurally mirrors the sibling N-AALP ecosystem/naalp-otel module (its
 // TracerProvider construction in export.go, its Recorder/EmitOperationSpan shape in
-// span.go), read directly this session. It deliberately departs from that sibling on ONE
-// point: N-PAMP's Part-1 R10 error registry (SessionErrorCode) is a session/handshake-layer
+// span.go), read directly. It deliberately departs from that sibling on ONE
+// point: N-PAMP's Part-1 error registry (SessionErrorCode) is a session/handshake-layer
 // concept with no gen_ai.* semantic-convention correspondence, so this package emits no
 // gen_ai.* attributes at all -- see attrs.go for the full reasoning. Every other structural
 // choice (a Recorder holding pre-created instruments, EmitOperationSpan validating its
@@ -38,7 +37,7 @@ import (
 )
 
 // definedCodes lists every SessionErrorCode this package recognizes as a registered Part-1
-// R10 error-registry entry (impl/go/errorframe.go). Cross-checked in span_test.go against
+// error-registry entry (impl/go/errorframe.go). Cross-checked in span_test.go against
 // npamp.SessionErrorCode.String() (which returns a "error_code(0x..)" hex fallback for any
 // value NOT in errorframe.go's own errCodeName map) so a registry drift -- a new code added
 // upstream, not yet added here -- flips a test rather than silently mis-classifying an
@@ -67,7 +66,7 @@ func reactionName(r npamp.ErrorReaction) string {
 
 // Outcome describes one observed N-PAMP session outcome -- the input to EmitOperationSpan.
 // A nil Code means the operation completed with no registered error (a successful span); a
-// non-nil Code names an observed Part-1 R10 error (from a received/decoded ERROR frame,
+// non-nil Code names an observed Part-1 error (from a received/decoded ERROR frame,
 // impl/go/errorframe.go's DecodeErrorBody, or a locally-detected condition the caller has
 // already classified against the same registry).
 type Outcome struct {
@@ -120,7 +119,7 @@ func NewRecorder(tracer trace.Tracer, meter metric.Meter) (*Recorder, error) {
 // no separate "start" call.
 //
 // Fail-closed: a nil Outcome, or a non-nil Outcome.Code that does not resolve in the Part-1
-// R10 error registry (definedCodes), returns a named error and emits NEITHER a span NOR a
+// error registry (definedCodes), returns a named error and emits NEITHER a span NOR a
 // metric point. A caller MUST NOT treat a returned error as "emit an empty span anyway" --
 // there is no code path in this function that does that.
 func (r *Recorder) EmitOperationSpan(ctx context.Context, out *Outcome) (trace.SpanContext, error) {

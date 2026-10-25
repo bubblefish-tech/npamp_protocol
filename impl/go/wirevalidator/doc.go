@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
 // Package wirevalidator implements a registry-driven, fail-closed wire
-// validator for N-PAMP frames (task E2.3, R3.3).
+// validator for N-PAMP frames.
 //
 // # Why hand-written, not CDDL-driven
 //
@@ -28,8 +28,8 @@
 // (channels.csv, frame_types_reserved.csv, frame_types_channel.csv,
 // tlv_tags.csv, error_codes.csv), loaded from disk at Load time -- never
 // hand-copied as Go literals, so a registry edit is picked up without
-// re-deriving anything here (F6 currency) and the expected values remain an
-// INDEPENDENT authority from this validator's own logic (F3 non-circular).
+// re-deriving anything here (currency) and the expected values remain an
+// INDEPENDENT authority from this validator's own logic (non-circular).
 //
 // # Fail-closed allowlist posture (an intentional design choice)
 //
@@ -42,7 +42,7 @@
 // RFC-style forward compatibility (e.g. npamp.CheckMustUnderstand ignores
 // an unrecognized TLV whose high bit is clear, and unknown_channel is a
 // discard-and-survive reaction, not a hard reject -- registries/error_codes.csv).
-// A wire-level gate meant to plug into a relay/firewall seam (E2.2,
+// A wire-level gate meant to plug into a relay/firewall seam (the firewall,
 // impl/go/relay.HookFunc) is a different kind of component from a
 // protocol peer: its job is default-deny, not maximal interoperability.
 // This deliberate divergence from the SDK's lenient peer behavior is

@@ -17,7 +17,7 @@ import (
 // TestDialRaw_AcceptRaw_RoundTrip proves the TLS-free seam: a DialRaw client and an
 // AcceptRaw server over an in-process net.Pipe complete the N-PAMP handshake (mutual
 // Ed25519 auth, no TLS), each learns the other's authenticated identity, and application
-// frames round-trip both directions. This is the transport the T18.2 state-learning SUL
+// frames round-trip both directions. This is the transport the state-learning SUL
 // uses. Mutation anchor: swapping the two per-direction roles in DialRaw's newConn call
 // makes the two ends derive mismatched send/recv keys, so the round-trip AEAD-open fails.
 func TestDialRaw_AcceptRaw_RoundTrip(t *testing.T) {

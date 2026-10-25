@@ -118,10 +118,10 @@ func TestVerifyAgentDiscoveryDocumentRejectsBadAuthenticatedKeySize(t *testing.T
 }
 
 // TestEndToEndDIDAndDiscoveryFlow demonstrates the whole package working together in
-// isolation (A9): build a DID Document for an N-PAMP agent's Ed25519 key, build and sign
+// isolation: build a DID Document for an N-PAMP agent's Ed25519 key, build and sign
 // an agent discovery document bound to that DID, and verify it against the
 // (independently-authenticated, here simulated) signer key — the exact flow this
-// package's E4 task exists to deliver.
+// package exists to deliver.
 func TestEndToEndDIDAndDiscoveryFlow(t *testing.T) {
 	pub, priv := testKeypair(t)
 

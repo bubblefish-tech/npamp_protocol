@@ -59,7 +59,7 @@ func TestHkdfExpandLabelOracleCrossValidate(t *testing.T) {
 }
 
 // TestTrafficKeyIVOracleCrossValidate proves NON-CIRCULARITY for the §5 traffic-key derivation
-// (TRACK C6): the (key,iv) bytes below are the ACTUAL output of the same independent, RFC-anchored
+// the (key,iv) bytes below are the ACTUAL output of the same independent, RFC-anchored
 // oracle, which builds the traffic context dir(1)||epoch(8 BE)||suite(2 BE)||channel(2 BE) and the
 // key/iv Expand-Labels from scratch — NOT dumped from impl/go/keyschedule.go. The direction- and
 // channel-discriminator cases produce different keys under the SAME master, proving the tuple is

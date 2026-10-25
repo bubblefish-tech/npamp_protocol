@@ -2,7 +2,7 @@
 
 // Package schemaversion reads and verifies schema/npamp-wire.manifest.json,
 // the versioned machine-consumable pin for the N-PAMP wire-format CDDL
-// artifact (schema/npamp-wire.cddl; task E2.3, R3.2).
+// artifact (schema/npamp-wire.cddl).
 //
 // The manifest pairs a semantic cddlArtifactVersion with a sha256 recomputed
 // over the CDDL file's actual on-disk bytes, so a consumer that has fetched

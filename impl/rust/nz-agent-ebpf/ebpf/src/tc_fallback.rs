@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `tc_fallback`: the kernel side of R13-B-cont's TC-clsact fallback rung
-//! (EBPF-DATAPATH-DESIGN.md: "TC-clsact fallback (the Istio-ambient path);
+//! `tc_fallback`: the kernel side of the TC-clsact fallback rung
+//! (per the eBPF datapath design: "TC-clsact fallback (the Istio-ambient path);
 //! used when the fast-path techniques above are not applicable ... but a
 //! recent-enough kernel with `CAP_BPF` can still attach a classifier
 //! program"). One program, one map:
@@ -33,7 +33,7 @@
 //! context field, and every offset below is a fixed RFC 791 (IPv4) / RFC 793
 //! (TCP) header layout constant, not a byte-order-narrowed context field.
 //!
-//! # The fail-closed property this file holds (R13.1)
+//! # The fail-closed property this file holds
 //!
 //! THIS file never writes `TC_WAYPOINTS` — that map is written ONLY from
 //! userspace, in `loader/src/lib.rs`'s `TcFallbackInstaller`, reachable only
@@ -108,7 +108,7 @@ const BPF_F_PSEUDO_HDR: u64 = 1 << 4;
 #[map]
 static TC_WAYPOINTS: HashMap<TcFlowKey, Waypoint> = HashMap::with_max_entries(64, 0);
 
-/// E2.13 (R13.5, kernel-side half): per-CPU verdict counters for every packet
+/// Kernel-side telemetry half: per-CPU verdict counters for every packet
 /// that MATCHED a registered `TC_WAYPOINTS` entry (a packet that missed —
 /// no registered flow — is never counted here; see the module docs above
 /// this map's sibling in `egress_redirect.rs`/`inbound_lookup.rs` for why a
@@ -192,7 +192,7 @@ fn try_fallback(ctx: &TcContext) -> Result<i32, i32> {
     let new_dst_port = waypoint.waypoint_port as u16;
 
     // From here on this flow HAS a registered (already-authorized) waypoint:
-    // every exit records a verdict (E2.13) — VERDICT_STEERED on total
+    // every exit records a verdict — VERDICT_STEERED on total
     // success, VERDICT_STEER_FAILED the instant any rewrite step fails —
     // never neither, since a match was found.
     //

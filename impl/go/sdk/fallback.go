@@ -10,7 +10,7 @@ import (
 )
 
 // TransportKind names which physical path an association completed over,
-// for FallbackTelemetry (R11).
+// for FallbackTelemetry.
 type TransportKind string
 
 const (
@@ -80,7 +80,7 @@ type FallbackConfig struct {
 
 // FallbackTelemetry records which path an association completed over and
 // why, so an operator can observe fallback decisions instead of inferring
-// them (R11 "telemetry records which transport won").
+// them (the telemetry records which transport won).
 type FallbackTelemetry struct {
 	Winner        TransportKind
 	QUICAttempted bool

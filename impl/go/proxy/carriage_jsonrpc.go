@@ -11,7 +11,7 @@ import (
 )
 
 // NPAMP-CC-JSONRPC (spec/companion/20_carriage_jsonrpc.md) carriage codec — the
-// second carriage leg of E2.4/R10 (doc.go). This file carries a JSON-RPC 2.0
+// second carriage leg of the proxy's carriage set (doc.go). This file carries a JSON-RPC 2.0
 // object octet-for-octet as the Bridge frame's foreign message (§2, §3): it
 // never re-serializes, reorders, or rewrites the carried object; every function
 // here either BUILDS the original octets once (encode side, where this package

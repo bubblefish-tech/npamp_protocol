@@ -91,7 +91,7 @@ type BOM struct {
 }
 
 // SpecVersion1_7 is the CycloneDX specification version this package targets (confirmed
-// current this session — see doc.go's grounding section).
+// current as of 2026-08-31 — see doc.go's grounding section).
 const SpecVersion1_7 = "1.7"
 
 // BuildSBOM constructs a CycloneDX 1.7 BOM document from an actual, parsed module

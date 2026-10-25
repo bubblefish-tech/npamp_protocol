@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-// NewOTLPHTTPTracerProvider builds a real OTLP/HTTP trace exporter (E5.6, R8.2) and wraps
+// NewOTLPHTTPTracerProvider builds a real OTLP/HTTP trace exporter and wraps
 // it in a batching TracerProvider. This constructs a real go.opentelemetry.io/otel/sdk
 // provider talking the real OTLP/HTTP wire protocol via the stable v1.46.0 exporter --
 // nothing here is mocked. It does NOT connect eagerly: otlptracehttp.New only dials lazily

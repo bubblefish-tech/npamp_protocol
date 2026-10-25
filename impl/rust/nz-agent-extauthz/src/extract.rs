@@ -9,12 +9,12 @@
 //! live in [`nz_waypoint_core::extract`] and are `pub use`d back here
 //! unchanged — the public path `nz_agent_extauthz::extract::*` this crate's
 //! own `service.rs` uses is byte-identical to before this move. **Why:**
-//! `nz-waypoint-wasm`'s Envoy proxy-wasm filter (E2.7's other named hosting
+//! `nz-waypoint-wasm`'s Envoy proxy-wasm filter (the waypoint requirement's other named hosting
 //! shape) reads the exact same three headers off a request, so both hosting
 //! shapes now share ONE fail-closed extraction rule instead of maintaining
 //! two independently-driftable copies of it. See
 //! `nz-waypoint-core/src/extract.rs`'s module docs for the full grounding
-//! text (the documented header mapping, the R14-Unit-A design decision,
+//! text (the documented header mapping, the design decision,
 //! and the "never trust unauthenticated transport metadata" caveat, all
 //! carried over unchanged).
 

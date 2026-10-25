@@ -45,7 +45,7 @@ func TestGoModulePURLRejectsEmptyPath(t *testing.T) {
 	}
 }
 
-// TestGoModulePURLChangesWithInput is the A4 mutation-surviving test.
+// TestGoModulePURLChangesWithInput is the mutation-surviving test.
 func TestGoModulePURLChangesWithInput(t *testing.T) {
 	a, err := GoModulePURL("example.com/foo", "v1.0.0")
 	if err != nil {

@@ -8,7 +8,7 @@ package npampotel
 // pinned version (that module's own attrs.go confirms v1.46.0 released 2026-08-25 via the
 // Go module proxy). Building against it is real, production-grade dependency use.
 //
-// Unlike naalp-otel, this package emits NO gen_ai.* attributes: N-PAMP's Part-1 R10 error
+// Unlike naalp-otel, this package emits NO gen_ai.* attributes: N-PAMP's Part-1 error
 // registry (impl/go/errorframe.go, SessionErrorCode) is a session/handshake-layer
 // transport-protocol concept with no honest correspondence to any
 // open-telemetry/semantic-conventions-genai enum member (that schema names LLM/agent
@@ -31,7 +31,7 @@ const (
 	AttrErrorType = "error.type"
 )
 
-// npamp.* attributes: the Part-1 R10 error-registry fields this package maps
+// npamp.* attributes: the Part-1 error-registry fields this package maps
 // (impl/go/errorframe.go's SessionErrorCode, .String(), .Reaction()) onto structured
 // telemetry.
 const (

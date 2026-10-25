@@ -1,11 +1,10 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! Windows Filtering Platform (WFP) datapath rung (R13-C) — the Windows
+//! Windows Filtering Platform (WFP) datapath rung — the Windows
 //! analog of the eBPF capability-probed selector ladder in [`crate::datapath`];
-//! design grounding: the WFP design grounding (every claim cited against
-//! `learn.microsoft.com`, fetched 2026-08-31).
+//! every claim is cited against `learn.microsoft.com`, fetched 2026-08-31.
 //!
-//! # Scope of THIS module (R13-C only)
+//! # Scope of THIS module (WFP rung only)
 //!
 //! WFP splits into two API surfaces, and this module builds ONLY the first:
 //!
@@ -26,7 +25,7 @@
 //! This module contains no N-PAMP handshake, KEM, or AEAD code — it composes
 //! the SAME [`crate::datapath::RedirectGate`]/[`crate::datapath::RedirectToken`]
 //! fail-closed seam the Linux `CgroupRedirect`/`TcClsact`/inbound-lookup rungs
-//! use (R13-B-cont), not a Windows-specific reimplementation of authorization.
+//! use, not a Windows-specific reimplementation of authorization.
 //!
 //! # Why this is a SIBLING module, not a new [`crate::datapath::DatapathStrategy`] variant
 //!
@@ -44,7 +43,7 @@
 //! but independent in TYPE, is the minimal-blast-radius design that still
 //! reuses every SECURITY-load-bearing piece (`RedirectGate`/`RedirectToken`).
 //!
-//! # The one property every other property depends on (mirrors R13.1/R13-B-cont)
+//! # The one property every other property depends on (mirrors the fast-path authorization gate)
 //!
 //! **A WFP PERMIT filter is constructed ONLY for a `(source, destination)`
 //! pair N-PAMP L4 authorization has already approved.** [`WfpFilterBuilder::build_permit`]
@@ -64,14 +63,14 @@
 //! test double. Actual connection REDIRECTION (as opposed to the
 //! permit/block authorization this module builds) additionally requires a
 //! signed kernel-mode callout driver registered via `FwpsCalloutRegister1`+
-//! (E2.14, a separate tracked build task — see the grounding doc §4); this
+//! (a separate tracked build task — see the grounding doc §4); this
 //! module contains no callout-driver code and cannot, since that requires
 //! the Windows Driver Kit, not a userspace crate.
 //!
-//! # E2.14 (this build's userspace floor)
+//! # The userspace floor
 //!
-//! Three additional, Claude-buildable-now pieces live in this file
-//! alongside R13-C's original scope, all still userspace-only (no signing,
+//! Three additional, buildable-now pieces live in this file
+//! alongside the original WFP scope, all still userspace-only (no signing,
 //! no WDK, no reboot): [`probe_engine_open_succeeds`] (a real, genuinely
 //! invoked `FwpmEngineOpen0`/`FwpmEngineClose0` reachability probe, the
 //! SAME "call the real OS API, fail closed on any error" shape as
@@ -87,9 +86,9 @@
 //! mirroring [`crate::datapath::DatapathSelector`]/[`crate::datapath::DatapathHandle`]'s
 //! reselection concept one rung family narrower). A signed kernel-mode
 //! callout driver actually registered at the redirect layers remains the
-//! maintainer-gated follow-up these three pieces do not attempt.
+//! follow-up, gated on a signed driver, that these three pieces do not attempt.
 //!
-//! # `WfpCapabilities::probe()` on THIS build environment
+//! # `WfpCapabilities::probe()` on a Windows host
 //!
 //! This crate is developed and graded on Windows. [`WfpCapabilities::probe`]
 //! genuinely reads `cfg!(windows)` at compile time (true here) and, on
@@ -183,7 +182,6 @@ impl WfpSelector {
     /// documented ALE-layer version floor, AND this process is elevated
     /// (the practical necessary condition for `FwpmEngineOpen0` to succeed
     /// against the live engine).
-    /// Mutated away by the M-wfp-1 mutation below.
     pub fn ready(caps: &WfpCapabilities) -> bool {
         caps.is_windows && caps.is_elevated && meets_os_floor(caps.os_version, WFP_ALE_LAYER_FLOOR)
     }
@@ -242,7 +240,7 @@ mod ffi {
         ) -> i32;
     }
 
-    // -- E2.14 (userspace floor): real `fwpmu.h` management-API FFI --------
+    // -- Userspace floor: real `fwpmu.h` management-API FFI --------
     //
     // Grounded against `learn.microsoft.com` (fetched 2026-09-06):
     // "FwpmEngineOpen0 function (fwpmu.h)", "FwpmFilterCreateEnumHandle0
@@ -261,7 +259,7 @@ mod ffi {
     // constructs or parses those structures (that is the same
     // `WFP-KERNEL-CALLOUT-GAP` tracked scope as `WfpEngineInstaller`'s live
     // `FwpmFilterAdd0` session — see the module docs above and
-    // the WFP design grounding §4/§6's honest limitations note about not
+    // the module's limitations note about not
     // transcribing full struct/GUID layouts this build never exercises).
     pub const RPC_C_AUTHN_WINNT: u32 = 10;
 
@@ -438,7 +436,7 @@ impl WfpAleLayer {
 /// `FWPM_FILTER0`'s action — this module only ever constructs `Permit`
 /// (there is no code path to `Block`: a filter is only built from an
 /// ALREADY-authorized [`RedirectToken`], and a block decision is exactly
-/// "no filter is built at all" — R13-C mirrors R13.1's "denied pair never
+/// "no filter is built at all" — this rung mirrors the datapath gate's "denied pair never
 /// reaches the installer" property one layer up, at the OS firewall).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WfpAction {
@@ -517,7 +515,7 @@ const WFP_FILTER_WEIGHT: u8 = 0x10;
 /// constructor outside [`crate::datapath::RedirectGate::authorize_redirect`]
 /// (itself gated on `AuthzTable::check` returning `Allow`) — so this
 /// function can never be reached for a denied, unknown, or self-asserted
-/// pair. Mutated away by the M-wfp-2 mutation below.
+/// pair.
 pub struct WfpFilterBuilder;
 
 impl WfpFilterBuilder {
@@ -577,8 +575,8 @@ impl From<WfpError> for DatapathError {
 /// The seam a live deployment supplies to actually push a constructed
 /// [`WfpFilterSpec`] into the Base Filtering Engine via `FwpmEngineOpen0` +
 /// `FwpmFilterAdd0` (`fwpuclnt.dll`) — NOT implemented by this crate (see
-/// the module docs' `WFP-KERNEL-CALLOUT-GAP` note: even this PERMIT-only
-/// user-mode rung needs a live engine session this build environment does
+/// the module docs' WFP kernel callout gap note: even this PERMIT-only
+/// user-mode rung needs a live engine session a test/build host does
 /// not open against the real OS firewall from a test/build process).
 pub trait WfpEngineInstaller {
     fn submit(&mut self, spec: &WfpFilterSpec) -> Result<(), WfpError>;
@@ -623,7 +621,7 @@ pub fn install_wfp_filter<I: WfpEngineInstaller>(
 }
 
 // ---------------------------------------------------------------------
-// E2.14 (userspace floor) — callout/filter conflict detection before
+// Userspace floor — callout/filter conflict detection before
 // install. Detects a third-party AV/firewall (or another WFP-based agent)
 // already occupying the target ALE layer, so this rung can back off rather
 // than install alongside an unpredictable conflicting rule.
@@ -647,8 +645,7 @@ pub struct WfpConflictReport {
 
 impl WfpConflictReport {
     /// `true` when [`WfpConflictScanner::scan`] found ANY pre-existing
-    /// callout/filter at this layer. Mutated away by the M-wfp-conflict-1
-    /// mutation below.
+    /// callout/filter at this layer.
     pub fn has_conflict(&self) -> bool {
         !self.conflicting.is_empty()
     }
@@ -691,7 +688,7 @@ impl WfpConflictScanner for RecordingWfpConflictScanner {
 }
 
 // ---------------------------------------------------------------------
-// E2.14 (userspace floor) — Windows-side strategy selection / degrade to
+// Userspace floor — Windows-side strategy selection / degrade to
 // userspace-only enforcement (mirrors crate::datapath's Linux
 // reselection/degrade concept: DatapathSelector::select + DatapathHandle).
 // ---------------------------------------------------------------------
@@ -724,8 +721,7 @@ impl WfpSelector {
     /// [`crate::datapath::DatapathSelector::select`]. Degrades to
     /// [`WfpStrategy::UserspaceOnly`] whenever `caps` is not ready OR
     /// `conflict_present` is `true`; never optimistically selects
-    /// `Authorize` on a combination it cannot confirm is clear. Mutated
-    /// away by the M-wfp-degrade-1 mutation below.
+    /// `Authorize` on a combination it cannot confirm is clear.
     pub fn select_strategy(caps: &WfpCapabilities, conflict_present: bool) -> WfpStrategy {
         if !WfpSelector::ready(caps) {
             return WfpStrategy::UserspaceOnly;
@@ -834,7 +830,6 @@ mod tests {
 
     #[test]
     fn elevated_modern_windows_is_ready() {
-        // Mutated away by M-wfp-1 in the mutation-evidence record below.
         let caps = WfpCapabilities::from_parts(true, Some((10, 0, 22631)), true);
         assert!(WfpSelector::ready(&caps));
     }
@@ -873,7 +868,6 @@ mod tests {
 
     #[test]
     fn build_permit_picks_inbound_layer_for_inbound_direction() {
-        // Mutated away by M-wfp-2 in the mutation-evidence record below.
         let token = authorized_token();
         let spec = WfpFilterBuilder::build_permit(&token, &v4_endpoints(), WfpDirection::Inbound);
         assert_eq!(spec.layer, WfpAleLayer::AuthRecvAcceptV4);
@@ -945,7 +939,7 @@ mod tests {
         assert_eq!(e, DatapathError::InstallFailed("nz-agent/wfp: filter submit failed: x".into()));
     }
 
-    // -- E2.14: real engine-reachability probe --------------------------
+    // -- Real engine-reachability probe --------------------------
 
     #[test]
     fn probe_engine_open_succeeds_never_panics() {
@@ -956,11 +950,10 @@ mod tests {
         let _ = probe_engine_open_succeeds();
     }
 
-    // -- E2.14: callout/filter conflict detection -----------------------
+    // -- Callout/filter conflict detection -----------------------
 
     #[test]
     fn conflict_report_reports_conflict_when_callouts_present() {
-        // Mutated away by M-wfp-conflict-1 in the crate's RED-EVIDENCE.md.
         let report = WfpConflictReport {
             layer: WfpAleLayer::AuthConnectV4,
             conflicting: vec![WfpConflictingObject { display_name: "ThirdPartyFirewall".into(), provider_key: None }],
@@ -992,11 +985,10 @@ mod tests {
         assert_eq!(report.layer, WfpAleLayer::AuthRecvAcceptV6);
     }
 
-    // -- E2.14: Windows-side degrade-to-userspace strategy selection ------
+    // -- Windows-side degrade-to-userspace strategy selection ------
 
     #[test]
     fn not_ready_selects_userspace_only_regardless_of_conflict() {
-        // Mutated away by M-wfp-degrade-1 in the crate's RED-EVIDENCE.md.
         let caps = WfpCapabilities::from_parts(true, Some((10, 0, 22631)), false); // not elevated -> not ready
         assert_eq!(WfpSelector::select_strategy(&caps, false), WfpStrategy::UserspaceOnly);
     }

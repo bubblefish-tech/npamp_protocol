@@ -138,7 +138,7 @@ func TestBuildSBOMEmptyModuleGraphIsEmptyComponents(t *testing.T) {
 	}
 }
 
-// TestBuildSBOMChangesWithModuleGraph is the A4 mutation-surviving test: an SBOM builder
+// TestBuildSBOMChangesWithModuleGraph is the mutation-surviving test: an SBOM builder
 // that ignores its modules argument (always emitting the same fixed component list)
 // fails this test, because two disjoint module graphs must produce disjoint component
 // name sets.

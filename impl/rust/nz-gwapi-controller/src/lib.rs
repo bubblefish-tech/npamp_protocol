@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `nz-gwapi-controller` -- the E2.7c Gateway-API/GAMMA control-plane
-//! wiring named as an unbuilt gap by `nz-agent/src/lib.rs`'s own R12 AC4
+//! `nz-gwapi-controller` -- the Gateway-API/GAMMA control-plane
+//! wiring named as an unbuilt gap by `nz-agent/src/lib.rs`'s own
 //! module docs: *"no Kubernetes controller reads Gateway API
 //! HTTPRoute/Backend/GAMMA-Mesh CRDs and configures nz-agent/AuthzTable/
 //! PeerDirectory from them. The AuthzTable/PeerDirectory population seams
@@ -25,7 +25,7 @@
 //! the POLICY DECISION it makes to fill that gap -- it does not claim that
 //! decision is normative Gateway-API text.
 //!
-//! Per R12 AC4 ("Gateway-API/GAMMA-Mesh-profile native, no bespoke CRDs"),
+//! Per the requirement ("Gateway-API/GAMMA-Mesh-profile native, no bespoke CRDs"),
 //! this crate defines NO new CRD kind. The one extension it needs --
 //! publishing a workload's SVID public key and its N-AALP max-effect grant
 //! for the [`AuthzHook`](nz_waypoint_core::AuthzHook) seam -- is carried as

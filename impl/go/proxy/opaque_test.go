@@ -96,8 +96,8 @@ func connectedOpaqueProxyPairForTest(t *testing.T, opaqueProtocolID npamp.Bridge
 	return ingressSide, egressSide
 }
 
-// TestCallOpaque_ProtocolIDUnset_Rejected is a fail-closed MUTATION ANCHOR
-// (RED-EVIDENCE), mirroring TestServeHTTP_NilConn_FailsClosed_NoBackendFallback:
+// TestCallOpaque_ProtocolIDUnset_Rejected is a fail-closed MUTATION ANCHOR,
+// mirroring TestServeHTTP_NilConn_FailsClosed_NoBackendFallback:
 // removing the OpaqueProtocolID==0 guard would let CallOpaque squat on
 // protocol_id 0x00 -- the reserved null identifier a receiver MUST reject
 // (NPAMP-BRIDGE §4/§9) -- rather than refusing locally before anything is
@@ -165,7 +165,7 @@ func TestE2E_CallOpaque_Case1EnumeratedMediaType_RoundTrip(t *testing.T) {
 	}
 }
 
-// TestE2E_CallOpaque_Case2NonEnumeratedMediaType_RoundTrip is the R10/E2.4
+// TestE2E_CallOpaque_Case2NonEnumeratedMediaType_RoundTrip is the
 // literal target of this leg: a "raw TCP"-shaped payload declared under a
 // media type the BridgeEnvelope content_type enumeration does not carry
 // (application/octet-stream), round-tripped byte-exact through two real

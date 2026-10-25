@@ -1,9 +1,9 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! WFP kernel-callout <-> userspace wire codec (E2.14, the Claude-buildable
+//! WFP kernel-callout <-> userspace wire codec (the buildable-now
 //! userspace floor) — the byte format a future signed WFP callout driver
 //! (the redirect-layer `classifyFn`/`FwpsCalloutRegister1` code
-//! the WFP design grounding §4's tracked `WFP-KERNEL-CALLOUT-GAP` names)
+//! that the tracked WFP kernel callout gap names)
 //! would use to report an observed redirect-layer decision back to this
 //! crate's userspace process.
 //!
@@ -51,8 +51,8 @@
 //! It does not open a device handle, does not issue a `DeviceIoControl`/
 //! `FSCTL_*` call, and runs no FFI — this is a standalone codec. The actual
 //! IOCTL plumbing that would move these bytes across the driver/userspace
-//! boundary is part of the same `WFP-KERNEL-CALLOUT-GAP` tracked gap
-//! `wfp.rs` already names (E2.14's signed-driver half, maintainer-gated —
+//! boundary is part of the same tracked gap
+//! `wfp.rs` already names (the signed-driver half, gated on driver signing —
 //! see `lib.rs`'s tracked-gaps list).
 //!
 //! # Frame shape
@@ -464,7 +464,6 @@ mod tests {
 
     #[test]
     fn round_trip_preserves_all_fields_v4() {
-        // Mutated away by M-wire-1 in the crate's RED-EVIDENCE.md.
         let rec = sample_record_v4();
         let buf = encode_wfp_callout_record(&rec).expect("encode");
         let (decoded, consumed) = decode_wfp_callout_record(&buf).expect("decode");
@@ -506,7 +505,6 @@ mod tests {
 
     #[test]
     fn decode_rejects_truncated_buffer() {
-        // Mutated away by M-wire-2 in the crate's RED-EVIDENCE.md.
         let rec = sample_record_with_note("hello");
         let full = encode_wfp_callout_record(&rec).expect("encode");
         let truncated = &full[..full.len() - 3];
@@ -526,7 +524,6 @@ mod tests {
 
     #[test]
     fn decode_rejects_unsupported_schema_version() {
-        // Mutated away by M-wire-3 in the crate's RED-EVIDENCE.md.
         let rec = sample_record_v4();
         let mut buf = encode_wfp_callout_record(&rec).expect("encode");
         buf[4..8].copy_from_slice(&999u32.to_le_bytes());

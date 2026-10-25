@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! The Envoy proxy-wasm N-PAMP filter -- E2.7/R12 AC3's other named L7
+//! The Envoy proxy-wasm N-PAMP filter -- the other named L7
 //! waypoint hosting shape (the sibling to `nz-agent::waypoint`, the native
 //! hosting shape). Composes `nz-waypoint-core`'s EXISTING
 //! `classify()`/`authorize()`/`extract_triple()` via the official
@@ -33,8 +33,7 @@ mod decision;
 // block to wasm32 is the standard way a proxy-wasm crate keeps its ABI
 // glue separate from its host-testable pure logic (`config.rs`/
 // `decision.rs`, which have no `#[cfg]` gate and run under plain
-// `cargo test`) — see this crate's RED-EVIDENCE.md for the confirmed link
-// error and why this shape is not a workaround but the correct one.
+// `cargo test`).
 // ---------------------------------------------------------------------
 #[cfg(target_arch = "wasm32")]
 mod filter {
@@ -105,8 +104,7 @@ impl RootContext for WaypointRoot {
 /// (request proceeds, tagged with its resolved carriage class) or an
 /// immediate `403` response via `send_http_response` (`Action::Pause`).
 /// This struct and its trait impl are the ONE part of this crate that
-/// cannot be unit-tested without a live Envoy/wasm host — see this crate's
-/// `RED-EVIDENCE.md` for that named residual and its concrete workaround.
+/// cannot be unit-tested without a live Envoy/wasm host.
 struct WaypointFilter {
     hook: Rc<TableAuthzHook>,
 }

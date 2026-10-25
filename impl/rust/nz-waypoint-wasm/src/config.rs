@@ -75,8 +75,7 @@ mod tests {
     /// `EffectClass::from_wire` decodes) is SKIPPED — that signer gets no
     /// grant at all (denied above ReadOnly by `authorize`'s own
     /// unrecognized-signer default), never rounded/truncated into a
-    /// different, unintended grant. Mutated away by M-config-1 in
-    /// RED-EVIDENCE.md.
+    /// different, unintended grant.
     #[test]
     fn an_out_of_range_grant_value_is_skipped_not_truncated() {
         let json = br#"{"consuming_authority":"gateway-a","grants":{"signer-1":9999,"signer-2":1}}"#;

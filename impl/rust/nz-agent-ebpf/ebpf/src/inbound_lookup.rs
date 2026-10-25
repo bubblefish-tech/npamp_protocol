@@ -1,7 +1,7 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! `inbound_lookup`: the kernel side of R13-B-cont's inbound-steering rung
-//! (EBPF-DATAPATH-DESIGN.md: "`sk_lookup` steers inbound to nz-agent's
+//! `inbound_lookup`: the kernel side of the inbound-steering rung
+//! (per the eBPF datapath design: "`sk_lookup` steers inbound to nz-agent's
 //! listener without the workload rebinding"). One program, one map:
 //!
 //! - `inbound_lookup_select` (`sk_lookup`, network-namespace-attached): for
@@ -13,7 +13,7 @@
 //!   `bpf_sk_release`). If no listener is registered, the packet is left to
 //!   the kernel's normal lookup.
 //!
-//! # The fail-closed property this file holds (R13.1)
+//! # The fail-closed property this file holds
 //!
 //! Exactly like `samenode_splice`/`egress_redirect`, THIS file never calls
 //! `INBOUND_LISTEN.update`/`SockHash::insert` — that map is written ONLY
@@ -77,7 +77,7 @@ const IPPROTO_TCP: u32 = 6;
 #[map]
 static INBOUND_LISTEN: SockHash<InboundKey> = SockHash::with_max_entries(64, 0);
 
-/// E2.13 (R13.5, kernel-side half): per-CPU verdict counters for every
+/// Kernel-side telemetry half: per-CPU verdict counters for every
 /// incoming SYN whose destination MATCHED a registered `INBOUND_LISTEN`
 /// entry — an `-ENOENT` miss (no registered listener) is never counted; see
 /// this file's own doc comment above on why an `sk_lookup` program is

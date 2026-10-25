@@ -69,7 +69,7 @@ impl ConnKey {
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for ConnKey {}
 
-/// `EGRESS_WAYPOINT`/`TC_WAYPOINTS` map key (R13-B-cont: the `egress_redirect`
+/// `EGRESS_WAYPOINT`/`TC_WAYPOINTS` map key (the `egress_redirect`
 /// `cgroup/connect4` rung and the `tc_fallback` TC-clsact rung), keyed by the
 /// ORIGINAL destination a workload's `connect()` (egress_redirect) or an
 /// already-established TCP flow (tc_fallback) targets.
@@ -118,7 +118,7 @@ pub struct Waypoint {
     pub waypoint_port: u32,
 }
 
-/// `INBOUND_LISTEN` `SockHash` key (R13-B-cont: the `inbound_lookup`
+/// `INBOUND_LISTEN` `SockHash` key (the `inbound_lookup`
 /// `sk_lookup` rung) — the destination (this node's own bound address) an
 /// inbound TCP SYN is targeting.
 ///
@@ -143,7 +143,7 @@ pub struct InboundKey {
     pub dest_port: u32,
 }
 
-/// `TC_WAYPOINTS` map key (R13-B-cont: the `tc_fallback` TC-clsact rung) —
+/// `TC_WAYPOINTS` map key (the `tc_fallback` TC-clsact rung) —
 /// the full 4-tuple of an established TCP flow, parsed directly off the wire
 /// (Ethernet + IPv4 + TCP headers; see `ebpf/src/tc_fallback.rs`), since a
 /// `classifier` program's `__sk_buff` context carries NO convenience

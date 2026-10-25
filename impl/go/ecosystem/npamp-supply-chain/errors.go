@@ -51,7 +51,7 @@ var (
 
 	// ErrBindingMismatch is returned by VerifyBinding when a Statement's recorded artifact
 	// digest or SBOM digest does not match the digest independently recomputed from the
-	// artifact bytes / SBOM bytes actually supplied — the F3 non-circular binding check.
+	// artifact bytes / SBOM bytes actually supplied — the non-circular binding check.
 	ErrBindingMismatch = errors.New("npamp/supplychain: statement digest does not match the independently recomputed digest")
 
 	// ErrSeedSize is returned by NewProvenanceSigner when seed is not exactly
