@@ -64,7 +64,7 @@ def payload(env_val, safety_val, foreign):
     return out + foreign
 
 # ---------- independent deterministic-CBOR HTTP-Carriage Object constructor (spec 21 §4.1/§4.2) ----------
-# Hand-rolled, from-scratch RFC 8949 canonical-CBOR encoder for exactly the shapes the x402 wave-1
+# Hand-rolled, from-scratch RFC 8949 canonical-CBOR encoder for exactly the shapes the x402 initial-set
 # vector needs (a small uint-keyed map in ascending key order, text strings, byte strings, arrays of
 # 2-element [name, value] header entries). NOT reused from any N-PAMP implementation and NOT a general
 # CBOR library -- it implements only the definite-length canonical forms RFC 8949 §4.2.1 requires for
@@ -138,7 +138,7 @@ FOREIGN_ERR = b'{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method
 FOREIGN_NTF = b'{"jsonrpc":"2.0","method":"notifications/message"}'  # one-way notification
 FOREIGN_CHUNK = b'chunk-0'
 
-# ---------- wave-1 fixtures (each grounded in the named protocol's own map document / spec) ----------
+# ---------- initial-set fixtures (each grounded in the named protocol's own map document / spec) ----------
 CORR_NLIP = b'NL01'; CORR_ANP = b'AN01'; CORR_AGNTCY = b'AC01'; CORR_AP2 = b'AP01'; CORR_X402 = b'X402'
 
 # NLIP (0x06): ECMA-430 message object, REQUIRED fields format/subformat/content (70_map_nlip.md §9,
@@ -173,7 +173,7 @@ FOREIGN_AP2_PAYMENT_MANDATE = (b'eyJhbGciOiJFUzI1NiIsInR5cCI6InZjK3NkLWp3dCJ9.'
                                 b'eyJ2Y3QiOiJtYW5kYXRlLnBheW1lbnQuMSIsImlzcyI6ImRpZDp0ZXN0LWZpeHR1cmU6aXNzdWVyIn0.c2ln~')
 
 # x402 (0x0A): the initial resource GET and the `402 Payment Required` challenge (71_map_x402.md §4
-# table, §6), the ONE wave-1 protocol whose sole registered carriage is HTTP with content_type=0x02
+# table, §6), the ONE initial-set protocol whose sole registered carriage is HTTP with content_type=0x02
 # (a deterministic-CBOR HTTP-Carriage Object per NPAMP-CC-HTTP §4.1/§4.2, not a JSON-direct fallback --
 # unlike NLIP/ANP/AGNTCY, x402's map document defines no Class OPAQUE alternative). The `PaymentRequired`
 # JSON fields (x402Version, resource, accepts[].{scheme,network,amount,asset,payTo,maxTimeoutSeconds})
@@ -230,7 +230,7 @@ ACCEPT = [
          BRIDGE_STREAM_END, PROTO_MCP, KIND_STREAM_END, CONTENT_JSON, FLAG_FINAL, CORR, b'tools/call',
          None, b''),
 
-    # ---- wave-1 (NPAMP-REG §6 0x06-0x0A): one request+response pair per newly assigned protocol_id,
+    # ---- initial-set (NPAMP-REG §6 0x06-0x0A): one request+response pair per newly assigned protocol_id,
     # each demonstrating that protocol's own registered carriage class and content_type. ----
     case("request_nlip_stream_session_open", "30/6/wave1-nlip-request",
          "BRIDGE_REQUEST (NLIP 0x06, STREAM/WebSocket JSON-fallback binding): envelope + "
@@ -391,7 +391,7 @@ correlate_tests = [
         BRIDGE_REQUEST, hx(REQ_PL), BRIDGE_STREAM_DATA, hx(STREAM_MATCH), True),
 ]
 
-# wave-1: correlation is per NPAMP-BRIDGE §5 identifier equality, independent of protocol_id -- these
+# initial-set: correlation is per NPAMP-BRIDGE §5 identifier equality, independent of protocol_id -- these
 # prove that generic property holds at two of the newly assigned code points.
 NLIP_REQ_PL = payload(envelope_value(PROTO_NLIP, KIND_REQUEST, CONTENT_JSON, 0x00, CORR_NLIP, b''), None, FOREIGN_NLIP_REQ)
 NLIP_RES_MATCH = payload(envelope_value(PROTO_NLIP, KIND_RESPONSE, CONTENT_JSON, 0x00, CORR_NLIP, b''), None, FOREIGN_NLIP_RES)

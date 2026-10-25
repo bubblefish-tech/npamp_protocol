@@ -19,7 +19,7 @@ type scenario interface {
 	closeScenario()
 }
 
-// main implements the T18.2 stdio SUL protocol: read one command per line from stdin, write
+// main implements the stdio SUL protocol: read one command per line from stdin, write
 // exactly one response line to stdout (flushed after every line), loop until EOF.
 //
 //	RESET          -> OK | ERR <message>

@@ -10,7 +10,7 @@ import (
 // and the SUT's long-term identities are reproducible across runs. Determinism here is
 // cosmetic: every SUL output is abstracted to a frame-type/error-code symbol (never raw key
 // bytes), so it has no bearing on learned-model correctness — it just keeps manual debugging
-// reproducible (T18.2 plan: "Determinism: use FIXED seeded identities and a FIXED KEM").
+// reproducible (Determinism: use FIXED seeded identities and a FIXED KEM).
 func fixedSeed(tag byte) []byte {
 	seed := make([]byte, ed25519.SeedSize)
 	for i := range seed {

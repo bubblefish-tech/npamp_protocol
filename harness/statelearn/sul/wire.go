@@ -1,16 +1,16 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-// Package main is the N-PAMP T18.2 LearnLib SUL (System Under Learning) driver. It speaks a
+// Package main is the N-PAMP LearnLib SUL (System Under Learning) driver. It speaks a
 // line-oriented stdio protocol (RESET / <input-symbol> -> <output-symbol>) to a Java LearnLib
 // harness, and on the wire it drives the REAL, unmodified N-PAMP Go SDK
 // (github.com/bubblefish-tech/npamp_protocol/impl/go/sdk) over an in-process net.Pipe using
 // the SDK's own public entry points (sdk.DialRaw / sdk.AcceptRaw, Conn.Recv,
 // Conn.CloseGraceful).
 //
-// F3/A9 note: harness/statelearn may not modify any file outside itself (including
+// note: harness/statelearn may not modify any file outside itself (including
 // impl/go/sdk), so it cannot call the sdk package's unexported test-only helpers
 // (runClientHandshake/runServerHandshake/sealFrame/readFrame/... — see
-// impl/go/sdk/statetrace_test.go, the T18.1 template). Instead the "driver" (scripted
+// impl/go/sdk/statetrace_test.go, the earlier template). Instead the "driver" (scripted
 // deviant peer) role in this file reimplements the SAME wire-level framing/sealing math
 // using ONLY EXPORTED building blocks from the root npamp package (Frame, SealAES256GCM,
 // DeriveTrafficSecret, DeriveKeyIV, HandshakeSecret, DeriveHandshakeTrafficSecrets,

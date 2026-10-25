@@ -308,7 +308,7 @@ func handle(req request) response {
 		switch s(req.In, "kem") {
 		case "X25519MLKEM768":
 			kem = npamp.KEMX25519MLKEM768
-		case "X25519MLKEM1024": // corpus name migration to SecP384r1MLKEM1024 is Phase-4 (T18.3)
+		case "X25519MLKEM1024": // corpus name migration to SecP384r1MLKEM1024 is a later phase
 			kem = npamp.KEMSecP384r1MLKEM1024
 		default:
 			return response{Skipped: "unknown kem: " + s(req.In, "kem")}

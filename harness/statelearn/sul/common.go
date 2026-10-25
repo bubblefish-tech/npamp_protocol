@@ -56,7 +56,7 @@ func keyUpdateMarkerBytes(epoch uint64) []byte {
 }
 
 // unknownFrameType is the abstract UNKNOWN input's concretization: an unassigned reserved
-// Control-channel type (T18.1/T18.2 plan: "0x00FE — NOT a ratchet type, per the table's
+// Control-channel type ("0x00FE — NOT a ratchet type, per the table's
 // modeled_exclusion"), matching impl/go/sdk/statetrace_test.go's
 // TestStateTable_EstablishedTotalDefault/unknown_type mutation anchor.
 const unknownFrameType = npamp.FrameType(0x00FE)

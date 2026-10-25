@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Independent nonce-derivation + TLV-encoding oracle + conformance-vector generator (TRACK C5).
+# Independent nonce-derivation + TLV-encoding oracle + conformance-vector generator.
 #
 # Emits two op-groups the pre-C5 corpus never graded:
 #   nonce.derive -- the per-frame AEAD nonce = iv XOR (0x00000000 || seq_BE64). The pre-existing

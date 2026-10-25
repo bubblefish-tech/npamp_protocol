@@ -8,7 +8,7 @@ and diffs the learned machine against `harness/statemodel/npamp-state-table.json
 draft-derived reference model the by-hand deviant-trace suite also uses. Any learned state or
 transition the table does not predict is a conformance defect: a spec gap or an implementation bug.
 
-## Why this is F3-independent (and why that is the whole point)
+## Why this is independent (and why that is the whole point)
 
 The reference side of the diff (`harness/statemodel/npamp-state-table.json`) is derived from
 the **draft text** (`ietf/draft-bubblefish-npamp-latest.md`, §State Machine), never from the
@@ -163,7 +163,7 @@ is not actually a pure function of its input prefix):
   `../../../impl/go`, following the same pattern as `harness/adapters/go`).
 - `GoProcessSUL.java` / `LearnedModel.java` / `NpampStateLearner.java` — the Java LearnLib
   harness.
-- `diff_model.py` — the F3-independent diff (Deliverable 3); also directly runnable/testable
+- `diff_model.py` — the independent diff (Deliverable 3); also directly runnable/testable
   standalone (`python diff_model.py --dir <dir-with-learned-*.json>`).
 - `learned-initiator.{dot,json}`, `learned-responder.{dot,json}` — the learned models
   (committed as evidence of a real run; regenerate with `run.sh`).
@@ -184,7 +184,7 @@ The `state-machine` job in `.github/workflows/conformance.yml` and the
 `state-machine-conformance` gate run in CI, on every push / PR:
 
 1. `diff_model.py --dir .` -- the committed learned models are equivalent to the CURRENT
-   draft-derived `npamp-state-table.json` (model <-> table consistency; F3-independent).
+   draft-derived `npamp-state-table.json` (model <-> table consistency; independent).
 2. `statelearn_freshness.py` -- the committed learned models were learned from the CURRENT
    `impl/go` + SUL + Java harness + `learn-config.json` (INPUT hashes) and were not
    hand-edited (OUTPUT hashes), per `statelearn-provenance.json`. An input change => the

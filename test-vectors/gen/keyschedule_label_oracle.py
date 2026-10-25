@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Independent HKDF-Expand-Label + traffic-key oracle + conformance-vector generator (TRACK C6).
+# Independent HKDF-Expand-Label + traffic-key oracle + conformance-vector generator.
 #
 # Emits two op-groups the pre-C6 corpus never graded:
 #   hkdf.expand_label -- the TLS-1.3-style HKDF-Expand-Label (RFC 8446 §7.1) with the N-PAMP label

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 #
-# T18.2 (R18.2) run recipe for Linux/macOS/CI (GitHub Actions ubuntu-latest runners carry
+# Run recipe for Linux/macOS/CI (GitHub Actions ubuntu-latest runners carry
 # java out of the box). Windows PowerShell equivalent: README.md "Run on Windows".
 #
 # Builds the Go stdio SUL, compiles the Java LearnLib harness, learns BOTH roles against the

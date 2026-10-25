@@ -1,12 +1,12 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 //
-// NpampStateLearner is the T18.2 LearnLib driver (R18.2): it actively learns the N-PAMP Go
+// NpampStateLearner is the LearnLib driver: it actively learns the N-PAMP Go
 // SDK's REAL Mealy state machine — via the statelearn-sul binary (sul/), which drives the
 // real sdk.DialRaw/sdk.AcceptRaw/Conn.Recv/Conn.CloseGraceful over an in-process net.Pipe
 // — for BOTH the initiator and responder roles, using LearnLib 0.18.0's TTT
 // algorithm with a Wp-method equivalence oracle. It exports each learned model as DOT
 // (learned-<role>.dot) and a plain JSON transition table (learned-<role>.json) for
-// diff_model.py (the F3-independent comparison against harness/statemodel's draft-derived
+// diff_model.py (the independent comparison against harness/statemodel's draft-derived
 // reference table), and records the run's parameters/statistics to learn-config.json.
 //
 // Build/run (no Maven; the ONE verified uber-jar carries LearnLib 0.18.0 + AutomataLib 0.12.0
@@ -67,7 +67,7 @@ public final class NpampStateLearner {
     // exhaustive certainty for a strong probabilistic guarantee, at a controllable cost, and —
     // because the middle length is geometric — it can reach LONGER distinguishing sequences than
     // any fixed-depth exhaustive run, so it does not shrink the reachable fault space the way a
-    // smaller depth would. F3 is preserved: the oracle still learns the REAL SDK and the diff
+    // smaller depth would. Independence is preserved: the oracle still learns the REAL SDK and the diff
     // still compares against the draft-derived table.
     //
     // EQ_MINIMAL_SIZE / EQ_RND_LENGTH: the random middle word has minimal length EQ_MINIMAL_SIZE

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 #
-# Fetch + SHA-verify the ONE LearnLib 0.18.0 uber-jar the T18.2 harness needs. The jar is
+# Fetch + SHA-verify the ONE LearnLib 0.18.0 uber-jar the harness needs. The jar is
 # 7.87 MB and is NOT committed (repo hygiene); this script downloads it from Maven Central
 # and verifies its SHA-256 (and SHA-1) BEFORE it is used, refusing a mismatch (fail-closed).
 # Run once before run.sh / the manual Windows recipe. Idempotent: a present, verified jar is

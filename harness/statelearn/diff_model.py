@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
-"""harness/statelearn/diff_model.py -- the T18.2 (R18.2) load-bearing F3 diff.
+"""harness/statelearn/diff_model.py -- the load-bearing diff.
 
 Expands harness/statemodel/npamp-state-table.json (the draft-derived reference Mealy
 model -- NEVER derived from the Go implementation, see that file's provenance note) into a
@@ -18,7 +18,7 @@ standard way to decide FSM equivalence without needing a minimization/isomorphis
 and it naturally handles the learned machine's opaque state IDs (q0, q1, ...) against the
 table's named states (WAIT_SH, ESTABLISHED, ...).
 
-F3 non-circularity: the reference side of this diff comes ONLY from npamp-state-table.json.
+Non-circularity: the reference side of this diff comes ONLY from npamp-state-table.json.
 This script never reads Go source. A FAIL here means the LEARNED (real SDK) behavior
 disagrees with the DRAFT-DERIVED table -- a spec gap or an implementation bug, never a
 tautology, because the two sides are built from independent authorities.
@@ -62,7 +62,7 @@ EXPAND_INIT_CLOSE_NOTE = (
     "this on key_established[state], which is ALSO true at the handshake states WAIT_SA / "
     "WAIT_CA -- but no *Conn is returned to the caller until ESTABLISHED, so the SUL's "
     "stepInitClose is a no-op there (sutConn == nil): INIT_CLOSE from WAIT_SA/WAIT_CA is a "
-    "SILENT self-loop, matching the learned model (this was a real diff bug, T18.2 Cat 3). A "
+    "SILENT self-loop, matching the learned model (this was a real diff bug, category 3). A "
     "repeat INIT_CLOSE while already CLOSING or CLOSED is likewise a no-op self-loop (sul's "
     "stepInitClose deliberately does not exercise the SDK's own un-guarded concurrent-"
     "CloseGraceful race -- see sul/initiator.go); before ESTABLISHED, INIT_CLOSE is also a "
@@ -96,7 +96,7 @@ def expand_reference(table: dict[str, Any], role: str) -> dict[str, dict[str, tu
     # cleartext handshake-flight symbols (no FlagENC) and the *_BADAUTH symbols (sealed then
     # corrupted so the AEAD open fails). A cleartext or AEAD-failing frame at such a state is
     # silently DROPPED and counted, the association SURVIVES -> (SILENT, self-loop), never the
-    # total-default ERROR. Read from the table (F3: the rule + its draft anchor live there).
+    # total-default ERROR. Read from the table (the rule + its draft anchor live there).
     unauth = table["total_default"].get("unauthenticated_inputs", {})
     unauth_inputs: set[str] = set(unauth.get("inputs", []))
     unauth_states: set[str] = set(unauth.get("at_states", []))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Independent whole-frame AEAD oracle + core-wire conformance-vector generator (TRACK C4).
+# Independent whole-frame AEAD oracle + core-wire conformance-vector generator.
 #
 # Emits two op-groups the pre-C4 corpus never graded:
 #   frame.seal  -- AEAD-seal a payload with the AAD = the 21-octet frame HEADER PREFIX and the

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
-"""harness/statelearn/statelearn_freshness.py -- the T18.2 durable-gate FRESHNESS check.
+"""harness/statelearn/statelearn_freshness.py -- the durable-gate FRESHNESS check.
 
 The deterministic, Java-free complement to diff_model.py, and the second half of the durable
 state-machine conformance gate (the first half being diff_model.py's model<->table
@@ -157,7 +157,7 @@ def build_manifest() -> dict:
         outputs[_rel(p)] = lf_hash(p)
     return {
         "_doc": (
-            "Provenance baseline for the T18.2 state-machine conformance gate. The committed "
+            "Provenance baseline for the state-machine conformance gate. The committed "
             "learned-*.json under outputs were learned by NpampStateLearner.java driving the "
             "real impl/go SDK, whose source (+ the SUL driver, the Java harness, and the learn "
             "parameters) is pinned under inputs at the hashes below. statelearn_freshness.py "
@@ -253,7 +253,7 @@ def selftest() -> bool:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="T18.2 state-machine conformance FRESHNESS gate.")
+    ap = argparse.ArgumentParser(description="State-machine conformance FRESHNESS gate.")
     ap.add_argument("--generate", action="store_true",
                     help="(re)generate statelearn-provenance.json from the current tree "
                          "(ONLY as the last step of a full relearn).")

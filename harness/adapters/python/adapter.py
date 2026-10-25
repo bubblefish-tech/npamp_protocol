@@ -83,7 +83,7 @@ def handle(req):
         if (b[4] >> 4) != 2:
             # ProtocolVersion is the WIRE-FORMAT version (0x2), frozen across the
             # n-pamp/3 crypto-generation bump; a receiver MUST reject any Ver nibble
-            # != 0x2 (frame.go ProtocolVersion=0x2 / ErrBadVersion). R10/header/version.
+            # != 0x2 (frame.go ProtocolVersion=0x2 / ErrBadVersion).
             return {"error": "unsupported wire version"}
         return {"out": {
             "magic": "NPAM", "ver": b[4] >> 4, "flags": b[4] & 0x0F,

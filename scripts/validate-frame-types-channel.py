@@ -17,7 +17,7 @@ two invariants JSON Schema cannot:
                     excluding the all-channel system frames 0x0001-0x000A) appears as a CSV row.
       A drifted impl (a renamed/re-valued/added/removed frame const) fails the gate.
 
-NON-CIRCULARITY (F3). The registry's expected values (name, frame_type, band, description) are
+NON-CIRCULARITY. The registry's expected values (name, frame_type, band, description) are
 authored from the channels' companion specifications section 3 -- the independent authority -- NOT
 generated from the Go source. This validator confirms the Go IMPLEMENTATION agrees with that
 spec-authored registry; it is a cross-check between two independently produced artifacts, not a

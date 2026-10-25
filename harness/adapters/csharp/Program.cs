@@ -129,7 +129,7 @@ internal static class Adapter
             case "tlv.decode":
             {
                 // The reference impl exposes TLV type constants but no decoder;
-                // parse the TLV here per draft-00 R2 (type u16, length u16, value).
+                // parse the TLV here per draft-00 (type u16, length u16, value).
                 byte[] b = Hx(input, "tlv");
                 if (b.Length < 4)
                 {
