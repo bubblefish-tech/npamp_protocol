@@ -9,7 +9,7 @@
       "tests": [
         {
           "tcId": 1,
-          "requirement": "R1/wire-format/header",
+          "requirement": "wire-format/header",
           "comment": "golden PING on Control channel, seq 0 (vectors.json)",
           "in": {
             "frame": "4e50414d20000100000000000000000000000000000d880c250000000000000000000000"
@@ -30,7 +30,7 @@
         },
         {
           "tcId": 2,
-          "requirement": "R10/header/reserved-nonzero-MUST-reject",
+          "requirement": "header/reserved-nonzero-MUST-reject",
           "comment": "reserved octet 25 set to 0x01 (CRC over octets 0-20 unaffected)",
           "in": {
             "frame": "4e50414d20000100000000000000000000000000000d880c250100000000000000000000"
@@ -43,7 +43,7 @@
         },
         {
           "tcId": 3,
-          "requirement": "R10/header/crc32c-mismatch-MUST-reject",
+          "requirement": "header/crc32c-mismatch-MUST-reject",
           "comment": "CRC32C field (octets 21-24) zeroed",
           "in": {
             "frame": "4e50414d2000010000000000000000000000000000000000000000000000000000000000"
@@ -56,7 +56,7 @@
         },
         {
           "tcId": 4,
-          "requirement": "R10/header/magic-MUST-reject",
+          "requirement": "header/magic-MUST-reject",
           "comment": "magic octet 0 'N' (0x4E) set to 'X' (0x58); CRC32C recomputed over the corrupted 21-octet prefix so the frame passes CRC and fails specifically on magic. Reference-generated and reference-verified to return ErrBadMagic (impl/go frame.go).",
           "in": {
             "frame": "5850414d2000010000000000000000000000000000f312de9b0000000000000000000000"
@@ -69,7 +69,7 @@
         },
         {
           "tcId": 5,
-          "requirement": "R10/header/version-MUST-reject",
+          "requirement": "header/version-MUST-reject",
           "comment": "octet-4 version nibble 0x2 set to 0x3 (unsupported wire version); CRC32C recomputed so the frame passes CRC and magic and fails specifically on version. Reference-generated and reference-verified to return ErrBadVersion (impl/go frame.go).",
           "in": {
             "frame": "4e50414d3000010000000000000000000000000000e19864e00000000000000000000000"
@@ -82,7 +82,7 @@
         },
         {
           "tcId": 6,
-          "requirement": "R1/wire-format/truncated-header-MUST-reject",
+          "requirement": "wire-format/truncated-header-MUST-reject",
           "comment": "first 20 of the fixed 36 octets of the golden PING header (tcId 1) with none of the remainder buffered; a decoder MUST NOT parse a short header and MUST report an error rather than a partial/zero-filled result. Reference-verified to return ErrShortHeader (impl/go frame.go ReadFrame/UnmarshalBinary).",
           "in": {
             "frame": "4e50414d20000100000000000000000000000000"
@@ -101,7 +101,7 @@
       "tests": [
         {
           "tcId": 10,
-          "requirement": "R1/wire-format/header",
+          "requirement": "wire-format/header",
           "comment": "encode the golden PING header from its fields",
           "in": {
             "magic": "NPAM",
@@ -126,7 +126,7 @@
       "tests": [
         {
           "tcId": 20,
-          "requirement": "R1/wire-format/crc32c-castagnoli",
+          "requirement": "wire-format/crc32c-castagnoli",
           "comment": "CRC32C (Castagnoli 0x1EDC6F41) over header octets 0-20",
           "in": {
             "octets": "4e50414d2000010000000000000000000000000000"
@@ -145,7 +145,7 @@
       "tests": [
         {
           "tcId": 30,
-          "requirement": "R2/tlv/unknown-high-bit-MUST-reject",
+          "requirement": "tlv/unknown-high-bit-MUST-reject",
           "comment": "TLV type 0x8001 has the high bit set: forward-incompatible, MUST be rejected",
           "in": {
             "tlv": "80010000"
@@ -158,7 +158,7 @@
         },
         {
           "tcId": 31,
-          "requirement": "R2/tlv/known-tlv-decode",
+          "requirement": "tlv/known-tlv-decode",
           "comment": "PathChallenge TLV (tag 0x0015, length 32)",
           "in": {
             "tlv": "001500201111111111111111111111111111111111111111111111111111111111111111"
@@ -173,7 +173,7 @@
         },
         {
           "tcId": 32,
-          "requirement": "R2/tlv/length-exceeds-buffer-MUST-reject",
+          "requirement": "tlv/length-exceeds-buffer-MUST-reject",
           "comment": "PathChallenge TLV (tag 0x0015) declares Length=32 but only 4 octets of Value follow: a decoder MUST reject a TLV whose declared Length exceeds the remaining buffer rather than reading past the end or silently truncating. Reference-verified to return ErrTruncatedTLV (impl/go tlv.go DecodeTLVs).",
           "in": {
             "tlv": "0015002011111111"
@@ -192,7 +192,7 @@
       "tests": [
         {
           "tcId": 91,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 91",
           "in": {
             "suite": "AES-256-GCM",
@@ -209,7 +209,7 @@
         },
         {
           "tcId": 92,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 92",
           "in": {
             "suite": "AES-256-GCM",
@@ -226,7 +226,7 @@
         },
         {
           "tcId": 93,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 93",
           "in": {
             "suite": "AES-256-GCM",
@@ -243,7 +243,7 @@
         },
         {
           "tcId": 94,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 94",
           "in": {
             "suite": "AES-256-GCM",
@@ -260,7 +260,7 @@
         },
         {
           "tcId": 95,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 95",
           "in": {
             "suite": "AES-256-GCM",
@@ -277,7 +277,7 @@
         },
         {
           "tcId": 96,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 96",
           "in": {
             "suite": "AES-256-GCM",
@@ -294,7 +294,7 @@
         },
         {
           "tcId": 97,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 97",
           "in": {
             "suite": "AES-256-GCM",
@@ -311,7 +311,7 @@
         },
         {
           "tcId": 98,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 98",
           "in": {
             "suite": "AES-256-GCM",
@@ -328,7 +328,7 @@
         },
         {
           "tcId": 99,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 99",
           "in": {
             "suite": "AES-256-GCM",
@@ -345,7 +345,7 @@
         },
         {
           "tcId": 100,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 100",
           "in": {
             "suite": "AES-256-GCM",
@@ -362,7 +362,7 @@
         },
         {
           "tcId": 101,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 101",
           "in": {
             "suite": "AES-256-GCM",
@@ -379,7 +379,7 @@
         },
         {
           "tcId": 102,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 102",
           "in": {
             "suite": "AES-256-GCM",
@@ -396,7 +396,7 @@
         },
         {
           "tcId": 103,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 103",
           "in": {
             "suite": "AES-256-GCM",
@@ -413,7 +413,7 @@
         },
         {
           "tcId": 104,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 104",
           "in": {
             "suite": "AES-256-GCM",
@@ -430,7 +430,7 @@
         },
         {
           "tcId": 105,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 105",
           "in": {
             "suite": "AES-256-GCM",
@@ -447,7 +447,7 @@
         },
         {
           "tcId": 106,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 106",
           "in": {
             "suite": "AES-256-GCM",
@@ -464,7 +464,7 @@
         },
         {
           "tcId": 107,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 107",
           "in": {
             "suite": "AES-256-GCM",
@@ -481,7 +481,7 @@
         },
         {
           "tcId": 108,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 108",
           "in": {
             "suite": "AES-256-GCM",
@@ -498,7 +498,7 @@
         },
         {
           "tcId": 109,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 109",
           "in": {
             "suite": "AES-256-GCM",
@@ -515,7 +515,7 @@
         },
         {
           "tcId": 110,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 110",
           "in": {
             "suite": "AES-256-GCM",
@@ -532,7 +532,7 @@
         },
         {
           "tcId": 111,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 111",
           "in": {
             "suite": "AES-256-GCM",
@@ -549,7 +549,7 @@
         },
         {
           "tcId": 112,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 112",
           "in": {
             "suite": "AES-256-GCM",
@@ -566,7 +566,7 @@
         },
         {
           "tcId": 113,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 113",
           "in": {
             "suite": "AES-256-GCM",
@@ -583,7 +583,7 @@
         },
         {
           "tcId": 114,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 114",
           "in": {
             "suite": "AES-256-GCM",
@@ -600,7 +600,7 @@
         },
         {
           "tcId": 115,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 115",
           "in": {
             "suite": "AES-256-GCM",
@@ -617,7 +617,7 @@
         },
         {
           "tcId": 116,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 116",
           "in": {
             "suite": "AES-256-GCM",
@@ -634,7 +634,7 @@
         },
         {
           "tcId": 117,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 117",
           "in": {
             "suite": "AES-256-GCM",
@@ -651,7 +651,7 @@
         },
         {
           "tcId": 118,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 118",
           "in": {
             "suite": "AES-256-GCM",
@@ -668,7 +668,7 @@
         },
         {
           "tcId": 119,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 119",
           "in": {
             "suite": "AES-256-GCM",
@@ -685,7 +685,7 @@
         },
         {
           "tcId": 120,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 120",
           "in": {
             "suite": "AES-256-GCM",
@@ -702,7 +702,7 @@
         },
         {
           "tcId": 121,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 121",
           "in": {
             "suite": "AES-256-GCM",
@@ -719,7 +719,7 @@
         },
         {
           "tcId": 122,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 122",
           "in": {
             "suite": "AES-256-GCM",
@@ -736,7 +736,7 @@
         },
         {
           "tcId": 123,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 123",
           "in": {
             "suite": "AES-256-GCM",
@@ -753,7 +753,7 @@
         },
         {
           "tcId": 124,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 124",
           "in": {
             "suite": "AES-256-GCM",
@@ -770,7 +770,7 @@
         },
         {
           "tcId": 125,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 125",
           "in": {
             "suite": "AES-256-GCM",
@@ -787,7 +787,7 @@
         },
         {
           "tcId": 126,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 126",
           "in": {
             "suite": "AES-256-GCM",
@@ -804,7 +804,7 @@
         },
         {
           "tcId": 127,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 127",
           "in": {
             "suite": "AES-256-GCM",
@@ -821,7 +821,7 @@
         },
         {
           "tcId": 128,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 128",
           "in": {
             "suite": "AES-256-GCM",
@@ -838,7 +838,7 @@
         },
         {
           "tcId": 129,
-          "requirement": "R3/aead/aes-256-gcm-seal",
+          "requirement": "aead/aes-256-gcm-seal",
           "comment": "Wycheproof AES-256-GCM tcId 129",
           "in": {
             "suite": "AES-256-GCM",
@@ -861,7 +861,7 @@
       "tests": [
         {
           "tcId": 91,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 91 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -878,7 +878,7 @@
         },
         {
           "tcId": 92,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 92 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -895,7 +895,7 @@
         },
         {
           "tcId": 93,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 93 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -912,7 +912,7 @@
         },
         {
           "tcId": 94,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 94 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -929,7 +929,7 @@
         },
         {
           "tcId": 95,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 95 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -946,7 +946,7 @@
         },
         {
           "tcId": 96,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 96 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -963,7 +963,7 @@
         },
         {
           "tcId": 97,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 97 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -980,7 +980,7 @@
         },
         {
           "tcId": 98,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 98 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -997,7 +997,7 @@
         },
         {
           "tcId": 99,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 99 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1014,7 +1014,7 @@
         },
         {
           "tcId": 100,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 100 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1031,7 +1031,7 @@
         },
         {
           "tcId": 101,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 101 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1048,7 +1048,7 @@
         },
         {
           "tcId": 102,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 102 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1065,7 +1065,7 @@
         },
         {
           "tcId": 103,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 103 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1082,7 +1082,7 @@
         },
         {
           "tcId": 104,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 104 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1099,7 +1099,7 @@
         },
         {
           "tcId": 105,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 105 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1116,7 +1116,7 @@
         },
         {
           "tcId": 106,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 106 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1133,7 +1133,7 @@
         },
         {
           "tcId": 107,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 107 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1150,7 +1150,7 @@
         },
         {
           "tcId": 108,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 108 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1167,7 +1167,7 @@
         },
         {
           "tcId": 109,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 109 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1184,7 +1184,7 @@
         },
         {
           "tcId": 110,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 110 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1201,7 +1201,7 @@
         },
         {
           "tcId": 111,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 111 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1218,7 +1218,7 @@
         },
         {
           "tcId": 112,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 112 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1235,7 +1235,7 @@
         },
         {
           "tcId": 113,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 113 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1252,7 +1252,7 @@
         },
         {
           "tcId": 114,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 114 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1269,7 +1269,7 @@
         },
         {
           "tcId": 115,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 115 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1286,7 +1286,7 @@
         },
         {
           "tcId": 116,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 116 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1303,7 +1303,7 @@
         },
         {
           "tcId": 117,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 117 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1320,7 +1320,7 @@
         },
         {
           "tcId": 118,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 118 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1337,7 +1337,7 @@
         },
         {
           "tcId": 119,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 119 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1354,7 +1354,7 @@
         },
         {
           "tcId": 120,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 120 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1371,7 +1371,7 @@
         },
         {
           "tcId": 121,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 121 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1388,7 +1388,7 @@
         },
         {
           "tcId": 122,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 122 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1405,7 +1405,7 @@
         },
         {
           "tcId": 123,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 123 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1422,7 +1422,7 @@
         },
         {
           "tcId": 124,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 124 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1439,7 +1439,7 @@
         },
         {
           "tcId": 125,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 125 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1456,7 +1456,7 @@
         },
         {
           "tcId": 126,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 126 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1473,7 +1473,7 @@
         },
         {
           "tcId": 127,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 127 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1490,7 +1490,7 @@
         },
         {
           "tcId": 128,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 128 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1507,7 +1507,7 @@
         },
         {
           "tcId": 129,
-          "requirement": "R3/aead/aes-256-gcm-open",
+          "requirement": "aead/aes-256-gcm-open",
           "comment": "Wycheproof AES-256-GCM tcId 129 (open)",
           "in": {
             "suite": "AES-256-GCM",
@@ -1524,7 +1524,7 @@
         },
         {
           "tcId": 9001,
-          "requirement": "R10/aead/tag-mismatch-MUST-reject",
+          "requirement": "aead/tag-mismatch-MUST-reject",
           "comment": "tampered GCM tag (last nibble flipped) MUST fail authentication",
           "in": {
             "suite": "AES-256-GCM",
@@ -1547,7 +1547,7 @@
       "tests": [
         {
           "tcId": 1,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 1",
           "in": {
             "hash": "sha256",
@@ -1563,7 +1563,7 @@
         },
         {
           "tcId": 2,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 2",
           "in": {
             "hash": "sha256",
@@ -1579,7 +1579,7 @@
         },
         {
           "tcId": 3,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 3",
           "in": {
             "hash": "sha256",
@@ -1595,7 +1595,7 @@
         },
         {
           "tcId": 4,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 4",
           "in": {
             "hash": "sha256",
@@ -1611,7 +1611,7 @@
         },
         {
           "tcId": 5,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 5",
           "in": {
             "hash": "sha256",
@@ -1627,7 +1627,7 @@
         },
         {
           "tcId": 6,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 6",
           "in": {
             "hash": "sha256",
@@ -1643,7 +1643,7 @@
         },
         {
           "tcId": 7,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 7",
           "in": {
             "hash": "sha256",
@@ -1659,7 +1659,7 @@
         },
         {
           "tcId": 8,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 8",
           "in": {
             "hash": "sha256",
@@ -1675,7 +1675,7 @@
         },
         {
           "tcId": 9,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 9",
           "in": {
             "hash": "sha256",
@@ -1691,7 +1691,7 @@
         },
         {
           "tcId": 10,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 10",
           "in": {
             "hash": "sha256",
@@ -1707,7 +1707,7 @@
         },
         {
           "tcId": 11,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 11",
           "in": {
             "hash": "sha256",
@@ -1723,7 +1723,7 @@
         },
         {
           "tcId": 12,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 12",
           "in": {
             "hash": "sha256",
@@ -1739,7 +1739,7 @@
         },
         {
           "tcId": 13,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 13",
           "in": {
             "hash": "sha256",
@@ -1755,7 +1755,7 @@
         },
         {
           "tcId": 14,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 14",
           "in": {
             "hash": "sha256",
@@ -1771,7 +1771,7 @@
         },
         {
           "tcId": 15,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 15",
           "in": {
             "hash": "sha256",
@@ -1787,7 +1787,7 @@
         },
         {
           "tcId": 16,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 16",
           "in": {
             "hash": "sha256",
@@ -1803,7 +1803,7 @@
         },
         {
           "tcId": 17,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 17",
           "in": {
             "hash": "sha256",
@@ -1819,7 +1819,7 @@
         },
         {
           "tcId": 18,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 18",
           "in": {
             "hash": "sha256",
@@ -1835,7 +1835,7 @@
         },
         {
           "tcId": 19,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 19",
           "in": {
             "hash": "sha256",
@@ -1851,7 +1851,7 @@
         },
         {
           "tcId": 20,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 20",
           "in": {
             "hash": "sha256",
@@ -1867,7 +1867,7 @@
         },
         {
           "tcId": 21,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 21",
           "in": {
             "hash": "sha256",
@@ -1883,7 +1883,7 @@
         },
         {
           "tcId": 22,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 22",
           "in": {
             "hash": "sha256",
@@ -1899,7 +1899,7 @@
         },
         {
           "tcId": 23,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 23",
           "in": {
             "hash": "sha256",
@@ -1915,7 +1915,7 @@
         },
         {
           "tcId": 24,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 24",
           "in": {
             "hash": "sha256",
@@ -1931,7 +1931,7 @@
         },
         {
           "tcId": 26,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 26",
           "in": {
             "hash": "sha256",
@@ -1947,7 +1947,7 @@
         },
         {
           "tcId": 27,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 27",
           "in": {
             "hash": "sha256",
@@ -1963,7 +1963,7 @@
         },
         {
           "tcId": 28,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 28",
           "in": {
             "hash": "sha256",
@@ -1979,7 +1979,7 @@
         },
         {
           "tcId": 29,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 29",
           "in": {
             "hash": "sha256",
@@ -1995,7 +1995,7 @@
         },
         {
           "tcId": 30,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 30",
           "in": {
             "hash": "sha256",
@@ -2011,7 +2011,7 @@
         },
         {
           "tcId": 31,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 31",
           "in": {
             "hash": "sha256",
@@ -2027,7 +2027,7 @@
         },
         {
           "tcId": 32,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 32",
           "in": {
             "hash": "sha256",
@@ -2043,7 +2043,7 @@
         },
         {
           "tcId": 33,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 33",
           "in": {
             "hash": "sha256",
@@ -2059,7 +2059,7 @@
         },
         {
           "tcId": 34,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 34",
           "in": {
             "hash": "sha256",
@@ -2075,7 +2075,7 @@
         },
         {
           "tcId": 35,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 35",
           "in": {
             "hash": "sha256",
@@ -2091,7 +2091,7 @@
         },
         {
           "tcId": 36,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 36",
           "in": {
             "hash": "sha256",
@@ -2107,7 +2107,7 @@
         },
         {
           "tcId": 37,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 37",
           "in": {
             "hash": "sha256",
@@ -2123,7 +2123,7 @@
         },
         {
           "tcId": 38,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 38",
           "in": {
             "hash": "sha256",
@@ -2139,7 +2139,7 @@
         },
         {
           "tcId": 39,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 39",
           "in": {
             "hash": "sha256",
@@ -2155,7 +2155,7 @@
         },
         {
           "tcId": 40,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 40",
           "in": {
             "hash": "sha256",
@@ -2171,7 +2171,7 @@
         },
         {
           "tcId": 41,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 41",
           "in": {
             "hash": "sha256",
@@ -2187,7 +2187,7 @@
         },
         {
           "tcId": 42,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 42",
           "in": {
             "hash": "sha256",
@@ -2203,7 +2203,7 @@
         },
         {
           "tcId": 43,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 43",
           "in": {
             "hash": "sha256",
@@ -2219,7 +2219,7 @@
         },
         {
           "tcId": 44,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 44",
           "in": {
             "hash": "sha256",
@@ -2235,7 +2235,7 @@
         },
         {
           "tcId": 45,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 45",
           "in": {
             "hash": "sha256",
@@ -2251,7 +2251,7 @@
         },
         {
           "tcId": 46,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 46",
           "in": {
             "hash": "sha256",
@@ -2267,7 +2267,7 @@
         },
         {
           "tcId": 47,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 47",
           "in": {
             "hash": "sha256",
@@ -2283,7 +2283,7 @@
         },
         {
           "tcId": 49,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 49",
           "in": {
             "hash": "sha256",
@@ -2299,7 +2299,7 @@
         },
         {
           "tcId": 50,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 50",
           "in": {
             "hash": "sha256",
@@ -2315,7 +2315,7 @@
         },
         {
           "tcId": 51,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 51",
           "in": {
             "hash": "sha256",
@@ -2331,7 +2331,7 @@
         },
         {
           "tcId": 52,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 52",
           "in": {
             "hash": "sha256",
@@ -2347,7 +2347,7 @@
         },
         {
           "tcId": 53,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 53",
           "in": {
             "hash": "sha256",
@@ -2363,7 +2363,7 @@
         },
         {
           "tcId": 54,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 54",
           "in": {
             "hash": "sha256",
@@ -2379,7 +2379,7 @@
         },
         {
           "tcId": 55,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 55",
           "in": {
             "hash": "sha256",
@@ -2395,7 +2395,7 @@
         },
         {
           "tcId": 56,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 56",
           "in": {
             "hash": "sha256",
@@ -2411,7 +2411,7 @@
         },
         {
           "tcId": 57,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 57",
           "in": {
             "hash": "sha256",
@@ -2427,7 +2427,7 @@
         },
         {
           "tcId": 58,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 58",
           "in": {
             "hash": "sha256",
@@ -2443,7 +2443,7 @@
         },
         {
           "tcId": 59,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 59",
           "in": {
             "hash": "sha256",
@@ -2459,7 +2459,7 @@
         },
         {
           "tcId": 60,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 60",
           "in": {
             "hash": "sha256",
@@ -2475,7 +2475,7 @@
         },
         {
           "tcId": 61,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 61",
           "in": {
             "hash": "sha256",
@@ -2491,7 +2491,7 @@
         },
         {
           "tcId": 62,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 62",
           "in": {
             "hash": "sha256",
@@ -2507,7 +2507,7 @@
         },
         {
           "tcId": 63,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 63",
           "in": {
             "hash": "sha256",
@@ -2523,7 +2523,7 @@
         },
         {
           "tcId": 64,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 64",
           "in": {
             "hash": "sha256",
@@ -2539,7 +2539,7 @@
         },
         {
           "tcId": 65,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 65",
           "in": {
             "hash": "sha256",
@@ -2555,7 +2555,7 @@
         },
         {
           "tcId": 66,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 66",
           "in": {
             "hash": "sha256",
@@ -2571,7 +2571,7 @@
         },
         {
           "tcId": 67,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 67",
           "in": {
             "hash": "sha256",
@@ -2587,7 +2587,7 @@
         },
         {
           "tcId": 68,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 68",
           "in": {
             "hash": "sha256",
@@ -2603,7 +2603,7 @@
         },
         {
           "tcId": 69,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 69",
           "in": {
             "hash": "sha256",
@@ -2619,7 +2619,7 @@
         },
         {
           "tcId": 70,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 70",
           "in": {
             "hash": "sha256",
@@ -2635,7 +2635,7 @@
         },
         {
           "tcId": 71,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 71",
           "in": {
             "hash": "sha256",
@@ -2651,7 +2651,7 @@
         },
         {
           "tcId": 72,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 72",
           "in": {
             "hash": "sha256",
@@ -2667,7 +2667,7 @@
         },
         {
           "tcId": 73,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 73",
           "in": {
             "hash": "sha256",
@@ -2683,7 +2683,7 @@
         },
         {
           "tcId": 75,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 75",
           "in": {
             "hash": "sha256",
@@ -2699,7 +2699,7 @@
         },
         {
           "tcId": 76,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 76",
           "in": {
             "hash": "sha256",
@@ -2715,7 +2715,7 @@
         },
         {
           "tcId": 77,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 77",
           "in": {
             "hash": "sha256",
@@ -2731,7 +2731,7 @@
         },
         {
           "tcId": 78,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 78",
           "in": {
             "hash": "sha256",
@@ -2747,7 +2747,7 @@
         },
         {
           "tcId": 79,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 79",
           "in": {
             "hash": "sha256",
@@ -2763,7 +2763,7 @@
         },
         {
           "tcId": 80,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 80",
           "in": {
             "hash": "sha256",
@@ -2779,7 +2779,7 @@
         },
         {
           "tcId": 81,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 81",
           "in": {
             "hash": "sha256",
@@ -2795,7 +2795,7 @@
         },
         {
           "tcId": 82,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 82",
           "in": {
             "hash": "sha256",
@@ -2811,7 +2811,7 @@
         },
         {
           "tcId": 83,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 83",
           "in": {
             "hash": "sha256",
@@ -2827,7 +2827,7 @@
         },
         {
           "tcId": 84,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 84",
           "in": {
             "hash": "sha256",
@@ -2843,7 +2843,7 @@
         },
         {
           "tcId": 85,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 85",
           "in": {
             "hash": "sha256",
@@ -2859,7 +2859,7 @@
         },
         {
           "tcId": 86,
-          "requirement": "R4/hkdf/expand-sha256",
+          "requirement": "hkdf/expand-sha256",
           "comment": "Wycheproof HKDF-Expand sha256 tcId 86",
           "in": {
             "hash": "sha256",
@@ -2881,7 +2881,7 @@
       "tests": [
         {
           "tcId": 8001,
-          "requirement": "R8/profile/standard-accepts-mlkem768",
+          "requirement": "profile/standard-accepts-mlkem768",
           "in": {
             "profile": "Standard",
             "kem": "X25519MLKEM768"
@@ -2892,7 +2892,7 @@
         },
         {
           "tcId": 8002,
-          "requirement": "R5/profile/sovereign-rejects-mlkem768-MUST",
+          "requirement": "profile/sovereign-rejects-mlkem768-MUST",
           "in": {
             "profile": "Sovereign",
             "kem": "X25519MLKEM768"
@@ -2905,7 +2905,7 @@
         },
         {
           "tcId": 8003,
-          "requirement": "R8/profile/high-accepts-mlkem1024",
+          "requirement": "profile/high-accepts-mlkem1024",
           "in": {
             "profile": "High",
             "kem": "X25519MLKEM1024"
@@ -2916,7 +2916,7 @@
         },
         {
           "tcId": 8004,
-          "requirement": "R8/profile/sovereign-accepts-mlkem1024",
+          "requirement": "profile/sovereign-accepts-mlkem1024",
           "in": {
             "profile": "Sovereign",
             "kem": "X25519MLKEM1024"
