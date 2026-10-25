@@ -82,7 +82,7 @@ jobs:
       - name: Validate per-channel frame-type registry (composite-key + Go lockstep)
         run: python scripts/validate-frame-types-channel.py
       # validate-registries.py checks CSV<->schema; it says nothing about the rendered
-      # docs/registries.md mirror. This closes that gap (F6): the page cannot drift from
+      # docs/registries.md mirror. This closes that gap: the page cannot drift from
       # the CSVs it renders. Stdlib-only, no new docs-toolchain dependency.
       - name: Check rendered registries doc has not drifted from the CSVs
         run: python scripts/check-registries-doc.py

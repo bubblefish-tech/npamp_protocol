@@ -1,6 +1,6 @@
 # N-PAMP crypto-agility and generation-migration runbook
 
-*Requirement R2.3 acceptance criterion 3:
+*Acceptance criterion:
 "The PQC modules SHALL address the documented production gap: versioned key formats,
 a crypto-agility/migration runbook, and a hybrid-by-default posture."*
 
@@ -149,7 +149,7 @@ keys are on which generation," and that must still work after cutover.
 
 ## 4. Hybrid-by-default: already the deployed posture
 
-R2.3's third acceptance-criterion clause — a "hybrid-by-default posture" — is already
+The third acceptance-criterion clause — a "hybrid-by-default posture" — is already
 satisfied structurally and is confirmed here rather than newly built:
 `registries/profiles.csv` defines exactly three profiles (Standard, High, Sovereign),
 and **every one of them mandates a hybrid KEM** — Standard uses `X25519MLKEM768`, High

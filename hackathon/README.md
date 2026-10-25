@@ -32,12 +32,11 @@ here modifies the frozen wire format, the conformance corpus, `MANIFEST.sha256`/
 
 ## Honest status (read before citing this kit as "interop complete")
 
-**Claude-buildable and graded, as of this session:**
+**Built and graded in this repository:**
 - The reference Go and Rust stacks build and interoperate live, over real TCP
   sockets, both directions (Go server ↔ Rust client, Rust server ↔ Go client),
   through this kit's `run-against-peer.sh` wrapper — see the graded run captured
-  in this session's commit message and `HACKATHON-CHECKLIST.md`'s "grading
-  provenance" note.
+  in `HACKATHON-CHECKLIST.md`'s "grading provenance" note.
 - The wrapper's Stage 3 (independent conformance check) runs the exact CI-graded
   commands from `.github/workflows/conformance.yml` (`go test -C impl/go ./...
   -count=1`) and `.github/workflows/interop.yml`'s Rust leg
@@ -46,7 +45,7 @@ here modifies the frozen wire format, the conformance corpus, `MANIFEST.sha256`/
   hackathon pages (retrieved 2026-09-06; see citations in
   `HACKATHON-CHECKLIST.md`).
 
-**Event-gated (requires the maintainer; not Claude-buildable):**
+**Event-gated (requires the maintainer; not built here):**
 - Actually registering for and attending an IETF hackathon.
 - Running this kit against a **genuinely independent third-party
   implementation** — one this project did not author. Every interop run

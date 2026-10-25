@@ -1,6 +1,6 @@
 # N-PAMP cryptographic provider matrix (ML-KEM + classical ECDH)
 
-*Requirement R2.1. Dated 2026-08-21; every version and date below was confirmed against a
+*Dated 2026-08-21; every version and date below was confirmed against a
 primary source (the vendor's own release page, package registry, or standards document) on
 that date. Provider ecosystems move quickly — re-confirm any row before it gates a build
 decision.*
@@ -14,7 +14,7 @@ classical elliptic-curve Diffie–Hellman component:
 The [hybrid-KEM combiner adapter](../spec/companion/90_hybrid_kem_adapter.md) is
 **provider-agnostic**: it consumes the two *raw* component shared secrets a language's own
 ML-KEM and ECDH providers produce, and concatenates them in the per-group order fixed by
-Part-1 R1.5. This document records which provider each reference SDK language should use to
+the specification. This document records which provider each reference SDK language should use to
 produce those two component secrets. It is implementation guidance, not a wire specification —
 the wire bytes are fixed by the spec regardless of which library computes them.
 
@@ -49,7 +49,7 @@ the wire bytes are fixed by the spec regardless of which library computes them.
 | **C# / .NET** | `System.Security.Cryptography.MLKem` (Linux/Windows) | .NET 10 (2025-11) | `ECDiffieHellman` (P-384); BC for X25519 | Native on Linux/Windows; **macOS gap** → BouncyCastle.Cryptography 2.7.0 (self-labeled *experimental*), native macOS deferred to .NET 11 |
 | **Ruby** | *no mature native binding yet* | tracked at `ruby/openssl#894` (open) + `bugs.ruby-lang.org` #22068 (open) | `OpenSSL::PKey` (X25519, P-384) | **Gap** — the `ruby/openssl` gem's PQC path (provider-pkey passthrough) will inherit ML-KEM once the tracking issue lands against OpenSSL ≥ 3.5; not shipped as of 2026-08-21. See notes |
 | **PHP** | `paragonie/ext-pqcrypto` (Rust-backed extension) | 0.1.0 (2026-04-07) | core `openssl` ext (X25519, P-384) | Workable; core PHP `openssl` does not expose ML-KEM (absent from the PHP 8.6 RFC roster) → a non-core extension is required |
-| **Swift** | SwiftKyber (pure Swift, cross-platform) | 3.5.0 (2026-04-21); deterministic `DeriveKeyPair` since 3.4.0 | CryptoKit `Curve25519` / `P384` | Solid; NIST-ACVP-sourced KAT suite (F3-clean). Preferred over Apple CryptoKit (Apple-platform-only) |
+| **Swift** | SwiftKyber (pure Swift, cross-platform) | 3.5.0 (2026-04-21); deterministic `DeriveKeyPair` since 3.4.0 | CryptoKit `Curve25519` / `P384` | Solid; NIST-ACVP-sourced KAT suite (non-circular). Preferred over Apple CryptoKit (Apple-platform-only) |
 
 ## The Go reference provider path (already wired)
 

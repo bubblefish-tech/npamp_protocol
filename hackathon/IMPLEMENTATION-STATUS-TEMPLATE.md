@@ -58,7 +58,7 @@ history of who has implemented N-PAMP over time is preserved.
   yet published to crates.io as of this writing — build from source).
 - **Description:** Independent (non-shared-codebase) reference implementation
   built on RustCrypto primitives and the `ml-kem` crate; the second
-  independent stack required by R2.1/goal 1.
+  independent stack the kit requires.
 - **Maturity:** prototype / pre-1.0 reference.
 - **Coverage:** the same handshake + record layer as the Go reference, at the
   Standard profile. The High and Sovereign profiles (`spec/05_profiles.md`) are

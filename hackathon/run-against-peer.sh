@@ -103,7 +103,8 @@ STAGE12_PASS=0
 if [ "$STACK" = "go" ]; then
   export GOWORK=off
   BIN_DIR="$(mktemp -d)"
-  trap 'rm -rf "${BIN_DIR}" 2>/dev/null || true' EXIT
+  # BIN_DIR is a mktemp directory holding only the built binary: remove that file by exact path, then the empty directory.
+  trap 'rm -f "${BIN_DIR}/npamp-interop" 2>/dev/null; rmdir "${BIN_DIR}" 2>/dev/null; true' EXIT
   GO_BIN="${BIN_DIR}/npamp-interop"
   echo "-- Stage 0: building the Go reference interop binary --"
   ( cd "${GO_DIR}" && go build -o "${GO_BIN}" ./cmd/npamp-interop )

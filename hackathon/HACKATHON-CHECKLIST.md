@@ -32,7 +32,7 @@ provides.
   to work on it."* There is no separate "submission" process beyond adding the
   project to the wiki and showing up — no code-of-conduct sign-off, repository
   format requirement, or team-size rule was published on the pages retrieved
-  this session.
+  (retrieved live; see the dated URLs above).
 - **Staying informed:** subscribe to the IETF Hackathon mailing list; monitor
   the hackathon wiki as the event approaches for other registered projects
   (potential interop partners) and their champions' contact info.
@@ -42,7 +42,7 @@ provides.
   before registering — do not rely on this document's dates once the 127
   meeting has passed.
 
-## 2. Before the event (maintainer action + Claude-buildable prep)
+## 2. Before the event (maintainer action + kit preparation)
 
 - [ ] **(maintainer)** Subscribe to the IETF Hackathon mailing list.
 - [ ] **(maintainer)** Create/confirm an IETF Datatracker login (needed to
@@ -57,12 +57,12 @@ provides.
       against our Go and Rust reference stacks."*
 - [ ] **(maintainer)** Decide onsite vs. remote participation and register
       accordingly on the meeting's registration portal.
-- [x] **(built this session)** A third-party-runnable interop kit exists:
+- [x] **(built)** A third-party-runnable interop kit exists:
       `hackathon/run-against-peer.sh` + `hackathon/THIRD-PARTY-QUICKSTART.md`
       — point any independent implementation at our Go or Rust reference
       stack over a real address, no repo checkout required on the peer's side
       beyond the published module/crate.
-- [x] **(built this session)** A results template exists:
+- [x] **(built)** A results template exists:
       `hackathon/IMPLEMENTATION-STATUS-TEMPLATE.md` (RFC 7942/BCP 205-shaped).
 - [ ] **(maintainer, optional)** Skim the current hackathon wiki's project list
       shortly before the event for other projects that might make a plausible
@@ -115,22 +115,22 @@ provides.
 - [ ] Record the interop milestone as fully "event-complete" in
       the project's internal task tracker only once a real
       third-party interop row exists in a dated results file — the checkbox
-      state this session lands with reflects only the Claude-buildable kit,
+      state recorded here reflects only the kit,
       not event attendance.
 
 ## 5. Grading provenance for this kit
 
 - The kit's own claim — "our Go and Rust reference stacks interoperate live,
-  through this kit's wrapper" — was graded in this session by running
+  through this kit's wrapper" — was graded by running
   `hackathon/run-against-peer.sh` for both directions against the other
-  stack's existing binary (see this session's commit message for the captured
-  output).
+  stack's existing binary (the captured output is in the commit message that
+  added the kit).
 - The kit's Stage-3 conformance check reuses the exact commands already graded
   in CI: `go test -C impl/go ./... -count=1` (`.github/workflows/
   conformance.yml`, job `impl-go`) and `cargo test --manifest-path
   impl/rust/Cargo.toml` (`.github/workflows/interop.yml`'s dependency chain
   and `.github/workflows/conformance.yml`'s `rust` job).
-- The IETF-hackathon facts in §1 were retrieved live this session from
+- The IETF-hackathon facts in §1 were retrieved live from
   `ietf.org`/`wiki.ietf.org` (URLs cited above); they are **not** from
   training-data memory, per this project's research-discipline rules, and
   they are dated so a future reader knows to re-verify before relying on them.
