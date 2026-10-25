@@ -15,7 +15,7 @@ import (
 // net.Conn instead of opening its own TCP socket. It is the connection-injecting
 // counterpart to Dial: use it when the transport already exists — an accepted
 // socket, a pipe, or a stream tunneled inside another (already-established)
-// N-PAMP session (the Phantom Relay inner tunnel is the motivating case).
+// N-PAMP session.
 //
 // The security posture is IDENTICAL to Dial. DialConn wraps raw in a TLS 1.3
 // client with the same pinned ALPN ("n-pamp/3") and TLS 1.3 floor that Dial

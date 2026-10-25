@@ -325,7 +325,7 @@ reserved-octet-non-zero, CRC mismatch, bad frame magic, unsupported wire
 version, short header, forward-incompatible TLV, truncated TLV length, AEAD
 tag mismatch — plus the Sovereign KEM-refusal invariant.
 
-> **2026-09-04 addendum (E3.7 ecosystem lane, non-wire).** The table and
+> **2026-09-04 addendum (non-wire).** The table and
 > narrative above predate several corpus-expansion waves this document has
 > not otherwise been reconciled against; `test-vectors/v1/conformance-corpus.json`
 > (MANIFEST-pinned) now carries **470** cases across **27** operation groups —
