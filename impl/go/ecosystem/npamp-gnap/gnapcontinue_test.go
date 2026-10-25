@@ -93,7 +93,7 @@ func TestPollerAdvanceUpdatesContinuationState(t *testing.T) {
 	}
 }
 
-// TestPollerAdvanceRejectsResponseWithNeitherAccessTokenNorContinue is the A4
+// TestPollerAdvanceRejectsResponseWithNeitherAccessTokenNorContinue is the
 // mutation-surviving check for the fail-closed "flow can neither proceed nor terminate"
 // gate.
 func TestPollerAdvanceRejectsResponseWithNeitherAccessTokenNorContinue(t *testing.T) {

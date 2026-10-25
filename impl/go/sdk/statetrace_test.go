@@ -19,7 +19,7 @@ package sdk
 // between this code and the table cannot hide, because the table does not come from this
 // code. TestStateTable_GeneratorConsumesTable makes that consumption explicit and checkable.
 //
-// The mutation anchor for the red-evidence ledger is a POST-KEY case (the pre-key cases are
+// The mutation anchor is a POST-KEY case (the pre-key cases are
 // green from birth because the impl already silent-aborts): disabling the ESTABLISHED
 // total-default rejection flips TestStateTable_EstablishedTotalDefault/unknown_type red.
 
@@ -668,7 +668,7 @@ func TestStateTable_EstablishedTotalDefault(t *testing.T) {
 
 	// (both, ESTABLISHED, UNKNOWN): an unassigned reserved Control type (0x00FE — NOT a
 	// ratchet type, per the table's modeled_exclusion). Total default → unexpected_message.
-	// This is the mutation anchor for the red-evidence ledger.
+	// This is the mutation anchor.
 	t.Run("unknown_type", func(t *testing.T) {
 		want := stCodeName(t, tbl.expect("both", "ESTABLISHED", "UNKNOWN"))
 		a, server, master := establishedServer(t)

@@ -22,7 +22,7 @@ spec (`ietf/draft-bubblefish-npamp-latest.md`, `spec/`) governs.
 
 N-PAMP negotiates its application protocol with an ALPN identifier whose trailing digit is the
 **crypto generation** — an axis independent of the wire-format version carried in the frame
-header `Ver` field, which is invariant across generations (see decision 0014)
+header `Ver` field, which is invariant across generations
 (draft §"Wire Format"; draft §"IANA Considerations"):
 
 | ALPN | Wire-format `Ver` | Status |
@@ -31,7 +31,7 @@ header `Ver` field, which is invariant across generations (see decision 0014)
 | `n-pamp/2` | 2 (`0x02`) | **Deprecated** — prior crypto generation, defined by `draft-bubblefish-npamp-00` |
 | `n-pamp/3` | 2 (`0x02`) | **Current** — crypto generation 3; the wire-format `Ver` nibble is unchanged (the break is cryptographic, not a frame-layout change) |
 
-The ALPN trailing digit is the crypto generation; the wire-format `Ver` nibble (`0x02`) is an independent axis, invariant across generations (see decision 0014). Each crypto generation uses a distinct identifier; a future generation would use `n-pamp/4` (draft §IANA).
+The ALPN trailing digit is the crypto generation; the wire-format `Ver` nibble (`0x02`) is an independent axis, invariant across generations. Each crypto generation uses a distinct identifier; a future generation would use `n-pamp/4` (draft §IANA).
 
 ## Protocol generations
 

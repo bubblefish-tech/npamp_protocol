@@ -77,8 +77,8 @@ pub const SIG_ED25519: u16 = 0x0807;
 // Registry-correct as of P2.10 (2026-09-02): was erroneously 0x0905 (that
 // code point is reserved for ML-DSA-65 per the IANA TLS SignatureScheme
 // registry / draft-ietf-tls-mldsa, and is unused by any N-PAMP profile).
-// 0x0906 matches impl/go/suites.go's SigMLDSA87 and the SUPERSESSION-LEDGER's
-// corrected registry (already reflected on the Go side before this fix).
+// 0x0906 matches impl/go/suites.go's SigMLDSA87
+// (already reflected on the Go side before this fix).
 pub const SIG_MLDSA87: u16 = 0x0906;
 
 /// CRC32C (Castagnoli, reflected) — identical to Go hash/crc32 Castagnoli.

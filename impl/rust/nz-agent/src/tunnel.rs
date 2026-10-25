@@ -380,8 +380,7 @@ mod tests {
     /// peer process exited), a `MuxStream::read` already blocked in
     /// `Receiver::recv()` must wake up with EOF (`Ok(0)`), not hang forever.
     /// `demux_loop`'s post-loop `streams.clear()` is what makes this pass;
-    /// removing that line reproduces the original hang (verified manually —
-    /// see RED-EVIDENCE.md M-tunnel-1).
+    /// removing that line reproduces the original hang (verified manually).
     #[test]
     fn transport_eof_wakes_a_blocked_read_with_eof() {
         let (a, b) = multiplexer_pair();
@@ -424,7 +423,7 @@ mod tests {
 
     /// Isolation property (module docs): two streams multiplexed over the
     /// SAME transport never observe each other's payload bytes. This is the
-    /// property M1 (see RED-EVIDENCE.md) mutates away and this test catches.
+    /// property this test catches if it is mutated away.
     #[test]
     fn two_streams_do_not_cross_contaminate() {
         let (a, b) = multiplexer_pair();

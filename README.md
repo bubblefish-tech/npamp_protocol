@@ -329,7 +329,7 @@ Both are also stated in the IANA Considerations of the Internet-Draft, which req
 
 ## Versioning
 
-- **Wire-format version** — the `Ver` nibble (`0x02`) in the frame header identifies the frame layout; it is invariant across crypto generations. **Crypto generation** — the trailing digit of the ALPN label (`n-pamp/3`) identifies the cryptographic construction; a crypto-incompatible change increments it and uses a new ALPN identifier. The two axes are independent (see decision 0014).
+- **Wire-format version** — the `Ver` nibble (`0x02`) in the frame header identifies the frame layout; it is invariant across crypto generations. **Crypto generation** — the trailing digit of the ALPN label (`n-pamp/3`) identifies the cryptographic construction; a crypto-incompatible change increments it and uses a new ALPN identifier. The two axes are independent.
 - **Internet-Draft revision** — the `-NN` counter at the end of the draft name advances with every published revision; it is independent of the protocol's wire major version. The working tree carries the `-latest` source; one annotated git tag marks each Datatracker `-NN` revision (`draft-bubblefish-npamp-00`, `-01`, …), with `rfcdiff` for per-revision deltas.
 
 ## License

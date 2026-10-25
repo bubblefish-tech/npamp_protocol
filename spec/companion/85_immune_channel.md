@@ -238,8 +238,7 @@ wrong CBOR major type.
 Immune operation bodies are carried in the frame **payload**, not in extension
 TLVs. This document defines and consumes no extension-TLV tag, and therefore
 claims none of the TLV code points the core specification reserves — including TLV
-`0x12` (currently OpaqueContentType, previously the retired "AnomalyCharge"; ADR
-0015), which is a general carriage mechanism and not an Immune operation (Immune
+`0x12` (currently OpaqueContentType, previously the retired "AnomalyCharge"), which is a general carriage mechanism and not an Immune operation (Immune
 interface reference `../channels/0005_immune.md` §4).
 
 ### 4.2 Common envelope fields
@@ -690,8 +689,7 @@ and unknown-negative-key rejections. Its expected values are produced by that
 independent RFC 8949 byte constructor, not by the implementation under test, so the
 vectors are non-circular, and they are cross-validated by
 `impl/go/zz_immune_oracle_xval_test.go`. That payload-encoding and common-envelope
-surface is therefore graded, and the conformance parity ledger records the
-Immune entry accordingly (impl status wired, conformance status graded).
+surface is therefore graded.
 
 Beyond that payload surface, the §5–§9 behavioural clauses — the correlation and
 operation model (§5), the anomaly-report disposition flow (§6), the

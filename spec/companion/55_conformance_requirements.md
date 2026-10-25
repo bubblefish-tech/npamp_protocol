@@ -326,15 +326,15 @@ version, short header, forward-incompatible TLV, truncated TLV length, AEAD
 tag mismatch — plus the Sovereign KEM-refusal invariant.
 
 > **2026-09-04 addendum (non-wire).** The table and
-> narrative above predate several corpus-expansion waves this document has
+> narrative above predate several corpus expansions this document has
 > not otherwise been reconciled against; `test-vectors/v1/conformance-corpus.json`
 > (MANIFEST-pinned) now carries **470** cases across **27** operation groups —
 > including `nonce.derive`, `hkdf.expand_label`, `keys.derive_traffic`,
 > `frame.seal`/`frame.open`, the ten channel `*.body.decode` groups, and the
 > `bridge.*` operations §8.1 below lists as unpopulated. A full reconciliation
 > of §7/§8 against the current corpus is tracked separately and is NOT part of
-> this addendum. This addendum records only the two negative vectors added in
-> this session, closing two of the three §8.6 examples: `header.decode`
+> this addendum. This addendum records only the two negative vectors added,
+> closing two of the three §8.6 examples: `header.decode`
 > tcId 6 (a buffer shorter than 36 octets — `ErrShortHeader`) and `tlv.decode`
 > tcId 32 (a TLV whose declared Length exceeds the remaining buffer —
 > `ErrTruncatedTLV`), both reference-verified against `impl/go` and passing

@@ -34,7 +34,7 @@ func TestStreamControl_RoundTrip(t *testing.T) {
 	}
 }
 
-// TestStreamControl_WrongType_Rejected is a MUTATION ANCHOR (RED-EVIDENCE):
+// TestStreamControl_WrongType_Rejected is a MUTATION ANCHOR:
 // a leading TLV whose Type is not 0x0011 MUST be rejected as "not a
 // StreamControl TLV" -- the frame either carries no StreamControl at all
 // (this build's fresh-request-vs-resume-request disambiguation, stream.go)

@@ -115,7 +115,7 @@ func TestEmitOperationSpanEmitsErrorAttributesForNonNilCode(t *testing.T) {
 	}
 }
 
-// TestEmitOperationSpanErrorNameChangesWithCode is the A4 mutation-surviving check: the
+// TestEmitOperationSpanErrorNameChangesWithCode is the mutation-surviving check: the
 // emitted span/metric attributes must actually depend on which registered code was passed,
 // not a fixed value.
 func TestEmitOperationSpanErrorNameChangesWithCode(t *testing.T) {

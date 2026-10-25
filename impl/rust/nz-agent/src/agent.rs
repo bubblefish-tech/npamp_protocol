@@ -15,8 +15,7 @@
 //! workloads, and no code path that reuses a previously-established
 //! `Session` for a different workload. Two workloads talking to the same
 //! destination — or the same workload dialing twice — therefore always get
-//! two independently-derived `master_secret`s (mutation-tested below and in
-//! `RED-EVIDENCE.md`).
+//! two independently-derived `master_secret`s (mutation-tested below).
 //!
 //! # Fail-closed, pre-payload (matches `impl/go/firewall`'s own precedent)
 //!

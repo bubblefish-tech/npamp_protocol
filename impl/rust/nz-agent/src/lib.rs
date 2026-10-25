@@ -9,8 +9,8 @@
 //! Kubernetes node terminates/originates N-PAMP hybrid-PQC sessions on behalf of
 //! every workload on that node, in place of the workload running its own N-PAMP
 //! stack (or, at the on-ramp rung, its own sidecar). It composes the existing
-//! `npamp` crate's [`npamp::session::Session`] — the crate's own KAT-pinned,
-//! red-evidenced handshake + AEAD record layer — for every cryptographic
+//! `npamp` crate's [`npamp::session::Session`] — the crate's own KAT-pinned
+//! handshake + AEAD record layer — for every cryptographic
 //! operation. **This crate contains no handshake code, no KEM code, and no AEAD
 //! code of its own**; it owns only the node-local plumbing:
 //! traffic capture, node-to-node tunnel multiplexing, per-workload
@@ -44,8 +44,7 @@
 //! established by its OWN independent N-PAMP handshake, carried over its OWN
 //! logical stream of the node-to-node tunnel (see [`tunnel::MuxStream`]). A
 //! compromise of the node agent's tunnel-transport layer does not, by itself,
-//! recover any workload's traffic key — see `THREAT-MODEL.md` for the full
-//! blast-radius analysis.
+//! recover any workload's traffic key.
 //!
 //! # What composes with what (no frozen-wire touch)
 //!

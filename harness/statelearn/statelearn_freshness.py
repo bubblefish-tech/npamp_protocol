@@ -53,8 +53,7 @@ implementation rather than a stale or doctored snapshot.
 ## Hashing
 
 hash = SHA-256 of the file's LF-normalized bytes (every b"\\r\\n" -> b"\\n" before hashing), so
-a Windows CRLF worktree and a committed-LF blob hash identically (the pinned-vector CRLF
-lesson: never pin a CRLF worktree hash). The SAME function generates and verifies, so the
+a Windows CRLF worktree and a committed-LF blob hash identically (never pin a CRLF worktree hash). The SAME function generates and verifies, so the
 manifest is self-consistent by construction; a genuine content change is the only thing that
 moves a hash.
 

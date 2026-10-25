@@ -8,8 +8,7 @@ package keyformat
 // code point, a generation the test's own Decode call did not accept) by
 // calling the unexported marshalRecord directly — the only way to construct
 // such inputs, since Encode itself refuses to build them. Each test asserts
-// the SPECIFIC named sentinel error, not merely "an error occurred", per
-// this repository's red-evidence discipline.
+// the SPECIFIC named sentinel error, not merely "an error occurred".
 
 import (
 	"bytes"

@@ -33,7 +33,7 @@ Revision of the Internet-Draft. Wire-breaking vs draft-01.
   wire-format version (the `Ver` nibble, which stays `0x2`). Because the CertVerify
   context string tracks the crypto generation, it moves to `N-PAMP/3, {server,client}
   CertificateVerify`, changing every CertVerify signature and the downstream transcript
-  points, Finished MACs, and master secret (decision 0014).
+  points, Finished MACs, and master secret.
 - **KEM code point `0x11ed` corrected.** `0x11ed` now denotes **SecP384r1MLKEM1024**
   (secp384r1 + ML-KEM-1024), matching the IANA TLS Supported-Groups registry and
   `RFC 10024` (formerly `draft-ietf-tls-ecdhe-mlkem`, published August 2026); the

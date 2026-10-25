@@ -1,13 +1,11 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! A9 isolation demonstration: `NodeAgent` composed with a real
+//! Isolation demonstration: `NodeAgent` composed with a real
 //! `npamp::session::Session` handshake, run over the in-memory tunnel
 //! (`nz_agent::tunnel::multiplexer_pair`), with concrete inputs producing
 //! concrete, independently-checkable outputs — no mocked cryptography, no
 //! stubbed handshake. This is the crate's own component, invoked in
-//! isolation from the rest of the (not-yet-built) larger nz-agent process,
-//! satisfying A9's "demonstrated working in isolation with a concrete input
-//! -> correct concrete output" bar.
+//! isolation from the rest of the (not-yet-built) larger nz-agent process.
 //!
 //! The exact testable claim — "session keys SHALL be per-workload
 //! (per-SVID), never node-global" — is exercised end to end here: TWO
@@ -111,8 +109,7 @@ fn two_workloads_to_the_same_destination_get_independently_keyed_sessions() {
     // Two DIFFERENT source workloads dialing the SAME destination over
     // (structurally) the same node-to-node tunnel pattern produce two
     // INDEPENDENTLY-DERIVED master secrets. A shared/node-global-key
-    // implementation would make this assertion fail (see RED-EVIDENCE.md
-    // M-agent-1).
+    // implementation would make this assertion fail.
     assert_ne!(
         client_one_session.master_secret(),
         client_two_session.master_secret(),

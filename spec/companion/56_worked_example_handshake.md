@@ -104,7 +104,7 @@ seq 0, empty payload — whose CRC32C is `0d880c25`: **[CORPUS]** (tcId 1/10/20)
 
 Reassembling that header field-by-field and recomputing the Castagnoli CRC over
 octets 0–20 reproduces `0d880c25` exactly; the same anchored CRC oracle is used
-for every derived header below (§12 recipe, check A5).
+for every derived header below (§12 recipe).
 
 ## 3. The four flights at a glance
 

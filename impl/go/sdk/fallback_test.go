@@ -18,7 +18,7 @@ package sdk_test
 // side-by-side plain sdk.Dial call and from the blackhole server's own,
 // independently-specified drop policy.
 //
-// The mutation anchor for the red-evidence ledger is
+// The mutation anchor is
 // TestDialWithFallback_NoCryptoDowngrade: temporarily changing
 // fallback.go's TCP+TLS leg to dial with a stripped-down Config (dropping
 // Identity) — simulating a fallback path that silently

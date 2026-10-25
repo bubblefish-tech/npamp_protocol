@@ -151,7 +151,7 @@ Carriage requirements:
   carried verbatim as BRIDGE_ERROR (NPAMP-BRIDGE §6); this mapping defines no error codes.
 - Because MAF publishes no native method namespace, an implementation MUST NOT invent MAF
   method strings, MAF error codes, or a MAF `content_type`; the `method`, error object,
-  and content type are always the carried protocol's (A3/E4: names are contracts).
+  and content type are always the carried protocol's.
 
 ## 5. SafetyLabel effect classes for mutating operations
 
