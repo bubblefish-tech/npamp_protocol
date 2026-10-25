@@ -2,7 +2,7 @@
 
 package sdk_test
 
-// QUIC-to-TCP/TLS fallback conformance suite (E3.7 / R11). Builds a real
+// QUIC-to-TCP/TLS fallback conformance suite. Builds a real
 // UDP "simulated network path" server whose drop policy reproduces three
 // named, documented QUIC deployment failures — UDP/443 fully blocked, an
 // ECN-blackholed middlebox, and a PMTU black hole — and races

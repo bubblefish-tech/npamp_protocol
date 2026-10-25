@@ -68,7 +68,7 @@ use crate::identity::SpiffeId;
 // ---------------------------------------------------------------------
 
 /// The datapath steering strategy `nz-agent` installs, ordered
-/// fastest -> fallback per EBPF-DATAPATH-DESIGN.md's capability-probed
+/// fastest -> fallback per a capability-probed
 /// ladder. Every variant steers traffic only — the hybrid-PQC handshake and
 /// AES-256-GCM/ChaCha20-Poly1305 record layer run in userspace under EVERY
 /// strategy; this enum never selects a record-layer offload (the design doc
@@ -207,8 +207,8 @@ fn probe_bpffs_mounted() -> bool {
 
 // Kernel-version floors for the three eBPF-backed strategies. SockmapSplice
 // needs `sk_msg` redirect (added ~4.18); CgroupRedirect needs
-// `BPF_CGROUP_INET4_CONNECT` (added ~4.17); TcClsact matches
-// EBPF-DATAPATH-DESIGN.md's own cited floor ("TC-clsact — kernel >=4.20").
+// `BPF_CGROUP_INET4_CONNECT` (added ~4.17); TcClsact needs
+// kernel >=4.20 (TC-clsact).
 const SOCKMAP_KERNEL_FLOOR: (u32, u32, u32) = (4, 18, 0);
 const CGROUP_REDIRECT_KERNEL_FLOOR: (u32, u32, u32) = (4, 17, 0);
 const TC_CLSACT_KERNEL_FLOOR: (u32, u32, u32) = (4, 20, 0);
@@ -578,8 +578,8 @@ impl fmt::Display for NpampDropCode {
     }
 }
 
-/// One drop event, keyed exactly as EBPF-DATAPATH-DESIGN.md's Observability
-/// section specifies: "authenticated peer SPIFFE id + carriage class +
+/// One drop event, keyed by
+/// "authenticated peer SPIFFE id + carriage class +
 /// session/tunnel id".
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DropEvent {
@@ -663,7 +663,7 @@ mod tests {
     fn probe_matches_this_platform_and_select_never_panics() {
         let caps = DatapathCapabilities::probe();
         if !cfg!(target_os = "linux") {
-            assert!(!caps.is_linux, "this build environment is not Linux");
+            assert!(!caps.is_linux, "this build is not Linux");
             assert!(!caps.has_cap_bpf);
             assert!(!caps.bpffs_mounted);
             assert_eq!(caps.kernel_version, None);

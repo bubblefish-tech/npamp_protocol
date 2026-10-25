@@ -42,8 +42,8 @@
 //! by the time `nz-agent` accepts the redirected connection the original
 //! destination is gone from the packet/socket unless something recorded it
 //! at rewrite time. Writing it is therefore a NECESSITY of this rung's own
-//! mechanism (matching EBPF-DATAPATH-DESIGN.md's explicit "original dst
-//! stashed in a BPF map keyed by socket cookie" line), not a substitute for
+//! mechanism (original dst
+//! stashed in a BPF map keyed by socket cookie), not a substitute for
 //! the authorization gate: `EGRESS_ORIG_DST` is written ONLY for a
 //! connection that already matched an authz-installed `EGRESS_WAYPOINT`
 //! entry (see `try_connect4` below — the insert happens strictly after,
@@ -218,8 +218,8 @@ fn try_connect4(ctx: &SockAddrContext) {
         Err(_) => bump_verdict(VERDICT_STEER_FAILED),
     }
 
-    // Break the nz-agent-re-capture loop (Istio SO_MARK pattern,
-    // EBPF-DATAPATH-DESIGN.md): mark the socket so a policy layer watching
+    // Break the nz-agent-re-capture loop (Istio SO_MARK pattern):
+    // mark the socket so a policy layer watching
     // this mark can distinguish nz-agent's own subsequent outbound connect
     // (to the REAL destination) from a workload's original connect.
     let mut mark = NZ_AGENT_REDIRECT_MARK;

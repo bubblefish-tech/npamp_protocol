@@ -3,7 +3,7 @@ name = "nz-waypoint-core"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Pure, target-agnostic core of the N-PAMP R12/E2.7 L7 waypoint: N-AALP effect-class/audience authorization + R10 carriage-class dispatch. No I/O, no async runtime, no OS dependency -- compiles for wasm32-unknown-unknown (the nz-waypoint-wasm Envoy proxy-wasm hosting shape) exactly as it compiles for the native host (nz-agent's own waypoint module, which re-exports this crate rather than reimplementing it, so the two hosting shapes never drift apart on the authorization decision)."
+description = "Pure, target-agnostic core of the N-PAMP L7 waypoint: N-AALP effect-class/audience authorization + carriage-class dispatch. No I/O, no async runtime, no OS dependency -- compiles for wasm32-unknown-unknown (the nz-waypoint-wasm Envoy proxy-wasm hosting shape) exactly as it compiles for the native host (nz-agent's own waypoint module, which re-exports this crate rather than reimplementing it, so the two hosting shapes never drift apart on the authorization decision)."
 
 # INDEPENDENT crate, path-dependency only. Builds and tests standalone:
 # `cd impl/rust/nz-waypoint-core && cargo build && cargo test`. Extracted

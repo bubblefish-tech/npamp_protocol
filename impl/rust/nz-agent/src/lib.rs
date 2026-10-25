@@ -12,28 +12,28 @@
 //! `npamp` crate's [`npamp::session::Session`] — the crate's own KAT-pinned,
 //! red-evidenced handshake + AEAD record layer — for every cryptographic
 //! operation. **This crate contains no handshake code, no KEM code, and no AEAD
-//! code of its own**; it owns only the node-local plumbing the design doc scopes
-//! to R12: traffic capture, node-to-node tunnel multiplexing, per-workload
+//! code of its own**; it owns only the node-local plumbing:
+//! traffic capture, node-to-node tunnel multiplexing, per-workload
 //! (per-SVID) identity binding and session-key isolation, node-local L4
 //! authorization, and an optional L7 waypoint's carriage-translation /
 //! authorization dispatch.
 //!
 //! # Module map
 //!
-//! | Module | Task | Design-doc component |
-//! |---|---|---|
-//! | [`tunnel`] | E2.5 | "Node-to-node tunnel" — the HBONE-analogue CONNECT mux |
-//! | [`capture`] | E2.5 | "Captures workload traffic via eBPF redirect (iptables fallback)" |
-//! | [`identity`] | E2.6 | "Identity via SPIFFE/SPIRE" (the [`DelegatedIdentitySource`](identity::DelegatedIdentitySource) trait + the static test double) |
-//! | [`spire_client`] | E2.6 | The real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS client implementing that trait |
-//! | [`authz`] | E2.6 | "L4 authorization (which workload may reach which) enforced here, at the node" |
-//! | [`waypoint`] | E2.7 | Component 2 — the optional per-namespace L7 (re-exports `nz-waypoint-core`, shared with the `nz-waypoint-wasm` Envoy proxy-wasm hosting shape) |
-//! | [`gateway_backend`] | E2.19/E2.20 (R14) | The `appProtocol: npamp` backend connection-type prototype + its fail-closed downgrade property + the R12/R14 waypoint authorization composition (E2.7 reconciliation) |
-//! | [`agent`] | E2.5/E2.6 | `NodeAgent` — composes the above + `npamp::session::Session` into the per-workload dial/accept path |
-//! | [`datapath`] | R13-A/R13-B-cont | eBPF datapath selector ladder + fast-path/redirect authorization gates (Linux) |
-//! | [`telemetry`] | E2.13 (R13.5, exporter half) | OTel + Prometheus export of `datapath::DropEvent` via the `TelemetrySink` trait |
-//! | [`wfp`] (Windows only) | R13-C | Windows Filtering Platform datapath rung — the Windows analog of `datapath`'s ladder |
-//! | [`wfp_wire`] | E2.14 (userspace floor) | The kernel-callout &lt;-&gt; userspace wire codec for the (not yet built, signed-driver-gated) WFP redirect-layer callout driver; pure `std`, not Windows-gated |
+//! | Module | Role |
+//! |---|---|
+//! | [`tunnel`] | "Node-to-node tunnel" — the HBONE-analogue CONNECT mux |
+//! | [`capture`] | "Captures workload traffic via eBPF redirect (iptables fallback)" |
+//! | [`identity`] | "Identity via SPIFFE/SPIRE" (the [`DelegatedIdentitySource`](identity::DelegatedIdentitySource) trait + the static test double) |
+//! | [`spire_client`] | The real SPIRE Workload API (DelegatedIdentity) gRPC-over-UDS client implementing that trait |
+//! | [`authz`] | "L4 authorization (which workload may reach which) enforced here, at the node" |
+//! | [`waypoint`] | Component 2 — the optional per-namespace L7 (re-exports `nz-waypoint-core`, shared with the `nz-waypoint-wasm` Envoy proxy-wasm hosting shape) |
+//! | [`gateway_backend`] | The `appProtocol: npamp` backend connection-type prototype + its fail-closed downgrade property + the waypoint authorization composition |
+//! | [`agent`] | `NodeAgent` — composes the above + `npamp::session::Session` into the per-workload dial/accept path |
+//! | [`datapath`] | eBPF datapath selector ladder + fast-path/redirect authorization gates (Linux) |
+//! | [`telemetry`] | OTel + Prometheus export of `datapath::DropEvent` via the `TelemetrySink` trait |
+//! | [`wfp`] (Windows only) | Windows Filtering Platform datapath rung — the Windows analog of `datapath`'s ladder |
+//! | [`wfp_wire`] | The kernel-callout &lt;-&gt; userspace wire codec for the (not yet built, signed-driver-gated) WFP redirect-layer callout driver; pure `std`, not Windows-gated |
 //!
 //! # The one property every other property depends on
 //!
@@ -45,7 +45,7 @@
 //! logical stream of the node-to-node tunnel (see [`tunnel::MuxStream`]). A
 //! compromise of the node agent's tunnel-transport layer does not, by itself,
 //! recover any workload's traffic key — see `THREAT-MODEL.md` for the full
-//! blast-radius analysis (E2.8).
+//! blast-radius analysis.
 //!
 //! # What composes with what (no frozen-wire touch)
 //!
@@ -119,7 +119,7 @@
 //!   `DropEvent` — that bridge is Linux/aya-build-gated (same reasoning as
 //!   `capture`'s eBPF-execution gap) and would call the SAME
 //!   `TelemetrySink::export` seam this crate now ships, not a new one.
-//! - **Gateway API / GAMMA control-plane wiring (R12 AC4)** — this build ships
+//! - **Gateway API / GAMMA control-plane wiring** — this build ships
 //!   only the DATA-plane agent (identity/authz/tunnel/waypoint-dispatch); no
 //!   Kubernetes controller reads Gateway API `HTTPRoute`/`Backend`/GAMMA-Mesh
 //!   CRDs and configures `nz-agent`/`AuthzTable`/`PeerDirectory` from them. The
@@ -138,7 +138,7 @@ pub mod spire_client;
 pub mod telemetry;
 pub mod tunnel;
 pub mod waypoint;
-/// The Windows Filtering Platform (WFP) datapath rung (R13-C) — the Windows
+/// The Windows Filtering Platform (WFP) datapath rung — the Windows
 /// analog of [`datapath`]'s eBPF ladder; Windows-only by construction (see
 /// `wfp`'s own module docs for why this is a sibling module rather than a
 /// new `datapath::DatapathStrategy` variant).

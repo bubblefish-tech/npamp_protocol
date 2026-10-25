@@ -9,7 +9,7 @@
 //! satisfying A9's "demonstrated working in isolation with a concrete input
 //! -> correct concrete output" bar.
 //!
-//! R12 AC2's exact testable claim — "session keys SHALL be per-workload
+//! The exact testable claim — "session keys SHALL be per-workload
 //! (per-SVID), never node-global" — is exercised end to end here: TWO
 //! separate workloads on a simulated node A each originate a REAL N-PAMP
 //! session to the SAME destination workload on node B, over the SAME
@@ -31,7 +31,7 @@ fn spiffe(path: &str) -> SpiffeId {
 /// node A each dial the SAME destination workload (pid 200) on node B, over
 /// one shared in-memory tunnel. Both handshakes complete (concrete,
 /// independently-verifiable output: two live `WorkloadSession`s whose
-/// `send`/`recv` round-trip real bytes end to end), and R12 AC2's per-
+/// `send`/`recv` round-trip real bytes end to end), and the per-
 /// workload-key claim is checked directly on the two resulting
 /// `master_secret()` values.
 #[test]
@@ -107,7 +107,7 @@ fn two_workloads_to_the_same_destination_get_independently_keyed_sessions() {
     });
     assert_eq!(backend_session_2.peer, client_two_id, "node B must resolve the peer to client-two's SPIFFE id");
 
-    // --- R12 AC2: session keys are per-workload, never node-global. ---
+    // --- Session keys are per-workload, never node-global. ---
     // Two DIFFERENT source workloads dialing the SAME destination over
     // (structurally) the same node-to-node tunnel pattern produce two
     // INDEPENDENTLY-DERIVED master secrets. A shared/node-global-key

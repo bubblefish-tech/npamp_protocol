@@ -407,7 +407,7 @@ mod tests {
         assert_ne!(
             a.signing_key().verifying_key().to_bytes(),
             b.signing_key().verifying_key().to_bytes(),
-            "R12 AC2: session keys MUST be per-workload (per-SVID), never node-global"
+            "session keys MUST be per-workload (per-SVID), never node-global"
         );
     }
 

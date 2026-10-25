@@ -53,7 +53,7 @@
 //! so there is no code path in this module that can produce a
 //! [`WfpFilterSpec`] for a denied, unknown, or self-asserted pair.
 //!
-//! # What this module does NOT do (tracked gap: `WFP-KERNEL-CALLOUT-GAP`)
+//! # What this module does NOT do (tracked gap)
 //!
 //! [`WfpEngineInstaller`] is the seam a live deployment supplies to actually
 //! open a `FwpmEngineOpen0` session and call `FwpmFilterAdd0` against the
@@ -257,7 +257,7 @@ mod ffi {
     // ABI representation does not depend on its declared Rust pointee type,
     // so this is representationally correct, but this build never
     // constructs or parses those structures (that is the same
-    // `WFP-KERNEL-CALLOUT-GAP` tracked scope as `WfpEngineInstaller`'s live
+    // tracked scope as `WfpEngineInstaller`'s live
     // `FwpmFilterAdd0` session — see the module docs above and
     // the module's limitations note about not
     // transcribing full struct/GUID layouts this build never exercises).
@@ -266,7 +266,7 @@ mod ffi {
     // `FwpmEngineOpen0`/`FwpmEngineClose0` ARE invoked for real (see
     // `probe_engine_open_succeeds` above). The enumeration-family functions
     // below are declared but genuinely never called by this build — the
-    // `WFP-KERNEL-CALLOUT-GAP` tracked scope (constructing a populated
+    // tracked scope (constructing a populated
     // `FWPM_FILTER_ENUM_TEMPLATE0`/`FWPM_CALLOUT_ENUM_TEMPLATE0` and parsing
     // the returned entry arrays is future work behind [`WfpConflictScanner`],
     // exercised only through [`RecordingWfpConflictScanner`] in this build)
@@ -539,7 +539,7 @@ impl WfpFilterBuilder {
 }
 
 // ---------------------------------------------------------------------
-// The submission seam — tracked gap (WFP-KERNEL-CALLOUT-GAP for the
+// The submission seam — tracked gap (the kernel callout for the
 // redirect layers; a live FwpmEngineOpen0/FwpmFilterAdd0 session for even
 // this rung's PERMIT-only filters)
 // ---------------------------------------------------------------------
@@ -660,7 +660,7 @@ impl WfpConflictReport {
 /// and marshalling those templates, and parsing the returned
 /// `FWPM_FILTER0`/`FWPM_CALLOUT0` arrays, is the same class of tracked gap
 /// as [`WfpEngineInstaller`]'s live `FwpmFilterAdd0` session — see the
-/// module docs' `WFP-KERNEL-CALLOUT-GAP` note).
+/// module docs' tracked-gap note).
 pub trait WfpConflictScanner {
     fn scan(&mut self, layer: WfpAleLayer) -> Result<WfpConflictReport, WfpError>;
 }

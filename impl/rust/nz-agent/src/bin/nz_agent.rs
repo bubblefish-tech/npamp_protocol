@@ -32,7 +32,7 @@
 //! wiring ([`nz_agent::capture`]) is demonstrated separately
 //! by `--print-capture-rules`, which prints the iptables/TPROXY rule set
 //! [`nz_agent::capture::IptablesCapture::rules_for`] constructs for a given
-//! scope, WITHOUT executing it (this build environment has no
+//! scope, WITHOUT executing it (this build has no
 //! `CAP_NET_ADMIN`; see the crate's module docs).
 
 use std::io::Write as _;

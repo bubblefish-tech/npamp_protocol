@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestSelectAEADSeqDerived is the R5.2 per-frame AEAD selector KAT: it freezes the
+// TestSelectAEADSeqDerived is the per-frame AEAD selector KAT: it freezes the
 // deterministic, sequence-number-derived selection (no per-frame wire flag). With
 // one suite every frame uses the primary; with two suites frames alternate by
 // sequence parity, primary first. Mutation-surviving: a selector that ignored the

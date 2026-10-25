@@ -3,7 +3,7 @@ name = "nz-agent"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "N-PAMP per-node/ambient PQC data-plane agent (R12, tasks E2.5-E2.8): composes the npamp crate's session module — does not reimplement the handshake or record layer."
+description = "N-PAMP per-node/ambient PQC data-plane agent: composes the npamp crate's session module — does not reimplement the handshake or record layer."
 
 # INDEPENDENT crate, path-dependency only: never edits ../ (the npamp reference
 # library / Part-1 core). Builds and tests standalone: `cd impl/rust/nz-agent &&

@@ -30,7 +30,7 @@
 //! but because this file contains no map-write capability at all. The
 //! `sock_ops` program exists to satisfy the ladder's own attach-point (a
 //! future revision MAY use it for connection-state visibility/telemetry —
-//! see EBPF-DATAPATH-DESIGN.md's Observability section — but that is a
+//! but that is a
 //! tracked, NOT-YET-BUILT extension, never a silent scope change here).
 #![no_std]
 #![no_main]

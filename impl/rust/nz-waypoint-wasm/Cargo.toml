@@ -3,7 +3,7 @@ name = "nz-waypoint-wasm"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "N-PAMP R12/E2.7 optional L7 waypoint -- the Envoy proxy-wasm N-PAMP filter hosting shape. Composes nz-waypoint-core's EXISTING classify()/authorize()/extract_triple() logic (via the official proxy-wasm-rust-sdk) -- does not reimplement any of it. See nz-agent/src/waypoint.rs for the sibling native hosting shape, which shares this exact same core."
+description = "N-PAMP optional L7 waypoint -- the Envoy proxy-wasm N-PAMP filter hosting shape. Composes nz-waypoint-core's EXISTING classify()/authorize()/extract_triple() logic (via the official proxy-wasm-rust-sdk) -- does not reimplement any of it. See nz-agent/src/waypoint.rs for the sibling native hosting shape, which shares this exact same core."
 
 # INDEPENDENT crate, path-dependency only. Builds standalone for the
 # wasm32-unknown-unknown target: `cd impl/rust/nz-waypoint-wasm && cargo

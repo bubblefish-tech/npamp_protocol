@@ -2,7 +2,7 @@
 
 //! `NodeAgent` — composes [`crate::identity`], [`crate::authz`], and
 //! [`crate::tunnel`] with `npamp::session::Session` into the per-workload
-//! dial/accept path (E2.5/E2.6, R12 AC1/AC2). This module contains no
+//! dial/accept path. This module contains no
 //! handshake, KEM, or AEAD code: every cryptographic operation is a direct
 //! call into `npamp::session::Session::dial`/`accept`/`send`/`recv`.
 //!

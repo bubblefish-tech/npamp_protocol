@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! The node-to-node CONNECT tunnel (E2.5) — the HBONE-analogue: one underlying
+//! The node-to-node CONNECT tunnel — the HBONE-analogue: one underlying
 //! transport between a pair of `nz-agent`s multiplexes many workloads' logical
 //! streams, so the tunnel-transport setup cost is amortized per node-pair while
 //! every workload still gets its own [`MuxStream`] to run an independent

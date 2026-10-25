@@ -290,7 +290,7 @@ func TestParseFlagsNoModuleGraphAndPURL(t *testing.T) {
 		t.Fatalf("cfg.purl = %q, want pkg:npm/npamp@0.1.0", cfg.purl)
 	}
 
-	// Default (flag omitted) must be false/empty — E5.4's Go-artifact release-attest.yml
+	// Default (flag omitted) must be false/empty — the Go-artifact release-attest.yml
 	// path (which never passes -no-module-graph or -purl) must keep enumerating the real
 	// module graph exactly as it did before this change (no behavior change for the
 	// existing production caller).

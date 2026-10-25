@@ -3,7 +3,7 @@ name = "nz-gwapi-controller"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "N-PAMP Gateway-API/GAMMA control-plane wiring (E2.7c, R12 AC4): reads standard Kubernetes Gateway-API HTTPRoute + core Service objects and configures nz-agent's --allow/--register-peer/AuthzHook seams from them, instead of static CLI flags."
+description = "N-PAMP Gateway-API/GAMMA control-plane wiring: reads standard Kubernetes Gateway-API HTTPRoute + core Service objects and configures nz-agent's --allow/--register-peer/AuthzHook seams from them, instead of static CLI flags."
 
 # INDEPENDENT crate, path-dependency only (matches every other impl/rust/nz-*
 # crate's convention): never edits ../nz-agent or ../nz-waypoint-core. Builds

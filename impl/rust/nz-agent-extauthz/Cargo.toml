@@ -3,7 +3,7 @@ name = "nz-agent-extauthz"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "N-PAMP ext_authz gRPC service (R14-Unit-A): lets an agent gateway (agentgateway / any Envoy-ext_authz-v3-compatible proxy) delegate per-request authorization to nz-agent's fail-closed waypoint authorization core. Composes nz-agent::waypoint::authorize — does not reimplement the authorization decision."
+description = "N-PAMP ext_authz gRPC service: lets an agent gateway (agentgateway / any Envoy-ext_authz-v3-compatible proxy) delegate per-request authorization to nz-agent's fail-closed waypoint authorization core. Composes nz-agent::waypoint::authorize — does not reimplement the authorization decision."
 
 # INDEPENDENT crate, path-dependency only: never edits ../nz-agent or ../
 # (the npamp reference library / Part-1 core). Builds and tests standalone:
