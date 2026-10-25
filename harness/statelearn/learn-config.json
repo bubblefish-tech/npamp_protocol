@@ -19,14 +19,14 @@
       "transitions": 70,
       "reset_count": 2554,
       "membership_query_count": 17945,
-      "wallclock_ms": 511330
+      "wallclock_ms": 509851
     },
     "responder": {
       "states": 5,
       "transitions": 70,
       "reset_count": 2555,
       "membership_query_count": 17935,
-      "wallclock_ms": 365863
+      "wallclock_ms": 363451
     }
   }
 }
