@@ -11,8 +11,8 @@
 // gRPC, WebSocket, stdio-local-MCP, raw TCP). This package carries all SIX:
 //
 //   - HTTP/1.1+2 — NPAMP-CC-HTTP (spec/companion/21_carriage_http.md; carriage_http.go/
-//     proxy.go). Also the literal e2e acceptance criterion (AC4: "an unmodified HTTP
-//     client reaches a remote service through two sidecars over N-PAMP").
+//     proxy.go). Also the literal end-to-end acceptance criterion: "an unmodified HTTP
+//     client reaches a remote service through two sidecars over N-PAMP".
 //   - Streamable-HTTP+JSON-RPC for MCP/A2A — NPAMP-CC-JSONRPC
 //     (spec/companion/20_carriage_jsonrpc.md; carriage_jsonrpc.go/jsonrpc.go).
 //   - stdio-local-MCP — the SAME NPAMP-CC-JSONRPC codec with a local stdio transport
@@ -108,8 +108,8 @@
 //     leg in this build.
 //   - HTTP streaming responses (§7, BRIDGE_STREAM_DATA/BRIDGE_STREAM_END) and the
 //     §5 metadata-passthrough block: this build carries only the non-streamed
-//     request/response path (object kinds 1 and 2), which is what AC4's e2e
-//     criterion exercises.
+//     request/response path (object kinds 1 and 2), which is what the end-to-end
+//     acceptance criterion exercises.
 //   - NPAMP-CC-STREAM real resumption (§6.1's producer-retains-state path) and
 //     the §8 full-duplex two-correlated-streams model: this build's gRPC/
 //     WebSocket producer is stateless (always NotResumable) and models each

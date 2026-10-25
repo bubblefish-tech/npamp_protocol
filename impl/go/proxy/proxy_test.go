@@ -123,7 +123,7 @@ func TestHandleInboundRequest_NoBackend_AnswersMethodUnsupported(t *testing.T) {
 }
 
 // TestServeHTTP_NoCaching_EachRequestReachesBackend is the doc.go non-goal
-// boundary (AC5) MUTATION ANCHOR: two identical GETs each produce a fresh
+// boundary MUTATION ANCHOR: two identical GETs each produce a fresh
 // backend hit — a Proxy that introduced request/response caching would answer
 // the second request without incrementing hitCount, and this test would flip
 // from PASS to FAIL.

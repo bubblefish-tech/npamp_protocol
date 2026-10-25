@@ -94,7 +94,7 @@
     "impl/go/proxy/carriage_opaque.go": "f5e514a64be426e31422ac6ef314ebc57e7a7840c86e6684ff067678091332cc",
     "impl/go/proxy/carriage_stream.go": "135be838bf59a387340a2c8b97f0ddddec7f417317d8c782f3cfd8656d8ee594",
     "impl/go/proxy/carriage_websocket.go": "be00b3286b052fa56606f6ed17bad32154d7279247befd861675152e25ae38d2",
-    "impl/go/proxy/doc.go": "baded47299efbdd57e777ffeafdd49eb2d4fd4e792a1dd834cef815cb7ad4a5c",
+    "impl/go/proxy/doc.go": "31bfe062b1683a7d7c613902473d75da0d34460d5b10dd0a526ed52da284c12d",
     "impl/go/proxy/grpc.go": "7e6b32e0495c0d7951279d6db0a8b7da72b20054a7007ebab6f27743b87d14f4",
     "impl/go/proxy/jsonrpc.go": "c0f89cd00cc3e957b003d5d993b2ae09ee93c34d0fa6e43ca0843c9378ecaf16",
     "impl/go/proxy/opaque.go": "a7e506595fd25848e23d2e8e5f5ec780bdad9a4ae8a688d0417c92f3cd62c469",
@@ -146,7 +146,7 @@
     "harness/statelearn/GoProcessSUL.java": "1a950ce91d5aaf3e7b0e6070a81aa9d47aefa7796111ddc2084e9be7da39cd10",
     "harness/statelearn/LearnedModel.java": "0cd56f665eeee1abac1e85d6227b0ad27f42576e822dcd4b2174aa0a5aef8bb3",
     "harness/statelearn/NpampStateLearner.java": "93733ca435951b551f7fc814746d40f7e2fa555f142816380008dbc03e968e7e",
-    "harness/statelearn/learn-config.json": "27352450a5ac09305f6dffe3a857fbd322a5e35548ad5864b511625ef6eff474"
+    "harness/statelearn/learn-config.json": "ce9299e24b8e680a03f827b80cd4c765ed56b34c9fd4b3e32af869d8d669d860"
   },
   "outputs": {
     "harness/statelearn/learned-initiator.json": "7b47eacd607787a7d27c69d6a1c9e30e7545c7405c308656c9ae0990d7bab133",
