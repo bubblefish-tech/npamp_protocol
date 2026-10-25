@@ -49,8 +49,8 @@
 //! entry (see `try_connect4` below — the insert happens strictly after,
 //! and conditioned on, a successful waypoint lookup), nothing ever READS
 //! `EGRESS_ORIG_DST` to authorize anything, and an unmatched connection
-//! never gets an entry at all. Flagged per this build's own instructions as
-//! the design question this sub-unit's single kernel-side map write raises.
+//! never gets an entry at all. Flagged as the open question that this sub-unit's
+//! single kernel-side map write raises.
 //!
 //! # IPv6 scope
 //!

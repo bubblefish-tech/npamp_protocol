@@ -5,7 +5,7 @@
 //! effect-class/audience authorization
 //! ([`nz_waypoint_core::authorize`]/[`nz_waypoint_core::extract::extract_triple`]),
 //! decoupled from the proxy-wasm ABI so it is unit-testable on the host
-//! target without a live Envoy/wasm runtime (A9). Composes
+//! target without a live Envoy/wasm runtime. Composes
 //! `nz-waypoint-core`'s EXISTING functions — does not reimplement any of
 //! them; the only NEW logic in this module is (a) the two-layer denial
 //! shape ([`FilterDenied`]: which layer refused) and (b) the

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 
-//! P2.5 Option B1 fixture generator: constructs a resolved
+//! Shared-JSON fixture generator: constructs a resolved
 //! [`nz_agent::waypoint::ResolvedWaypointGrant`] via
 //! [`nz_agent::waypoint::resolve_grant_for_export`] (the SAME function a real nz-agent
 //! deployment would call, over the SAME [`nz_agent::waypoint::AuthzHook`] seam), serializes

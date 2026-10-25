@@ -13,7 +13,7 @@
 //! <https://gateway-api.sigs.k8s.io/api-types/httproute/> (`spec.rules[].
 //! backendRefs[]`: `name`, optional `namespace`, `kind`, `group`, `port`,
 //! `weight`). This module parses these as plain `serde::Deserialize`
-//! structs (typed fields, not raw text -- A11) from the JSON body of a
+//! structs (typed fields, not raw text) from the JSON body of a
 //! `kube::core::DynamicObject` fetched from a real Kubernetes API.
 
 use serde::Deserialize;

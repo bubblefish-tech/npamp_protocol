@@ -1,8 +1,8 @@
 // Copyright (c) 2026 BubbleFish Technologies, Inc. Apache-2.0.
 //
 // A hand-vendored MINIMAL SUBSET of `envoy.service.auth.v3` (the Envoy
-// External Authorization v3 gRPC service), grounded this session against the
-// authoritative source, NOT reconstructed from memory (Section B1/E8):
+// External Authorization v3 gRPC service), grounded against the
+// authoritative source, NOT reconstructed from memory:
 //
 //   - Service + CheckRequest/CheckResponse shape:
 //     github.com/envoyproxy/envoy, `api/envoy/service/auth/v3/external_auth.proto`
@@ -26,7 +26,7 @@
 //
 // agentgateway (github.com/agentgateway/agentgateway) is API-compatible with
 // this exact contract for its general (HTTP-request-level) ext_authz policy
-// — re-verified this session against agentgateway.dev/docs/standalone/latest/
+// — re-verified against agentgateway.dev/docs/standalone/latest/
 // configuration/security/external-authz/ and
 // agentgateway.dev/docs/kubernetes/main/security/extauth/byo-ext-auth-service/
 // (both fetched 2026-08-31), NOT merely inherited from a prior agent's claim.
@@ -93,7 +93,7 @@ message HttpRequest {
 // the real message, repeated google.protobuf.Any) is omitted — this
 // service never sets it.
 message RpcStatus {
-  // A google.rpc.Code value (verified this session against
+  // A google.rpc.Code value (verified against
   // `google/rpc/code.proto`): OK = 0, PERMISSION_DENIED = 7,
   // UNAUTHENTICATED = 16. code==0 means ALLOW; any non-zero code means
   // DENY. This service emits only 0 (OK) or 7 (PERMISSION_DENIED).

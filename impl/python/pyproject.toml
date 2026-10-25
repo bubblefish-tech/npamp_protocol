@@ -9,7 +9,7 @@ dependencies = ["cryptography>=42"]
 # Optional: the `npamp.session` module (the live handshake + record-layer
 # adoption API) needs a real X25519MLKEM768 hybrid KEM. `cryptography`
 # predates ML-KEM (see QUICKSTART.md), so `session` pulls in `kyber-py`, a
-# pure-Python FIPS-203 ML-KEM implementation -- verified this session against
+# pure-Python FIPS-203 ML-KEM implementation -- verified against
 # the frozen handshake-flow-kat.json vector (deterministic keygen from the
 # pinned seed reproduces the pinned encapsulation key; decapsulating the
 # pinned ciphertext recovers the pinned shared secret exactly). The base

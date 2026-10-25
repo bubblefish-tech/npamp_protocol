@@ -88,8 +88,8 @@ impl fmt::Display for EffectClass {
 }
 
 /// Serializes as the SAME lowercase snake_case token [`fmt::Display`] emits (`"read_only"`,
-/// `"destructive"`, ...) — not the underlying discriminant integer. This is the P2.5
-/// Option B1 wire representation: it matches
+/// `"destructive"`, ...) — not the underlying discriminant integer. This is the shared-JSON
+/// wire representation: it matches
 /// `impl/go/ecosystem/npamp-gnap/gnapexport.go`'s `EffectClass.String()` output exactly, so
 /// the SAME token set both languages already use for the OUTPUT `WaypointAssertionPayload`
 /// (`effect`/`max_grant` fields) is reused for the INPUT transport, rather than inventing a
@@ -181,9 +181,8 @@ fn resolved_max_grant<H: AuthzHook>(hook: &H, signer_id: &str) -> EffectClass {
 }
 
 // ---------------------------------------------------------------------------
-// P2.5 Option B1: the shared-JSON cross-language transport (maintainer-approved
-// 2026-09-02) — see impl/go/ecosystem/npamp-gnap/gnapexport.go's file header for the two
-// options this closes the gap between. This crate serializes the resolved
+// The shared-JSON cross-language transport — see impl/go/ecosystem/npamp-gnap/gnapexport.go's
+// file header. This crate serializes the resolved
 // (signer_id, consuming_authority, max_grant) triple as JSON over an existing
 // process/IPC/admin-API boundary; the Go side independently RE-CHECKS it
 // (ExportWaypointEvidence never trusts a caller's own pass/fail verdict) rather than
@@ -210,7 +209,7 @@ pub struct ResolvedWaypointGrant {
 }
 
 impl ResolvedWaypointGrant {
-    /// The Option B1 wire encoding: `serde_json`'s default (compact) object serialization
+    /// The shared-JSON wire encoding: `serde_json`'s default (compact) object serialization
     /// of this struct's three fields, in declaration order. Not pretty-printed — the Go
     /// side decodes with `encoding/json`, which does not care about whitespace, and a
     /// compact encoding is what the fixture generator (`nz-agent`'s `src/bin/
@@ -221,7 +220,7 @@ impl ResolvedWaypointGrant {
 }
 
 /// Resolves `signer_id`'s grant against `hook` into the wire-serializable
-/// [`ResolvedWaypointGrant`] Option B1 sends to Go — using the SAME unrecognized-signer
+/// [`ResolvedWaypointGrant`] the shared-JSON transport sends to Go — using the SAME unrecognized-signer
 /// default ([`resolved_max_grant`]) [`authorize`] itself uses, so a grant this function
 /// exports always matches what a LOCAL call to `authorize` for the same `(signer_id,
 /// hook.consuming_authority())` pair would actually allow.
@@ -401,9 +400,9 @@ mod tests {
         assert_eq!(CarriageClass::Opaque.to_string(), "NPAMP-CC-OPAQUE");
     }
 
-    // ---- P2.5 Option B1: the shared-JSON wire contract -----------------------------------
+    // ---- the shared-JSON wire contract -----------------------------------
 
-    /// Pins the EXACT Option B1 wire shape both languages must agree on: field names and
+    /// Pins the EXACT shared-JSON wire shape both languages must agree on: field names and
     /// the `max_grant` string token. If a future refactor renames a field, or switches
     /// `max_grant` back to an integer discriminant, this test catches it — a name/shape
     /// drift here would silently break `gnapexport.go`'s `DecodeWaypointGrant`, which

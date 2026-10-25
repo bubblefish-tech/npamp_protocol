@@ -11,7 +11,7 @@
 //! untested."* This crate is that binding.
 //!
 //! # What this crate reads (verified against the primary source, not from
-//! memory -- E8)
+//! memory)
 //!
 //! `HTTPRoute` (`gateway.networking.k8s.io/v1`) is the ONLY Gateway-API CRD
 //! this crate watches. Per <https://gateway-api.sigs.k8s.io/docs/mesh/mesh-overview/>

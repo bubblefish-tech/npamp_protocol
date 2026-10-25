@@ -39,7 +39,7 @@ if command -v javac >/dev/null && command -v java >/dev/null; then
       "$IMPL/java/src/test/java/sh/bubblefish/npamp/KatAesGcmWycheproof.java" 2>/dev/null; then
     o="$(java -cp "$JT" sh.bubblefish.npamp.KatAesGcmWycheproof "$TSV" 2>/dev/null)"; chk java "$o" $?
   else echo "FAIL  java (compile)"; fail=1; fi
-  rm -rf "$JT"
+  # $JT is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  java"; fi
 
 if command -v dotnet >/dev/null && dotnet --list-sdks 2>/dev/null | grep -q .; then
@@ -59,7 +59,7 @@ if command -v dotnet >/dev/null && dotnet --list-sdks 2>/dev/null | grep -q .; t
 CSPROJ
   ( cd "$CT" && dotnet build -c Release -v q --nologo >/dev/null 2>&1 )
   o="$(dotnet "$CT/bin/Release/net8.0/npamp-kat.dll" "$TSV" 2>/dev/null)"; chk csharp "$o" $?
-  rm -rf "$CT"
+  # $CT is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  csharp (no .NET SDK; build via csharp/build-local.ps1)"; fi
 
 if command -v ruby >/dev/null; then
@@ -78,7 +78,7 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
     STDLIB="$(dirname "$(command -v kotlinc)")/../lib/kotlin-stdlib.jar"
     o="$(java -cp "$(kpath "$KT/out")$KSEP$(kpath "$STDLIB")" sh.bubblefish.npamp.KatAesGcm "$(kpath "$TSV")" 2>/dev/null)"; chk kotlin "$o" $?
   else echo "FAIL  kotlin (compile)"; fail=1; fi
-  rm -rf "$KT"
+  # $KT is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  kotlin"; fi
 
 # swift: native on Linux/macOS, else via WSL Ubuntu (Windows host). Args positional.

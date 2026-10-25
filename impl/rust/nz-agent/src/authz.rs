@@ -27,8 +27,8 @@ pub enum Decision {
 }
 
 /// Why a pair was denied — always populated on [`Decision::Deny`] so a caller
-/// can log a specific, auditable reason rather than a bare "denied" (D3:
-/// silent enforcement failures are a defect to investigate, not accept).
+/// can log a specific, auditable reason rather than a bare "denied" (silent
+/// enforcement failures are a defect to investigate, not accept).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DenyReason {
     NoEntryForPair,

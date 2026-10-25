@@ -8,7 +8,7 @@ independent grader: for each op-group every vector is decoded and
   - result "invalid"               MUST raise a decode error (MUST-reject vectors).
 
 The corpus is authored independently of this implementation (the Go reference emits
-it), so a passing run is non-circular (F3). Run directly (PYTHONPATH=impl/python) or
+it), so a passing run is non-circular. Run directly (PYTHONPATH=impl/python) or
 via pytest.
 """
 import os

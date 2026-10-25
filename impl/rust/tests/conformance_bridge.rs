@@ -3,7 +3,7 @@
 //!
 //! This test grades `npamp::bridge` against the SHARED conformance corpus — the same
 //! `test-vectors/v1/conformance-corpus.json` the Go reference and the other SDKs grade
-//! against. The corpus is the independent authority (an F3 non-circular oracle,
+//! against. The corpus is the independent authority (an non-circular oracle,
 //! `test-vectors/gen/bridge_oracle.py`); it is embedded verbatim at compile time and is
 //! neither weakened nor special-cased here.
 //!

@@ -32,7 +32,7 @@
 //! [`WireLayer`] models the REDIRECT layers specifically
 //! (`FWPM_LAYER_ALE_CONNECT_REDIRECT_V4`/`_V6`,
 //! `FWPM_LAYER_ALE_BIND_REDIRECT_V4`/`_V6`) — the layer family
-//! the WFP design grounding §2/§3 identifies as requiring a signed
+//! that requires a signed
 //! kernel-mode callout driver (`classifyFn`, `FwpsCalloutRegister1`), NOT
 //! the ALE AUTHORIZE layers [`crate::wfp::WfpAleLayer`] already models: the
 //! authorize layers need no kernel callout at all (a user-mode

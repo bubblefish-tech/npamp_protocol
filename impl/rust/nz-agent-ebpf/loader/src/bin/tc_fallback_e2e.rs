@@ -18,7 +18,7 @@
 // packet's IP/TCP header IN PLACE at the TC-ingress layer, downstream of
 // where the CLIENT's own connecting socket already recorded its expected
 // peer (`dest`, the ORIGINAL destination) at `connect()` time. Reading
-// `ebpf/src/tc_fallback.rs`'s own source (this session) confirms it rewrites
+// `ebpf/src/tc_fallback.rs`'s own source confirms it rewrites
 // ONLY `IP_DST_OFFSET`/`TCP_DST_PORT_OFFSET` — there is no reverse (SNAT)
 // rewrite of the WAYPOINT's reply traffic back to look like it came from
 // `dest`, and no conntrack integration. So the client's own `SYN_SENT`
@@ -133,7 +133,7 @@ fn raw_connect_from(src: SocketAddrV4, dst: SocketAddrV4) -> std::io::Result<std
 
 /// Pure parse of `/proc/net/tcp`-shaped text: returns the raw hex state code
 /// of the row whose LOCAL port equals `local_port`. Format grounded against
-/// this host's own `/proc/net/tcp` output, read directly this session:
+/// this host's own `/proc/net/tcp` output, read directly:
 /// `LOCAL_IP_HEX:PORT_HEX REMOTE_IP_HEX:PORT_HEX STATE_HEX ...`, port printed
 /// as a plain big-endian 4-hex-digit value (e.g. a real bound port 34567 =
 /// 0x8707 appeared as exactly `:8707`). Separated from the file read so it is
@@ -389,7 +389,7 @@ mod tests {
 
     /// Builds a synthetic 54-byte Eth(14)+IPv4(20)+TCP(20) frame with the
     /// EXACT layout this host's own `lo` interface was observed emitting
-    /// this session (a standard 14-byte fake-Ethernet header, all-zero MACs,
+    /// (a standard 14-byte fake-Ethernet header, all-zero MACs,
     /// `ETH_P_IP` at offset 12; a 20-byte IPv4 header, IHL=5, protocol=TCP;
     /// a 20-byte TCP header) — the fixture `is_syn_ack_from_waypoint` is
     /// tested against, independent of any live capture.

@@ -10,7 +10,7 @@
 //! JSON grammar (RFC 8259) and Go's `encoding/json` default marshal behavior
 //! (map-key sort order, string escaping), the two properties that must match
 //! byte-for-byte for this carriage class's wrap-then-unwrap round trip. Both
-//! rules were empirically re-confirmed this session against a live Go program
+//! rules were empirically re-confirmed against a live Go program
 //! (`json.Marshal` of `map[string]any` and of strings containing `<`, `>`,
 //! `&`, control characters, and non-ASCII UTF-8) rather than trusted from
 //! memory.
@@ -38,7 +38,7 @@ pub enum JsonValue {
     /// exactly mirroring Go's `encoding/json` behavior when marshaling a
     /// `map[string]any` (Go's own map iteration is unordered; `encoding/json`
     /// always sorts map keys before emitting them — empirically re-confirmed
-    /// this session against a live Go program).
+    /// against a live Go program).
     Object(Vec<(String, JsonValue)>),
 }
 
@@ -71,7 +71,7 @@ fn encode_into(v: &JsonValue, out: &mut Vec<u8>) {
         }
         JsonValue::Object(entries) => {
             // Go's encoding/json sorts map keys byte-lexicographically before
-            // emitting them (empirically confirmed this session: a Go map
+            // emitting them (empirically confirmed: a Go map
             // {"z":1,"a":2,"id":nil,"M":3} marshals as
             // {"M":3,"a":2,"id":null,"z":1} -- plain byte-wise ASCII order,
             // not case-insensitive). Rust's default `String: Ord` is also
@@ -97,7 +97,7 @@ fn encode_into(v: &JsonValue, out: &mut Vec<u8>) {
 /// escaped (`\b \t \n \f \r` shorthand where defined, `\u00XX` otherwise),
 /// `<`/`>`/`&` escaped as `<`/`>`/`&`, U+2028/U+2029 escaped as
 /// `\u2028`/`\u2029`, and every other codepoint (including non-ASCII UTF-8 and
-/// U+007F DEL) emitted verbatim. Empirically verified this session against a
+/// U+007F DEL) emitted verbatim. Empirically verified against a
 /// live Go program covering every one of these classes.
 fn encode_string(s: &str, out: &mut Vec<u8>) {
     out.push(b'"');
@@ -694,7 +694,7 @@ mod tests {
             ("id".into(), JsonValue::Null),
             ("M".into(), JsonValue::Number("3".into())),
         ]));
-        // Empirically confirmed against a live Go program this session:
+        // Empirically confirmed against a live Go program:
         // map[string]any{"z":1,"a":2,"id":nil,"M":3} marshals to exactly this.
         assert_eq!(wire, br#"{"M":3,"a":2,"id":null,"z":1}"#);
     }
@@ -702,7 +702,7 @@ mod tests {
     #[test]
     fn encode_string_matches_go_html_safe_escaping() {
         // Each case here was run against a live Go `encoding/json.Marshal`
-        // this session; the expected bytes are copied from that output.
+        // and the expected bytes are copied from that output.
         assert_eq!(encode(&JsonValue::String("hello".into())), br#""hello""#);
         assert_eq!(encode(&JsonValue::String("a\"b".into())), br#""a\"b""#);
         assert_eq!(encode(&JsonValue::String("a\\b".into())), br#""a\\b""#);

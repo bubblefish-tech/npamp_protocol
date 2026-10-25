@@ -2,7 +2,7 @@
 
   <!--
     Library / NuGet-package target for the N-PAMP (draft-bubblefish-npamp-01) OPEN reference,
-    C# port (F3-CSHARP). The sibling Npamp.csproj stays an EXE (the conformance-vector generator,
+    C# port. The sibling Npamp.csproj stays an EXE (the conformance-vector generator,
     AssemblyName npamp-vectors); this project makes the SAME primitives consumable as a library and
     publishable to NuGet as package id "Bubblefish.Npamp" (namespace Sh.Bubblefish.Npamp).
 

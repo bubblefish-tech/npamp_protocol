@@ -267,7 +267,7 @@ func writeOutputs(outDir string, result *supplychain.BuildResult, pub []byte) er
 // reverify reads sbom.json, provenance.json, and pubkey.hex back from outDir, reads the
 // artifact back from artifactPath, and runs every independent check the supplychain
 // package exports over those on-disk bytes — never the in-memory BuildResult that produced
-// them. This is the F3 non-circular check: a bit flipped in any of the three written files,
+// them. This is the non-circular check: a bit flipped in any of the three written files,
 // or in the artifact itself, is caught here, not merely trusted because BuildRelease
 // returned no error.
 func reverify(outDir, artifactPath string) error {

@@ -27,7 +27,7 @@ impl<H: AuthzHook + Send + Sync + 'static> ExtAuthzService<H> {
     }
 }
 
-/// google.rpc.Code (verified this session against `google/rpc/code.proto`,
+/// google.rpc.Code (verified against `google/rpc/code.proto`,
 /// see `proto/ext_authz.proto`'s `RpcStatus` message comment): OK = 0,
 /// PERMISSION_DENIED = 7. These are the only two values this service ever
 /// emits — the primary allow/deny signal ext_authz clients read.

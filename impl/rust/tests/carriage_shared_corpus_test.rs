@@ -30,7 +30,7 @@ use npamp::carriage::{http, jsonrpc, stream};
 /// Independently hand-written expected wire bytes for
 /// `encode_jsonrpc_request("ping", None, id="1")`: Go's `encoding/json.Marshal`
 /// of a `map[string]any` sorts object keys byte-lexicographically (a documented
-/// stdlib property, empirically re-confirmed this session against a live Go
+/// stdlib property, empirically re-confirmed against a live Go
 /// program rather than trusted from memory) — "id" < "jsonrpc" < "method" — so
 /// the expected byte sequence is fully determined independent of running the
 /// function under test.

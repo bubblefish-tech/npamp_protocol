@@ -59,7 +59,7 @@
 //! [`WfpEngineInstaller`] is the seam a live deployment supplies to actually
 //! open a `FwpmEngineOpen0` session and call `FwpmFilterAdd0` against the
 //! real Base Filtering Engine (requiring local-Administrators-equivalent
-//! access — see the WFP design grounding §2) — NOT implemented by this
+//! access) — NOT implemented by this
 //! crate. This build ships [`RecordingWfpEngine`], a deterministic in-memory
 //! test double. Actual connection REDIRECTION (as opposed to the
 //! permit/block authorization this module builds) additionally requires a
@@ -156,7 +156,7 @@ impl WfpCapabilities {
 /// this module targets became available: Windows 7 (NT 6.1). Source —
 /// "Using Bind or Connect Redirection": "The redirect layers are only
 /// available for Windows 7 and later versions of Windows." (see
-/// the WFP design grounding §2).
+/// the same page).
 const WFP_ALE_LAYER_FLOOR: (u32, u32, u32) = (6, 1, 0);
 
 fn meets_os_floor(version: Option<(u32, u32, u32)>, floor: (u32, u32, u32)) -> bool {
@@ -182,7 +182,7 @@ impl WfpSelector {
     /// `true` only when the platform is genuinely Windows, the OS meets the
     /// documented ALE-layer version floor, AND this process is elevated
     /// (the practical necessary condition for `FwpmEngineOpen0` to succeed
-    /// against the live engine — see the WFP design grounding §2).
+    /// against the live engine).
     /// Mutated away by the M-wfp-1 mutation below.
     pub fn ready(caps: &WfpCapabilities) -> bool {
         caps.is_windows && caps.is_elevated && meets_os_floor(caps.os_version, WFP_ALE_LAYER_FLOOR)
@@ -392,7 +392,6 @@ pub fn probe_engine_open_succeeds() -> bool {
 
 /// Which side of a connection this filter authorizes — outbound (the ALE
 /// "auth connect" layers) or inbound (the ALE "auth recv/accept" layers).
-/// See the WFP design grounding §3 for the operation-to-layer mapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WfpDirection {
     Outbound,

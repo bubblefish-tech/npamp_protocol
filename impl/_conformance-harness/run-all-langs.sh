@@ -21,7 +21,7 @@ if command -v javac >/dev/null && command -v java >/dev/null; then
   if javac -d "$JOUT" "$HERE"/../java/src/main/java/sh/bubblefish/npamp/*.java 2>/dev/null; then
     chk "$(java -cp "$JOUT" sh.bubblefish.npamp.Vectors 2>/dev/null)" java
   else echo "FAIL  java (compile)"; fail=1; fi
-  rm -rf "$JOUT"
+  # $JOUT is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  java"; fi
 
 # csharp: needs the .NET SDK. Build a throwaway copy in a temp dir so no bin/obj
@@ -32,7 +32,7 @@ if command -v dotnet >/dev/null && dotnet --list-sdks 2>/dev/null | grep -q .; t
   cp "$HERE/../csharp/Npamp.cs" "$HERE/../csharp/Vectors.cs" "$HERE/../csharp/Npamp.csproj" "$CSO/"
   ( cd "$CSO" && dotnet build -c Release -v q --nologo >/dev/null 2>&1 )
   chk "$(dotnet "$CSO/bin/Release/net8.0/npamp-vectors.dll" 2>/dev/null)" csharp
-  rm -rf "$CSO"
+  # $CSO is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  csharp (no .NET SDK; build via csharp/build-local.ps1)"; fi
 
 # ruby: pure-Ruby reference (stdlib OpenSSL; CRC32C hand-rolled). require_relative is
@@ -53,7 +53,7 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
     STDLIB="$(dirname "$(command -v kotlinc)")/../lib/kotlin-stdlib.jar"
     chk "$(java -cp "$(kpath "$KT/out")$KSEP$(kpath "$STDLIB")" sh.bubblefish.npamp.Vectors 2>/dev/null)" kotlin
   else echo "FAIL  kotlin (compile)"; fail=1; fi
-  rm -rf "$KT"
+  # $KT is a mktemp directory under TMPDIR, left for the OS temp cleaner.
 else echo "SKIP  kotlin"; fi
 
 # swift: native `swift` on Linux/macOS; otherwise via WSL Ubuntu on a Windows host

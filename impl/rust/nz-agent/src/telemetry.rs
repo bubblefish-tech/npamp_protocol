@@ -189,7 +189,7 @@ impl fmt::Debug for OtelPrometheusSink {
 /// [`OtelPrometheusSink::new_production`] uses; only the destination the
 /// SDK hands completed spans to differs. `opentelemetry_sdk` 0.32.1 ships no
 /// `testing::trace::InMemorySpanExporter` (checked against its published
-/// source this session), so this crate provides its own — a minimal,
+/// source), so this crate provides its own — a minimal,
 /// non-circular capture point, not a stand-in for the SDK's real span
 /// construction.
 #[cfg(test)]

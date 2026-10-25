@@ -29,7 +29,7 @@ mod decision;
 // wasm imports at runtime — on the native host target (what `cargo test`
 // builds by default) nothing provides those symbols, so a test binary that
 // links this code fails at LINK time (`unresolved external symbol
-// proxy_log`, confirmed this session — not a hypothetical). Gating this
+// proxy_log`, confirmed — not a hypothetical). Gating this
 // block to wasm32 is the standard way a proxy-wasm crate keeps its ABI
 // glue separate from its host-testable pure logic (`config.rs`/
 // `decision.rs`, which have no `#[cfg]` gate and run under plain

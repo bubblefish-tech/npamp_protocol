@@ -4,7 +4,7 @@
 //! `RootContext::on_configure` into a `(consuming_authority, grants)` pair
 //! this filter's shared `nz_waypoint_core::TableAuthzHook` is built from.
 //! Pure — no proxy-wasm ABI calls — so it is unit-testable on the host
-//! target without a live wasm runtime (A9).
+//! target without a live wasm runtime.
 
 use nz_waypoint_core::EffectClass;
 

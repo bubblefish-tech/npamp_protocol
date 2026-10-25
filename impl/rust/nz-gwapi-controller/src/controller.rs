@@ -48,7 +48,7 @@ use crate::types::HttpRouteSpec;
 
 /// Either half of this module's I/O can fail independently (the initial/
 /// re-list `kube::Error`, or the watch stream's own `watcher::Error`) --
-/// named per source, never collapsed into one opaque string (D3).
+/// named per source, never collapsed into one opaque string.
 #[derive(Debug)]
 pub enum ControllerError {
     Kube(kube::Error),

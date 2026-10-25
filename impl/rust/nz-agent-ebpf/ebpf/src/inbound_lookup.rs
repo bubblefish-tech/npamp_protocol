@@ -41,7 +41,7 @@ use nz_agent_ebpf_common::InboundKey;
 
 /// `ENOENT` (grounded: `/usr/include/asm-generic/errno-base.h`,
 /// `#define ENOENT 2`). `SockHash::redirect_sk_lookup` (aya-ebpf-0.2.1,
-/// read this session) returns `Err(-ENOENT)` specifically for "no entry
+/// read) returns `Err(-ENOENT)` specifically for "no entry
 /// registered for this key" — the SAME constant aya_ebpf's own
 /// `lookup()` helper uses internally (`aya-ebpf-0.2.1/src/lib.rs`,
 /// `pub(crate) const ENOENT: i32 = 2`, not reachable from this crate, hence

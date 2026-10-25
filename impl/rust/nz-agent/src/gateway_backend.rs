@@ -324,7 +324,7 @@ mod tests {
     /// The prototype connection type actually carries bytes: a live PQC
     /// handshake, then a request/response round-trip through
     /// `NpampBackendSocket`'s `Read`/`Write` — demonstrated in isolation
-    /// with a concrete input producing a correct concrete output (A9),
+    /// with a concrete input producing a correct concrete output,
     /// against a peer that runs the plain `npamp::session::Session` API
     /// directly (proving this module adds no new wire bytes of its own).
     #[test]

@@ -34,7 +34,9 @@ export GOWORK=off
 
 fail=0; ran=0; skips=""
 JT=""; JE=""; KT=""; KE=""
-trap 'rm -rf "${JT:-}" "${JE:-}" "${KT:-}" "${KE:-}" 2>/dev/null' EXIT INT TERM
+# JT and KT are mktemp directories under TMPDIR, left for the OS temp cleaner; JE and KE are
+# mktemp files, removed here by exact path.
+trap 'rm -f "${JE:-}" "${KE:-}" 2>/dev/null' EXIT INT TERM
 
 # chk LABEL OUTPUT EXIT TOKEN_REGEX — PASS iff exit 0 AND OUTPUT matches TOKEN_REGEX (positive evidence).
 chk() {
@@ -123,7 +125,7 @@ if command -v kotlinc >/dev/null && command -v java >/dev/null; then
     done
     chk kotlin "$ko" "$ec" 'ALL PASS'
   else chk kotlin "$(cat "$KE")" 1 'ALL PASS'; fi
-  rm -rf "$KT" "$KE"; KT=""; KE=""
+  rm -f "$KE"; KT=""; KE=""
 else skip kotlin "no kotlinc/java"; fi
 
 # --- ruby (token: 'ALL PASS') ---

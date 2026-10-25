@@ -16,7 +16,7 @@ import (
 // directories under (impl/go/cmd/npamp-supply-chain -> impl/go), so every test below
 // exercises the actual production `go list -m -json all` invocation against this
 // repository's real go.mod, not a synthetic fixture. This is the direct demonstration that
-// the CLI is a real production caller of the supplychain package (A9/E2): the SBOM it
+// the CLI is a real production caller of the supplychain package: the SBOM it
 // builds describes THIS module's real dependency graph.
 const testModuleDir = "../.."
 
@@ -46,7 +46,7 @@ func TestDiscoverModulesAgainstRealModule(t *testing.T) {
 }
 
 // TestBuildSignerFromSeedIsDeterministic confirms the seed-hex path produces a stable
-// signing identity (A4: same seed twice must produce the same public key; a different seed
+// signing identity (same seed twice must produce the same public key; a different seed
 // must produce a different one).
 func TestBuildSignerFromSeedIsDeterministic(t *testing.T) {
 	seedHex := "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"[:64]
@@ -116,7 +116,7 @@ func runFullPipeline(t *testing.T, artifactContent string) (artifactPath, outDir
 	return artifactPath, outDir
 }
 
-// TestRunEndToEndProducesVerifiableArtifacts is the A9 isolation demonstration: invoke the
+// TestRunEndToEndProducesVerifiableArtifacts is the isolation demonstration: invoke the
 // CLI's full pipeline (build -> write -> independent re-verify) against a real artifact and
 // this repository's real module graph, and confirm all three output files exist and the
 // pipeline's own built-in re-verification (step 7) already passed (run() returned nil).
@@ -220,7 +220,7 @@ func TestParseFlagsRequiresArtifact(t *testing.T) {
 }
 
 // TestParseFlagsDefaultsNameFromArtifactBasename confirms the -name default is derived
-// from the actual -artifact path (A4: changing the artifact path changes the default
+// from the actual -artifact path (changing the artifact path changes the default
 // name), not a constant.
 func TestParseFlagsDefaultsNameFromArtifactBasename(t *testing.T) {
 	cfg, err := parseFlags([]string{"-artifact", "/tmp/foo/npamp-release.tar.gz"})

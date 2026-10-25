@@ -90,7 +90,7 @@ pub enum WaypointConfigOp {
 }
 
 /// Why a `HTTPRoute`, or a Service annotation on an object it references,
-/// could not be planned -- named per the specific rule violated (D3: no
+/// could not be planned -- named per the specific rule violated (no
 /// bare "invalid").
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReconcileError {
@@ -105,7 +105,7 @@ pub enum ReconcileError {
     /// SPIFFE ID path segment once composed into
     /// `spiffe://<trust-domain>/ns/<namespace>/sa/<name>` (formatted, since
     /// `nz_agent::identity::SpiffeIdError` does not implement
-    /// `PartialEq`/`Eq`, D3: never a bare "invalid").
+    /// `PartialEq`/`Eq`, never a bare "invalid").
     BadSpiffeId(String),
     /// A `npamp.bubblefish.io/max-effect-class` annotation value was not
     /// one of the four exact tokens/digits [`parse_effect_class_annotation`]

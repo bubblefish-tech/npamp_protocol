@@ -17,7 +17,7 @@
 //!   runs the SAME pure [`nz_gwapi_controller::plan::plan_full_desired_state`]
 //!   this crate's unit tests exercise, and prints the resulting allow-pairs/
 //!   peers/grants as plain text. A genuine, concrete-input -> concrete-output
-//!   demonstration of the built binary (A9), independent of both the unit
+//!   demonstration of the built binary, independent of both the unit
 //!   test harness and any live cluster.
 use std::collections::BTreeMap;
 
@@ -124,7 +124,7 @@ async fn main() -> std::process::ExitCode {
             // ambient kubeconfig names, runs exactly one
             // `controller::reconcile_once`, prints the result, and exits --
             // deterministic (no 5s polling loop to race against), used for
-            // the live-cluster (D1) grading pass against a real kind
+            // the live-cluster grading pass against a real kind
             // cluster.
             "--reconcile-once" => reconcile_once_mode = true,
             // Observes one specific (source, destination) SPIFFE-id pair's
@@ -203,7 +203,7 @@ async fn main() -> std::process::ExitCode {
         std::sync::Arc::new(std::sync::Mutex::new(nz_gwapi_controller::plan::plan_full_desired_state(&trust_domain, &[], &Default::default()).0));
 
     // A lightweight reporter task: prints the shared state's op counts
-    // every 5 seconds so a live-cluster observer (human or a D1 grading
+    // every 5 seconds so a live-cluster observer (human or a grading
     // script) can see reconciliation results without a separate admin RPC.
     let reporter_shared = shared.clone();
     tokio::spawn(async move {

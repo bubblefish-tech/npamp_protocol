@@ -65,7 +65,9 @@ if [ -z "${PYTHON_BIN}" ]; then
   fi
 fi
 
-cleanup() { rm -rf "${BIN_DIR}" 2>/dev/null || true; }
+# BIN_DIR is a mktemp directory holding only the built binary: remove that file by exact
+# path and the then-empty directory.
+cleanup() { rm -f "${GO_BIN}" 2>/dev/null || true; rmdir "${BIN_DIR}" 2>/dev/null || true; }
 trap cleanup EXIT
 
 echo "== building Go interop harness =="

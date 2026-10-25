@@ -4,10 +4,10 @@
 //! N-PAMP session to a SPIFFE X.509 SVID issued by SPIRE via OS-level workload
 //! attestation — never an ambient/shared credential.
 //!
-//! # Grounded against the primary source (this build)
+//! # Grounded against the primary source (primary source)
 //!
 //! [`SpiffeId::parse`] enforces the structural rules of the SPIFFE-ID
-//! specification (`spiffe/spiffe` standards/SPIFFE-ID.md, fetched this build):
+//! specification (`spiffe/spiffe` standards/SPIFFE-ID.md, fetched):
 //! scheme MUST be `spiffe`; the trust domain MUST be non-empty, lowercase, and
 //! contain only `[a-z0-9.-_]`; `userinfo` and port MUST be empty; a query or
 //! fragment component MUST NOT be present; each path segment MUST contain only
