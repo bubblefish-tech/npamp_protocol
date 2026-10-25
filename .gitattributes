@@ -37,5 +37,9 @@ registries/**/*.json text eol=lf
 schema/**/*.cddl text eol=lf
 schema/**/*.json text eol=lf
 
+# The vendored CycloneDX schema is checked byte for byte (size and SHA-256) against the
+# upstream file, which is LF; a CRLF checkout changes its size and fails the test.
+impl/go/ecosystem/npamp-supply-chain/schema/*.json text eol=lf
+
 # Shell scripts run under sh on Linux and macOS; a CRLF checkout breaks them there.
 *.sh text eol=lf
