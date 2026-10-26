@@ -1592,8 +1592,8 @@ This revision makes the following changes relative to draft-bubblefish-npamp-00:
 - The trailing digit `3` is the **crypto generation** — the cryptographic
   construction (hybrid combiner order, KEM and signature code points). It is an
   axis independent of the wire-format version: the `Ver` nibble `0x2` in the frame
-  header identifies the frame layout and is invariant across generations (see
-  decision 0014). A raw frame is not generation-self-describing; the generation is
+  header identifies the frame layout and is invariant across generations.
+  A raw frame is not generation-self-describing; the generation is
   fixed by ALPN negotiation, or by explicit configuration where frames are
   exchanged without TLS.
 - Registration policy for the ALPN registry is **Expert Review** (RFC 8126).
@@ -1696,7 +1696,7 @@ The `Ver` field carries the **wire-format version** (the frame layout), which is
 generation: that is carried out of band by the negotiated ALPN identifier
 (currently `n-pamp/3`), or by explicit configuration where frames are exchanged
 without TLS. A raw frame is therefore not generation-self-describing; a receiver
-MUST reject any frame whose `Ver` nibble is not `0x02` (see decision 0014).
+MUST reject any frame whose `Ver` nibble is not `0x02`.
 
 ## Flags (low nibble of octet 4)
 
@@ -2031,7 +2031,7 @@ ML-DSA-87 per FIPS 204.
 **Registry authority.** For every code point it shares with the IANA TLS registries —
 the Supported-Groups KEM values (`0x11ec`, `0x11ed`) and the SignatureScheme values
 (`0x0807`, `0x0904`–`0x0906`) — N-PAMP references the IANA value with its exact
-semantics; it defines no code point that shadows an occupied IANA assignment (R15).
+semantics; it defines no code point that shadows an occupied IANA assignment.
 
 The hybrid-KEM construction authority is `RFC 10024` (formerly the Internet-Draft
 `draft-ietf-tls-ecdhe-mlkem`, published August 2026) — cited directly as a published

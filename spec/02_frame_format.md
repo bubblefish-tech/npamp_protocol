@@ -73,7 +73,7 @@ The `Ver` field carries the **wire-format version** (the frame layout), which is
 generation: that is carried out of band by the negotiated ALPN identifier
 (currently `n-pamp/3`), or by explicit configuration where frames are exchanged
 without TLS. A raw frame is therefore not generation-self-describing; a receiver
-MUST reject any frame whose `Ver` nibble is not `0x02` (see decision 0014).
+MUST reject any frame whose `Ver` nibble is not `0x02`.
 
 ## Flags (low nibble of octet 4)
 

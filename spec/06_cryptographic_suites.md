@@ -82,7 +82,7 @@ ML-DSA-87 per FIPS 204.
 **Registry authority.** For every code point it shares with the IANA TLS registries —
 the Supported-Groups KEM values (`0x11ec`, `0x11ed`) and the SignatureScheme values
 (`0x0807`, `0x0904`–`0x0906`) — N-PAMP references the IANA value with its exact
-semantics; it defines no code point that shadows an occupied IANA assignment (R15).
+semantics; it defines no code point that shadows an occupied IANA assignment.
 
 The hybrid-KEM construction authority is `RFC 10024` (formerly the Internet-Draft
 `draft-ietf-tls-ecdhe-mlkem`, published August 2026) — cited directly as a published

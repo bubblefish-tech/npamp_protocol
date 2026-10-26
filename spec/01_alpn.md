@@ -15,8 +15,8 @@
 - The trailing digit `3` is the **crypto generation** — the cryptographic
   construction (hybrid combiner order, KEM and signature code points). It is an
   axis independent of the wire-format version: the `Ver` nibble `0x2` in the frame
-  header identifies the frame layout and is invariant across generations (see
-  decision 0014). A raw frame is not generation-self-describing; the generation is
+  header identifies the frame layout and is invariant across generations.
+  A raw frame is not generation-self-describing; the generation is
   fixed by ALPN negotiation, or by explicit configuration where frames are
   exchanged without TLS.
 - Registration policy for the ALPN registry is **Expert Review** (RFC 8126).
